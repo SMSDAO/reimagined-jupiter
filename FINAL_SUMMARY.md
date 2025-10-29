@@ -21,8 +21,8 @@ The GXQ Studio platform is now production-ready with:
 1. Go to https://vercel.com/new
 2. Click "Add New Project"
 3. Import GitHub repository: `SMSDAO/reimagined-jupiter`
-4. Configure:
-   - **Root Directory**: `webapp`
+4. **⚠️ CRITICAL**: Configure these settings:
+   - **Root Directory**: Click "Edit" and enter `webapp` ← **YOU MUST SET THIS**
    - **Framework**: Next.js (auto-detected)
    - **Build Command**: `npm run build` (auto-detected)
    - **Output Directory**: `.next` (auto-detected)
@@ -31,6 +31,8 @@ The GXQ Studio platform is now production-ready with:
    - **Value**: `https://api.mainnet-beta.solana.com` (or your QuickNode URL)
 6. Click "Deploy"
 7. ✅ **DONE!** Your app is live in ~2 minutes
+
+**Common Issue**: If you see "src" directory instead of "webapp" during setup, you forgot to set the Root Directory to `webapp`. Go to Settings → General → Root Directory and set it to `webapp`.
 
 ### Option 2: Vercel CLI (Advanced - 3 minutes)
 
@@ -41,7 +43,7 @@ npm install -g vercel
 # Login
 vercel login
 
-# Deploy
+# IMPORTANT: Deploy from webapp directory
 cd webapp
 vercel --prod
 ```

@@ -18,17 +18,22 @@ The most advanced Solana DeFi platform with flash loan arbitrage, sniper bot, to
 
 ### Quick Deploy to Vercel
 
-```bash
-# Deploy from webapp directory
-cd webapp
-npm install
-npm run build
+**⚠️ IMPORTANT**: When deploying to Vercel, set **Root Directory** to `webapp` in the project settings.
 
-# Or use Vercel CLI
+#### Via Vercel Dashboard:
+1. Go to https://vercel.com/new
+2. Import: `SMSDAO/reimagined-jupiter`
+3. **Set Root Directory**: `webapp` ← **REQUIRED**
+4. Add env: `NEXT_PUBLIC_RPC_URL`
+5. Deploy
+
+#### Via Vercel CLI:
+```bash
+cd webapp
 vercel --prod
 ```
 
-See [VERCEL_DEPLOYMENT.md](VERCEL_DEPLOYMENT.md) for complete deployment instructions.
+See [VERCEL_DEPLOY.md](VERCEL_DEPLOY.md) for detailed instructions and troubleshooting.
 
 ## 🚀 Backend CLI Features
 
