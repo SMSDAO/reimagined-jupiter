@@ -28,6 +28,9 @@ export interface Config {
     lifinity: PublicKey;
     aldrin: PublicKey;
     crema: PublicKey;
+    meteora: PublicKey;
+    phoenix: PublicKey;
+    openbook: PublicKey;
   };
   jupiter: {
     programId: PublicKey;
@@ -41,6 +44,11 @@ export interface Config {
     minProfitThreshold: number;
     maxSlippage: number;
     gasBuffer: number;
+  };
+  devFee: {
+    enabled: boolean;
+    percentage: number;
+    wallet: PublicKey;
   };
 }
 

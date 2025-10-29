@@ -223,3 +223,75 @@ export class CremaDEX extends BaseDEX {
     return {} as TransactionInstruction;
   }
 }
+
+export class MeteoraDEX extends BaseDEX {
+  getName(): string {
+    return 'Meteora';
+  }
+  
+  async getSupportedTokens(): Promise<PublicKey[]> {
+    return [];
+  }
+  
+  async getQuote(_inputMint: PublicKey, _outputMint: PublicKey, amount: number): Promise<number> {
+    return amount * 0.998; // 0.2% fee
+  }
+  
+  async createSwapInstruction(
+    _inputMint: PublicKey,
+    _outputMint: PublicKey,
+    _amount: number,
+    _minAmountOut: number,
+    _userAccount: PublicKey
+  ): Promise<TransactionInstruction> {
+    return {} as TransactionInstruction;
+  }
+}
+
+export class PhoenixDEX extends BaseDEX {
+  getName(): string {
+    return 'Phoenix';
+  }
+  
+  async getSupportedTokens(): Promise<PublicKey[]> {
+    return [];
+  }
+  
+  async getQuote(_inputMint: PublicKey, _outputMint: PublicKey, amount: number): Promise<number> {
+    return amount * 0.9995; // 0.05% fee (very competitive)
+  }
+  
+  async createSwapInstruction(
+    _inputMint: PublicKey,
+    _outputMint: PublicKey,
+    _amount: number,
+    _minAmountOut: number,
+    _userAccount: PublicKey
+  ): Promise<TransactionInstruction> {
+    return {} as TransactionInstruction;
+  }
+}
+
+export class OpenBookDEX extends BaseDEX {
+  getName(): string {
+    return 'OpenBook';
+  }
+  
+  async getSupportedTokens(): Promise<PublicKey[]> {
+    return [];
+  }
+  
+  async getQuote(_inputMint: PublicKey, _outputMint: PublicKey, amount: number): Promise<number> {
+    return amount * 0.998; // 0.2% fee
+  }
+  
+  async createSwapInstruction(
+    _inputMint: PublicKey,
+    _outputMint: PublicKey,
+    _amount: number,
+    _minAmountOut: number,
+    _userAccount: PublicKey
+  ): Promise<TransactionInstruction> {
+    return {} as TransactionInstruction;
+  }
+}

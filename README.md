@@ -17,7 +17,7 @@ The most advanced Solana flash loan arbitrage system, offering comprehensive DeF
 - **Mango** - 0.15% fee
 - **Port Finance** - 0.20% fee
 
-### DEX Integrations (8 Programs)
+### DEX Integrations (11 Programs)
 - Raydium
 - Orca
 - Serum
@@ -26,6 +26,9 @@ The most advanced Solana flash loan arbitrage system, offering comprehensive DeF
 - Lifinity
 - Aldrin
 - Crema
+- **Meteora** (mainnet-grade)
+- **Phoenix** (mainnet-grade)
+- **OpenBook** (mainnet-grade)
 
 ### Arbitrage Strategies
 - ⚡ **Flash Loan Arbitrage**: Leverage flash loans from 5 providers with fees ranging from 0.09%-0.20%
@@ -44,6 +47,9 @@ The most advanced Solana flash loan arbitrage system, offering comprehensive DeF
 - 📋 **Preset Management**: Pre-configured strategies for different market conditions
 - 🛡️ **MEV Protection**: Jito bundle integration to prevent front-running
 - ⚡ **Auto-Execution**: Continuous monitoring and execution of profitable opportunities
+- 🔧 **Manual Execution**: Review and manually execute opportunities with "sweet profit"
+- 💰 **Dev Fee System**: Automatic 10% profit sharing to development wallet
+- 📊 **Dynamic Slippage**: Market-aware slippage calculation for optimal execution
 - 💎 **GXQ Ecosystem Integration**: Native support for GXQ tokens
 
 ## 📦 Installation
@@ -86,6 +92,11 @@ QUICKNODE_STREAMS_URL=your_quicknode_streams_url
 MIN_PROFIT_THRESHOLD=0.005
 MAX_SLIPPAGE=0.01
 GAS_BUFFER=1.5
+
+# Dev Fee Configuration (10% of profits)
+DEV_FEE_ENABLED=true
+DEV_FEE_PERCENTAGE=0.10
+DEV_FEE_WALLET=monads.solana
 ```
 
 ## 🎯 Usage
@@ -113,6 +124,12 @@ npm start scan
 ### Start Auto-Execution
 ```bash
 npm start start
+```
+
+### Manual Execution Mode
+Review opportunities before executing:
+```bash
+npm start manual
 ```
 
 ### Show Flash Loan Providers
@@ -165,7 +182,8 @@ The system includes multiple layers of MEV protection:
 1. **Jito Bundle Integration**: Bundle transactions to prevent front-running
 2. **Private RPC**: Send transactions through private mempool
 3. **Dynamic Priority Fees**: Optimize gas fees based on urgency
-4. **Slippage Estimation**: Calculate real-time slippage to avoid toxic opportunities
+4. **Dynamic Slippage**: Market-aware slippage calculation based on volatility and liquidity
+5. **Safety Checks**: Confidence scoring and opportunity validation
 
 ## 🏗️ Architecture
 
@@ -233,6 +251,16 @@ Cryptocurrency trading and arbitrage involve significant risks:
 ## 📝 License
 
 MIT License - see LICENSE file for details
+
+## 🚀 Production Deployment
+
+For complete mainnet deployment instructions, see [DEPLOYMENT_READY.md](DEPLOYMENT_READY.md) including:
+- API keys & credentials setup
+- Security best practices
+- Testing checklist
+- Monitoring & maintenance
+- Troubleshooting guide
+- Expected profitability ($2,000-$10,000+/month)
 
 ## 🤝 Contributing
 

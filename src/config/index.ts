@@ -32,6 +32,10 @@ export const config: Config = {
     lifinity: new PublicKey('EewxydAPCCVuNEyrVN68PuSYdQ7wKn27V9Gjeoi8dy3S'),
     aldrin: new PublicKey('AMM55ShdkoGRB5jVYPjWziwk8m5MpwyDgsMWHaMSQWH6'),
     crema: new PublicKey('CLMM9tUoggJu2wagPkkqs9eFG4BWhVBZWkP1qv3Sp7tR'),
+    // Additional mainnet-grade DEXs
+    meteora: new PublicKey('Eo7WjKq67rjJQSZxS6z3YkapzY3eMj6Xy8X5EQVn5UaB'),
+    phoenix: new PublicKey('PhoeNiXZ8ByJGLkxNfZRnkUfjvmuYqLR89jjFHGqdXY'),
+    openbook: new PublicKey('srmqPvymJeFKQ4zGQed1GFppgkRHL9kaELCbyksJtPX'),
   },
   jupiter: {
     programId: new PublicKey(process.env.JUPITER_V6_PROGRAM_ID || 'JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4'),
@@ -45,6 +49,11 @@ export const config: Config = {
     minProfitThreshold: parseFloat(process.env.MIN_PROFIT_THRESHOLD || '0.005'),
     maxSlippage: parseFloat(process.env.MAX_SLIPPAGE || '0.01'),
     gasBuffer: parseFloat(process.env.GAS_BUFFER || '1.5'),
+  },
+  devFee: {
+    enabled: process.env.DEV_FEE_ENABLED !== 'false',
+    percentage: parseFloat(process.env.DEV_FEE_PERCENTAGE || '0.10'), // 10% default
+    wallet: new PublicKey(process.env.DEV_FEE_WALLET || '11111111111111111111111111111111'), // Placeholder, use real wallet in production
   },
 };
 

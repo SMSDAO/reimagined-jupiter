@@ -65,9 +65,10 @@ class GXQStudio {
     console.log(`   - Mango (${config.flashLoanProviders.mango.toBase58().slice(0, 8)}...) - 0.15% fee`);
     console.log(`   - Kamino (${config.flashLoanProviders.kamino.toBase58().slice(0, 8)}...) - 0.12% fee`);
     console.log(`   - Port Finance (${config.flashLoanProviders.portFinance.toBase58().slice(0, 8)}...) - 0.20% fee`);
-    console.log(`🔄 DEX Programs: 8`);
+    console.log(`🔄 DEX Programs: 11`);
     console.log(`   - Raydium, Orca, Serum, Saber`);
     console.log(`   - Mercurial, Lifinity, Aldrin, Crema`);
+    console.log(`   - Meteora, Phoenix, OpenBook`);
     console.log(`📈 Jupiter v6: ${config.jupiter.programId.toBase58().slice(0, 8)}...`);
     console.log(`🪙 Supported Tokens: 30+`);
     console.log(`🎁 Airdrop Checker: ${this.airdropChecker ? '✓' : '✗'}`);
@@ -174,6 +175,16 @@ class GXQStudio {
     await this.autoExecutionEngine.start();
   }
   
+  async manualExecution(): Promise<void> {
+    if (!this.autoExecutionEngine) {
+      console.error('Manual execution not available (wallet not configured)');
+      return;
+    }
+    
+    console.log('🔧 Manual Execution Mode\n');
+    await this.autoExecutionEngine.manualExecute();
+  }
+  
   async showFlashLoanProviders(): Promise<void> {
     console.log('💰 Flash Loan Providers:\n');
     const providers = this.flashLoanArbitrage.getProviderInfo();
@@ -211,6 +222,9 @@ async function main() {
     case 'start':
       await studio.startAutoExecution();
       break;
+    case 'manual':
+      await studio.manualExecution();
+      break;
     case 'providers':
       await studio.showFlashLoanProviders();
       break;
@@ -221,6 +235,7 @@ async function main() {
       console.log('  npm start presets     - List available presets');
       console.log('  npm start scan        - Scan for arbitrage opportunities');
       console.log('  npm start start       - Start auto-execution engine');
+      console.log('  npm start manual      - Manual execution mode (review opportunities)');
       console.log('  npm start providers   - Show flash loan providers');
       break;
   }

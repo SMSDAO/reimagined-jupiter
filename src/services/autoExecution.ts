@@ -53,6 +53,27 @@ export class MEVProtection {
     return baseFee * multipliers[urgency];
   }
   
+  async calculateDynamicSlippage(
+    marketVolatility: number,
+    liquidityDepth: number,
+    tradeSize: number
+  ): Promise<number> {
+    // Dynamic slippage calculation based on market conditions
+    const baseSlippage = 0.005; // 0.5% base
+    
+    // Adjust for volatility (0-1 scale)
+    const volatilityMultiplier = 1 + marketVolatility;
+    
+    // Adjust for liquidity (higher liquidity = lower slippage)
+    const liquidityMultiplier = Math.max(0.5, 1 / Math.sqrt(liquidityDepth / tradeSize));
+    
+    // Calculate final slippage
+    const dynamicSlippage = baseSlippage * volatilityMultiplier * liquidityMultiplier;
+    
+    // Cap at reasonable max (2%)
+    return Math.min(dynamicSlippage, 0.02);
+  }
+  
   async estimateSlippage(opportunity: ArbitrageOpportunity): Promise<number> {
     // Estimate actual slippage for the opportunity
     // Consider pool depth, trade size, and market conditions
@@ -217,12 +238,68 @@ export class AutoExecutionEngine {
       
       if (signature) {
         console.log(`✅ Successfully executed arbitrage! Signature: ${signature}`);
+        
+        // Handle dev fee if enabled
+        await this.handleDevFee(opportunity.estimatedProfit);
       } else {
         console.log('❌ Failed to execute arbitrage');
       }
     } catch (error) {
       console.error('Error executing opportunity:', error);
     }
+  }
+  
+  private async handleDevFee(profit: number): Promise<void> {
+    const { config } = await import('../config/index.js');
+    
+    if (!config.devFee.enabled) {
+      return;
+    }
+    
+    const devFeeAmount = profit * config.devFee.percentage;
+    console.log(`💰 Dev fee: $${devFeeAmount.toFixed(4)} (${(config.devFee.percentage * 100).toFixed(1)}%) to ${config.devFee.wallet.toBase58().slice(0, 8)}...`);
+    
+    // In production, this would send the actual fee
+    // await sendDevFee(devFeeAmount, config.devFee.wallet);
+  }
+  
+  async manualExecute(opportunityId?: string): Promise<string | null> {
+    console.log('🔧 Manual execution mode');
+    
+    if (opportunityId) {
+      // Execute specific opportunity by ID
+      const opportunity = await this.quicknode.getCachedArbitrageOpportunity(opportunityId);
+      if (opportunity) {
+        await this.executeOpportunity(opportunity, { name: 'Manual' });
+        return 'executed';
+      }
+    }
+    
+    // Scan and show opportunities for manual selection
+    const presets = await this.presetManager.getEnabledPresets();
+    const allOpportunities: ArbitrageOpportunity[] = [];
+    
+    for (const preset of presets) {
+      if (preset.strategy === 'flash-loan' || preset.strategy === 'hybrid') {
+        const flashOpps = await this.flashLoanArbitrage.findOpportunities(preset.tokens);
+        allOpportunities.push(...flashOpps);
+      }
+      
+      if (preset.strategy === 'triangular' || preset.strategy === 'hybrid') {
+        const triOpps = await this.triangularArbitrage.findOpportunities(preset.tokens);
+        allOpportunities.push(...triOpps);
+      }
+    }
+    
+    if (allOpportunities.length > 0) {
+      console.log(`\n📊 Found ${allOpportunities.length} opportunities:`);
+      allOpportunities.slice(0, 5).forEach((opp, i) => {
+        console.log(`  ${i + 1}. ${opp.type} - $${opp.estimatedProfit.toFixed(4)} profit (${(opp.confidence * 100).toFixed(0)}% confidence)`);
+      });
+      return 'opportunities_found';
+    }
+    
+    return null;
   }
   
   getStatus(): { running: boolean; uptime: number } {
