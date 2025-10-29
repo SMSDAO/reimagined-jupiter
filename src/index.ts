@@ -1,4 +1,4 @@
-import { Connection, Keypair } from '@solana/web3.js';
+import { Connection, Keypair, PublicKey } from '@solana/web3.js';
 import bs58 from 'bs58';
 import { config } from './config/index.js';
 import { QuickNodeIntegration } from './integrations/quicknode.js';
@@ -6,6 +6,9 @@ import { PresetManager } from './services/presetManager.js';
 import { AirdropChecker } from './services/airdropChecker.js';
 import { AutoExecutionEngine } from './services/autoExecution.js';
 import { FlashLoanArbitrage, TriangularArbitrage } from './strategies/arbitrage.js';
+import { AddressBook } from './services/addressBook.js';
+import { WalletScoring } from './services/walletScoring.js';
+import { RouteTemplateManager } from './services/routeTemplates.js';
 
 class GXQStudio {
   private connection: Connection;
@@ -16,6 +19,9 @@ class GXQStudio {
   private autoExecutionEngine: AutoExecutionEngine | null = null;
   private flashLoanArbitrage: FlashLoanArbitrage;
   private triangularArbitrage: TriangularArbitrage;
+  private addressBook: AddressBook;
+  private walletScoring: WalletScoring;
+  private routeTemplates: RouteTemplateManager;
   
   constructor() {
     // Initialize QuickNode first
@@ -26,6 +32,9 @@ class GXQStudio {
     this.presetManager = new PresetManager('./presets');
     this.flashLoanArbitrage = new FlashLoanArbitrage(this.connection);
     this.triangularArbitrage = new TriangularArbitrage(this.connection);
+    this.addressBook = new AddressBook('./address-book');
+    this.walletScoring = new WalletScoring(this.connection);
+    this.routeTemplates = new RouteTemplateManager('./route-templates');
     
     // Initialize user keypair if available
     if (config.solana.walletPrivateKey) {
@@ -50,6 +59,8 @@ class GXQStudio {
     console.log('The most advanced Solana flash loan arbitrage system\n');
     
     await this.presetManager.initialize();
+    await this.addressBook.initialize();
+    await this.routeTemplates.initialize();
     
     console.log('✅ Initialization complete\n');
     this.printSystemInfo();
@@ -59,16 +70,17 @@ class GXQStudio {
     console.log('📊 System Information:');
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     console.log(`🌐 QuickNode Integration: ${config.quicknode.rpcUrl ? '✓' : '✗'}`);
-    console.log(`💰 Flash Loan Providers: 5`);
+    console.log(`💰 Flash Loan Providers: 6`);
     console.log(`   - Marginfi (${config.flashLoanProviders.marginfi.toBase58().slice(0, 8)}...) - 0.09% fee`);
     console.log(`   - Solend (${config.flashLoanProviders.solend.toBase58().slice(0, 8)}...) - 0.10% fee`);
-    console.log(`   - Mango (${config.flashLoanProviders.mango.toBase58().slice(0, 8)}...) - 0.15% fee`);
+    console.log(`   - Save Finance (${config.flashLoanProviders.saveFinance.toBase58().slice(0, 8)}...) - 0.11% fee`);
     console.log(`   - Kamino (${config.flashLoanProviders.kamino.toBase58().slice(0, 8)}...) - 0.12% fee`);
+    console.log(`   - Mango (${config.flashLoanProviders.mango.toBase58().slice(0, 8)}...) - 0.15% fee`);
     console.log(`   - Port Finance (${config.flashLoanProviders.portFinance.toBase58().slice(0, 8)}...) - 0.20% fee`);
-    console.log(`🔄 DEX Programs: 11`);
+    console.log(`🔄 DEX Programs: 12`);
     console.log(`   - Raydium, Orca, Serum, Saber`);
     console.log(`   - Mercurial, Lifinity, Aldrin, Crema`);
-    console.log(`   - Meteora, Phoenix, OpenBook`);
+    console.log(`   - Meteora, Phoenix, OpenBook, FluxBeam`);
     console.log(`📈 Jupiter v6: ${config.jupiter.programId.toBase58().slice(0, 8)}...`);
     console.log(`🪙 Supported Tokens: 30+`);
     console.log(`🎁 Airdrop Checker: ${this.airdropChecker ? '✓' : '✗'}`);
@@ -196,6 +208,107 @@ class GXQStudio {
       console.log('');
     }
   }
+  
+  async analyzeWallet(address?: string): Promise<void> {
+    console.log('📊 Wallet Analysis\n');
+    
+    const walletAddress = address || this.userKeypair?.publicKey.toString();
+    if (!walletAddress) {
+      console.error('No wallet address provided or configured');
+      return;
+    }
+    
+    const publicKey = new PublicKey(walletAddress);
+    const score = await this.walletScoring.analyzeWallet(publicKey);
+    
+    console.log(`Wallet: ${score.address.slice(0, 8)}...${score.address.slice(-8)}`);
+    console.log(`\n🏆 Tier: ${score.tier}`);
+    console.log(`📈 Total Score: ${score.totalScore}/100`);
+    console.log(`\n💎 Factor Breakdown:`);
+    console.log(`   Balance: ${score.factors.balance}/20`);
+    console.log(`   Transactions: ${score.factors.transactionCount}/20`);
+    console.log(`   NFT Holdings: ${score.factors.nftHoldings}/15`);
+    console.log(`   DeFi Activity: ${score.factors.defiActivity}/15`);
+    console.log(`   Age & Consistency: ${score.factors.ageAndConsistency}/15`);
+    console.log(`   Diversification: ${score.factors.diversification}/15`);
+    console.log(`\n🎁 Airdrop Priority: ${score.airdropPriority}/5`);
+    console.log(`💰 Estimated Airdrop Value: $${score.estimatedAirdropValue.toLocaleString()}`);
+  }
+  
+  async manageAddressBook(action?: string, ...args: string[]): Promise<void> {
+    console.log('📇 Address Book Management\n');
+    
+    if (!action) {
+      const entries = this.addressBook.getAllEntries();
+      console.log(`Total entries: ${entries.length}\n`);
+      
+      for (const entry of entries.slice(0, 10)) {
+        console.log(`  [${entry.type}] ${entry.name}`);
+        console.log(`     ${entry.address.slice(0, 16)}...`);
+        if (entry.tags && entry.tags.length > 0) {
+          console.log(`     Tags: ${entry.tags.join(', ')}`);
+        }
+        console.log('');
+      }
+      
+      if (entries.length > 10) {
+        console.log(`  ... and ${entries.length - 10} more entries`);
+      }
+      return;
+    }
+    
+    if (action === 'export') {
+      const json = await this.addressBook.exportToJSON();
+      console.log('Address book exported:\n');
+      console.log(json);
+    }
+  }
+  
+  async manageRouteTemplates(): Promise<void> {
+    console.log('🔄 Route Templates\n');
+    
+    const templates = this.routeTemplates.getAllTemplates();
+    console.log(`Total templates: ${templates.length}\n`);
+    
+    for (const template of templates) {
+      const status = template.autoExecute ? '🤖 Auto' : '🔧 Manual';
+      console.log(`  ${status} ${template.name}`);
+      console.log(`     Path: ${template.tokenPath.join(' -> ')}`);
+      console.log(`     Min Profit: ${(template.minProfit * 100).toFixed(2)}%`);
+      if (template.successRate !== undefined) {
+        console.log(`     Success Rate: ${(template.successRate * 100).toFixed(1)}%`);
+      }
+      console.log('');
+    }
+  }
+  
+  async exportConfig(type: string): Promise<void> {
+    console.log(`📤 Exporting ${type} configuration...\n`);
+    
+    if (type === 'presets') {
+      const json = await this.presetManager.exportPresets();
+      console.log(json);
+    } else if (type === 'templates') {
+      const json = await this.routeTemplates.exportTemplates();
+      console.log(json);
+    } else if (type === 'addresses') {
+      const json = await this.addressBook.exportToJSON();
+      console.log(json);
+    } else {
+      console.log('Unknown export type. Use: presets, templates, or addresses');
+    }
+  }
+  
+  async syncToCloud(): Promise<void> {
+    console.log('☁️  Syncing to QuickNode KV Store...\n');
+    
+    const success = await this.presetManager.syncToQuickNodeKV(this.quicknode);
+    if (success) {
+      console.log('✅ Presets synced successfully');
+    } else {
+      console.log('❌ Failed to sync presets');
+    }
+  }
 }
 
 // CLI Interface
@@ -228,6 +341,21 @@ async function main() {
     case 'providers':
       await studio.showFlashLoanProviders();
       break;
+    case 'analyze':
+      await studio.analyzeWallet(args[1]);
+      break;
+    case 'addresses':
+      await studio.manageAddressBook(args[1], ...args.slice(2));
+      break;
+    case 'templates':
+      await studio.manageRouteTemplates();
+      break;
+    case 'export':
+      await studio.exportConfig(args[1] || 'presets');
+      break;
+    case 'sync':
+      await studio.syncToCloud();
+      break;
     default:
       console.log('Usage:');
       console.log('  npm start airdrops    - Check for claimable airdrops');
@@ -237,6 +365,13 @@ async function main() {
       console.log('  npm start start       - Start auto-execution engine');
       console.log('  npm start manual      - Manual execution mode (review opportunities)');
       console.log('  npm start providers   - Show flash loan providers');
+      console.log('');
+      console.log('Phase 2 Features:');
+      console.log('  npm start analyze [address]  - Analyze wallet score and tier');
+      console.log('  npm start addresses [action] - Manage address book');
+      console.log('  npm start templates          - View route templates');
+      console.log('  npm start export [type]      - Export config (presets/templates/addresses)');
+      console.log('  npm start sync               - Sync presets to QuickNode KV');
       break;
   }
 }

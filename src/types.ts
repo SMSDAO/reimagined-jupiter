@@ -18,6 +18,7 @@ export interface Config {
     mango: PublicKey;
     kamino: PublicKey;
     portFinance: PublicKey;
+    saveFinance: PublicKey;
   };
   dexPrograms: {
     raydium: PublicKey;
@@ -31,6 +32,7 @@ export interface Config {
     meteora: PublicKey;
     phoenix: PublicKey;
     openbook: PublicKey;
+    fluxbeam: PublicKey;
   };
   jupiter: {
     programId: PublicKey;

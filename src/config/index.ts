@@ -22,6 +22,7 @@ export const config: Config = {
     mango: new PublicKey(process.env.MANGO_PROGRAM_ID || 'mv3ekLzLbnVPNxjSKvqBpU3ZeZXPQdEC3bp5MDEBG68'),
     kamino: new PublicKey(process.env.KAMINO_PROGRAM_ID || 'KLend2g3cP87fffoy8q1mQqGKjrxjC8boSyAYavgmjD'),
     portFinance: new PublicKey(process.env.PORT_FINANCE_PROGRAM_ID || 'Port7uDYB3wk6GJAw4KT1WpTeMtSu9bTcChBHkX2LfR'),
+    saveFinance: new PublicKey(process.env.SAVE_FINANCE_PROGRAM_ID || 'SAVEg4Je7HZcJk2X1FTr1vfLhQqrpXPTvAWmYnYY1Wy'),
   },
   dexPrograms: {
     raydium: new PublicKey('675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8'),
@@ -36,6 +37,7 @@ export const config: Config = {
     meteora: new PublicKey('Eo7WjKq67rjJQSZxS6z3YkapzY3eMj6Xy8X5EQVn5UaB'),
     phoenix: new PublicKey('PhoeNiXZ8ByJGLkxNfZRnkUfjvmuYqLR89jjFHGqdXY'),
     openbook: new PublicKey('srmqPvymJeFKQ4zGQed1GFppgkRHL9kaELCbyksJtPX'),
+    fluxbeam: new PublicKey('FLUXubRmkEi2q6K3Y9kBPg9248ggaZVsoSFhtJHSrm1X'),
   },
   jupiter: {
     programId: new PublicKey(process.env.JUPITER_V6_PROGRAM_ID || 'JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4'),
@@ -110,4 +112,5 @@ export const FLASH_LOAN_FEES = {
   mango: 0.15,
   kamino: 0.12,
   portFinance: 0.20,
+  saveFinance: 0.11,
 };

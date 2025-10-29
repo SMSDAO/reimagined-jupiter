@@ -162,3 +162,27 @@ export class PortFinanceProvider extends BaseFlashLoanProvider {
     return [...flashLoanIx, ...instructions];
   }
 }
+
+export class SaveFinanceProvider extends BaseFlashLoanProvider {
+  getName(): string {
+    return 'Save Finance';
+  }
+  
+  async getMaxLoanAmount(_tokenMint: PublicKey): Promise<number> {
+    return 850000;
+  }
+  
+  async getAvailableLiquidity(_tokenMint: PublicKey): Promise<number> {
+    return 425000;
+  }
+  
+  async createFlashLoanInstruction(
+    amount: number,
+    tokenMint: PublicKey,
+    userAccount: PublicKey,
+    instructions: TransactionInstruction[]
+  ): Promise<TransactionInstruction[]> {
+    const flashLoanIx: TransactionInstruction[] = [];
+    return [...flashLoanIx, ...instructions];
+  }
+}

@@ -295,3 +295,27 @@ export class OpenBookDEX extends BaseDEX {
     return {} as TransactionInstruction;
   }
 }
+
+export class FluxBeamDEX extends BaseDEX {
+  getName(): string {
+    return 'FluxBeam';
+  }
+  
+  async getSupportedTokens(): Promise<PublicKey[]> {
+    return [];
+  }
+  
+  async getQuote(_inputMint: PublicKey, _outputMint: PublicKey, amount: number): Promise<number> {
+    return amount * 0.997; // 0.3% fee
+  }
+  
+  async createSwapInstruction(
+    _inputMint: PublicKey,
+    _outputMint: PublicKey,
+    _amount: number,
+    _minAmountOut: number,
+    _userAccount: PublicKey
+  ): Promise<TransactionInstruction> {
+    return {} as TransactionInstruction;
+  }
+}

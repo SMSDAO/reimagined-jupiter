@@ -181,4 +181,61 @@ export class PresetManager {
     await this.savePreset(newPreset);
     return id;
   }
+  
+  async exportPresets(): Promise<string> {
+    const data = {
+      exportedAt: new Date().toISOString(),
+      version: '1.0.0',
+      presets: Array.from(this.presets.values()),
+    };
+    return JSON.stringify(data, null, 2);
+  }
+  
+  async importPresets(jsonData: string): Promise<number> {
+    try {
+      const data = JSON.parse(jsonData);
+      let imported = 0;
+      
+      for (const preset of data.presets) {
+        // Skip if already exists
+        if (!this.presets.has(preset.id)) {
+          await this.savePreset(preset);
+          imported++;
+        }
+      }
+      
+      console.log(`Imported ${imported} presets`);
+      return imported;
+    } catch (error) {
+      console.error('Error importing presets:', error);
+      throw error;
+    }
+  }
+  
+  async syncToQuickNodeKV(quicknode: any): Promise<boolean> {
+    try {
+      const presetsData = await this.exportPresets();
+      const success = await quicknode.kvSet('presets-backup', presetsData, 86400 * 7); // 7 days TTL
+      console.log('Synced presets to QuickNode KV');
+      return success;
+    } catch (error) {
+      console.error('Error syncing to QuickNode KV:', error);
+      return false;
+    }
+  }
+  
+  async restoreFromQuickNodeKV(quicknode: any): Promise<number> {
+    try {
+      const presetsData = await quicknode.kvGet('presets-backup');
+      if (presetsData) {
+        const imported = await this.importPresets(presetsData);
+        console.log(`Restored ${imported} presets from QuickNode KV`);
+        return imported;
+      }
+      return 0;
+    } catch (error) {
+      console.error('Error restoring from QuickNode KV:', error);
+      return 0;
+    }
+  }
 }
