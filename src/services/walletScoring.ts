@@ -1,5 +1,4 @@
 import { Connection, PublicKey } from '@solana/web3.js';
-import axios from 'axios';
 
 export type WalletTier = 'WHALE' | 'DEGEN' | 'ACTIVE' | 'CASUAL' | 'NOVICE';
 
@@ -133,10 +132,11 @@ export class WalletScoring {
       const signatures = await this.connection.getSignaturesForAddress(address, { limit: 100 });
       
       let defiScore = 0;
-      const defiProtocols = [
-        'Jupiter', 'Raydium', 'Orca', 'Marinade', 'Lido',
-        'Mango', 'Solend', 'Marginfi', 'Kamino'
-      ];
+      // Track major DeFi protocol interactions
+      // const defiProtocols = [
+      //   'Jupiter', 'Raydium', 'Orca', 'Marinade', 'Lido',
+      //   'Mango', 'Solend', 'Marginfi', 'Kamino'
+      // ];
       
       // Simplified scoring based on recent activity
       if (signatures.length > 50) defiScore += 10;
@@ -210,7 +210,7 @@ export class WalletScoring {
     return 'NOVICE';
   }
   
-  private calculateAirdropPriority(tier: WalletTier, factors: WalletScore['factors']): number {
+  private calculateAirdropPriority(tier: WalletTier, _factors: WalletScore['factors']): number {
     const tierPriority = {
       WHALE: 5,
       DEGEN: 4,

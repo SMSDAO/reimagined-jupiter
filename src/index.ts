@@ -235,7 +235,7 @@ class GXQStudio {
     console.log(`💰 Estimated Airdrop Value: $${score.estimatedAirdropValue.toLocaleString()}`);
   }
   
-  async manageAddressBook(action?: string, ...args: string[]): Promise<void> {
+  async manageAddressBook(action?: string, ..._args: string[]): Promise<void> {
     console.log('📇 Address Book Management\n');
     
     if (!action) {

@@ -8,3 +8,12 @@ coverage/
 .vscode/
 .idea/
 presets/
+
+# Next.js
+webapp/.next/
+webapp/out/
+webapp/build/
+webapp/.vercel
+
+# Testing
+webapp/.turbo

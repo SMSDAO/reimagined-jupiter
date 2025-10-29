@@ -1,8 +1,36 @@
-# GXQ STUDIO - Advanced Solana Flash Loan Arbitrage System
+# GXQ STUDIO - Advanced Solana DeFi Platform
 
-The most advanced Solana flash loan arbitrage system, offering comprehensive DeFi opportunities across the Solana ecosystem.
+The most advanced Solana DeFi platform with flash loan arbitrage, sniper bot, token launchpad, and comprehensive Web3 UI.
 
-## 🚀 Features
+## 🌐 Web Application (NEW!)
+
+**Production-ready Next.js web app with full Solana integration!**
+
+### Features
+- 🔄 **Jupiter Swap** - Best rates across all Solana DEXs
+- 🎯 **Sniper Bot** - Monitor and snipe new token launches (Pump.fun + 8-22 DEXs)
+- 🚀 **Token Launchpad** - Launch tokens with 3D airdrop roulette game
+- 🎁 **Airdrop Checker** - Wallet scoring and auto-claim with Jupiter integration
+- 💎 **Staking** - Marinade, Lido, Jito, Kamino integration
+- ⚡ **Flash Loan Arbitrage** - Real-time opportunity scanning and execution
+- 📱 **Responsive Design** - Mobile, tablet, and desktop optimized
+- 🎨 **Modern UI** - Solana-themed with purple, blue, green gradients and 3D effects
+
+### Quick Deploy to Vercel
+
+```bash
+# Deploy from webapp directory
+cd webapp
+npm install
+npm run build
+
+# Or use Vercel CLI
+vercel --prod
+```
+
+See [VERCEL_DEPLOYMENT.md](VERCEL_DEPLOYMENT.md) for complete deployment instructions.
+
+## 🚀 Backend CLI Features
 
 ### QuickNode Integration
 - **RPC**: High-performance Solana RPC endpoint
