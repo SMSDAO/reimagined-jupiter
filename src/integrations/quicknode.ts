@@ -149,7 +149,7 @@ export class QuickNodeIntegration {
     }
   }
   
-  async subscribeToStream(streamId: string, callback: (data: any) => void): Promise<void> {
+  async subscribeToStream(streamId: string, _callback: (data: Record<string, unknown>) => void): Promise<void> {
     // WebSocket implementation for real-time data
     console.log(`Subscribing to stream: ${streamId}`);
     // Implementation would use WebSocket to listen to stream events

@@ -1,4 +1,4 @@
-import { Connection, PublicKey, Transaction, Keypair } from '@solana/web3.js';
+import { Connection, PublicKey, Keypair } from '@solana/web3.js';
 import axios from 'axios';
 
 export interface AirdropInfo {
@@ -143,29 +143,29 @@ export class AirdropChecker {
     }
   }
   
-  private async claimJupiterAirdrop(userKeypair: Keypair): Promise<string | null> {
+  private async claimJupiterAirdrop(_userKeypair: Keypair): Promise<string | null> {
     // Implementation would create and send claim transaction
     console.log('Claiming Jupiter airdrop...');
     return null;
   }
   
-  private async claimJitoAirdrop(userKeypair: Keypair): Promise<string | null> {
+  private async claimJitoAirdrop(_userKeypair: Keypair): Promise<string | null> {
     // Implementation would create and send claim transaction
     console.log('Claiming Jito airdrop...');
     return null;
   }
   
-  private async claimPythAirdrop(userKeypair: Keypair): Promise<string | null> {
+  private async claimPythAirdrop(_userKeypair: Keypair): Promise<string | null> {
     console.log('Claiming Pyth airdrop...');
     return null;
   }
   
-  private async claimKaminoAirdrop(userKeypair: Keypair): Promise<string | null> {
+  private async claimKaminoAirdrop(_userKeypair: Keypair): Promise<string | null> {
     console.log('Claiming Kamino airdrop...');
     return null;
   }
   
-  private async claimMarginfiAirdrop(userKeypair: Keypair): Promise<string | null> {
+  private async claimMarginfiAirdrop(_userKeypair: Keypair): Promise<string | null> {
     console.log('Claiming Marginfi airdrop...');
     return null;
   }

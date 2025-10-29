@@ -11,7 +11,7 @@ export class MEVProtection {
     this.connection = connection;
   }
   
-  async applyJitoBundle(transactions: Transaction[]): Promise<string | null> {
+  async applyJitoBundle(_transactions: Transaction[]): Promise<string | null> {
     try {
       // Use Jito block engine for MEV protection
       console.log('Applying Jito bundle for MEV protection...');
@@ -27,7 +27,7 @@ export class MEVProtection {
     }
   }
   
-  async usePrivateRPC(transaction: Transaction | VersionedTransaction): Promise<string | null> {
+  async usePrivateRPC(_transaction: Transaction | VersionedTransaction): Promise<string | null> {
     try {
       // Send transaction through private RPC
       // This hides transaction from public mempool

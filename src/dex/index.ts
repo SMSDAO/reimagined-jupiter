@@ -45,11 +45,11 @@ export class RaydiumDEX extends BaseDEX {
   }
   
   async createSwapInstruction(
-    inputMint: PublicKey,
-    outputMint: PublicKey,
-    amount: number,
-    minAmountOut: number,
-    userAccount: PublicKey
+    _inputMint: PublicKey,
+    _outputMint: PublicKey,
+    _amount: number,
+    _minAmountOut: number,
+    _userAccount: PublicKey
   ): Promise<TransactionInstruction> {
     // Create Raydium swap instruction
     return {} as TransactionInstruction;
@@ -70,11 +70,11 @@ export class OrcaDEX extends BaseDEX {
   }
   
   async createSwapInstruction(
-    inputMint: PublicKey,
-    outputMint: PublicKey,
-    amount: number,
-    minAmountOut: number,
-    userAccount: PublicKey
+    _inputMint: PublicKey,
+    _outputMint: PublicKey,
+    _amount: number,
+    _minAmountOut: number,
+    _userAccount: PublicKey
   ): Promise<TransactionInstruction> {
     return {} as TransactionInstruction;
   }
@@ -94,11 +94,11 @@ export class SerumDEX extends BaseDEX {
   }
   
   async createSwapInstruction(
-    inputMint: PublicKey,
-    outputMint: PublicKey,
-    amount: number,
-    minAmountOut: number,
-    userAccount: PublicKey
+    _inputMint: PublicKey,
+    _outputMint: PublicKey,
+    _amount: number,
+    _minAmountOut: number,
+    _userAccount: PublicKey
   ): Promise<TransactionInstruction> {
     return {} as TransactionInstruction;
   }
@@ -118,11 +118,11 @@ export class SaberDEX extends BaseDEX {
   }
   
   async createSwapInstruction(
-    inputMint: PublicKey,
-    outputMint: PublicKey,
-    amount: number,
-    minAmountOut: number,
-    userAccount: PublicKey
+    _inputMint: PublicKey,
+    _outputMint: PublicKey,
+    _amount: number,
+    _minAmountOut: number,
+    _userAccount: PublicKey
   ): Promise<TransactionInstruction> {
     return {} as TransactionInstruction;
   }
@@ -142,11 +142,11 @@ export class MercurialDEX extends BaseDEX {
   }
   
   async createSwapInstruction(
-    inputMint: PublicKey,
-    outputMint: PublicKey,
-    amount: number,
-    minAmountOut: number,
-    userAccount: PublicKey
+    _inputMint: PublicKey,
+    _outputMint: PublicKey,
+    _amount: number,
+    _minAmountOut: number,
+    _userAccount: PublicKey
   ): Promise<TransactionInstruction> {
     return {} as TransactionInstruction;
   }
@@ -166,11 +166,11 @@ export class LifinityDEX extends BaseDEX {
   }
   
   async createSwapInstruction(
-    inputMint: PublicKey,
-    outputMint: PublicKey,
-    amount: number,
-    minAmountOut: number,
-    userAccount: PublicKey
+    _inputMint: PublicKey,
+    _outputMint: PublicKey,
+    _amount: number,
+    _minAmountOut: number,
+    _userAccount: PublicKey
   ): Promise<TransactionInstruction> {
     return {} as TransactionInstruction;
   }
@@ -190,11 +190,11 @@ export class AldrinDEX extends BaseDEX {
   }
   
   async createSwapInstruction(
-    inputMint: PublicKey,
-    outputMint: PublicKey,
-    amount: number,
-    minAmountOut: number,
-    userAccount: PublicKey
+    _inputMint: PublicKey,
+    _outputMint: PublicKey,
+    _amount: number,
+    _minAmountOut: number,
+    _userAccount: PublicKey
   ): Promise<TransactionInstruction> {
     return {} as TransactionInstruction;
   }
@@ -214,11 +214,11 @@ export class CremaDEX extends BaseDEX {
   }
   
   async createSwapInstruction(
-    inputMint: PublicKey,
-    outputMint: PublicKey,
-    amount: number,
-    minAmountOut: number,
-    userAccount: PublicKey
+    _inputMint: PublicKey,
+    _outputMint: PublicKey,
+    _amount: number,
+    _minAmountOut: number,
+    _userAccount: PublicKey
   ): Promise<TransactionInstruction> {
     return {} as TransactionInstruction;
   }

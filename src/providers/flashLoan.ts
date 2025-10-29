@@ -1,4 +1,4 @@
-import { Connection, PublicKey, Transaction, TransactionInstruction } from '@solana/web3.js';
+import { Connection, PublicKey, TransactionInstruction } from '@solana/web3.js';
 import { FlashLoanProvider } from '../types.js';
 
 export abstract class BaseFlashLoanProvider {
@@ -42,12 +42,12 @@ export class MarginfiProvider extends BaseFlashLoanProvider {
     return 'Marginfi';
   }
   
-  async getMaxLoanAmount(tokenMint: PublicKey): Promise<number> {
+  async getMaxLoanAmount(_tokenMint: PublicKey): Promise<number> {
     // Implementation would query Marginfi protocol
     return 1000000; // Placeholder
   }
   
-  async getAvailableLiquidity(tokenMint: PublicKey): Promise<number> {
+  async getAvailableLiquidity(_tokenMint: PublicKey): Promise<number> {
     // Implementation would query Marginfi protocol
     return 500000; // Placeholder
   }
@@ -72,11 +72,11 @@ export class SolendProvider extends BaseFlashLoanProvider {
     return 'Solend';
   }
   
-  async getMaxLoanAmount(tokenMint: PublicKey): Promise<number> {
+  async getMaxLoanAmount(_tokenMint: PublicKey): Promise<number> {
     return 800000;
   }
   
-  async getAvailableLiquidity(tokenMint: PublicKey): Promise<number> {
+  async getAvailableLiquidity(_tokenMint: PublicKey): Promise<number> {
     return 400000;
   }
   
@@ -96,11 +96,11 @@ export class MangoProvider extends BaseFlashLoanProvider {
     return 'Mango';
   }
   
-  async getMaxLoanAmount(tokenMint: PublicKey): Promise<number> {
+  async getMaxLoanAmount(_tokenMint: PublicKey): Promise<number> {
     return 1200000;
   }
   
-  async getAvailableLiquidity(tokenMint: PublicKey): Promise<number> {
+  async getAvailableLiquidity(_tokenMint: PublicKey): Promise<number> {
     return 600000;
   }
   
@@ -120,11 +120,11 @@ export class KaminoProvider extends BaseFlashLoanProvider {
     return 'Kamino';
   }
   
-  async getMaxLoanAmount(tokenMint: PublicKey): Promise<number> {
+  async getMaxLoanAmount(_tokenMint: PublicKey): Promise<number> {
     return 900000;
   }
   
-  async getAvailableLiquidity(tokenMint: PublicKey): Promise<number> {
+  async getAvailableLiquidity(_tokenMint: PublicKey): Promise<number> {
     return 450000;
   }
   
@@ -144,11 +144,11 @@ export class PortFinanceProvider extends BaseFlashLoanProvider {
     return 'Port Finance';
   }
   
-  async getMaxLoanAmount(tokenMint: PublicKey): Promise<number> {
+  async getMaxLoanAmount(_tokenMint: PublicKey): Promise<number> {
     return 700000;
   }
   
-  async getAvailableLiquidity(tokenMint: PublicKey): Promise<number> {
+  async getAvailableLiquidity(_tokenMint: PublicKey): Promise<number> {
     return 350000;
   }
   

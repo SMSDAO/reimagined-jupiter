@@ -1,4 +1,4 @@
-import { Connection, PublicKey, Keypair } from '@solana/web3.js';
+import { Connection, Keypair } from '@solana/web3.js';
 import { ArbitrageOpportunity, TokenConfig } from '../types.js';
 import { JupiterV6Integration } from '../integrations/jupiter.js';
 import { 
@@ -110,7 +110,7 @@ export class FlashLoanArbitrage {
   
   async executeArbitrage(
     opportunity: ArbitrageOpportunity,
-    userKeypair: Keypair
+    _userKeypair: Keypair
   ): Promise<string | null> {
     try {
       console.log(`Executing flash loan arbitrage via ${opportunity.provider}...`);
@@ -218,7 +218,7 @@ export class TriangularArbitrage {
   
   async executeArbitrage(
     opportunity: ArbitrageOpportunity,
-    userKeypair: Keypair
+    _userKeypair: Keypair
   ): Promise<string | null> {
     try {
       console.log('Executing triangular arbitrage via Jupiter v6...');
