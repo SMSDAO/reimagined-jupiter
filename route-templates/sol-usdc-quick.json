@@ -1,0 +1,18 @@
+{
+  "id": "sol-usdc-quick",
+  "name": "SOL-USDC Quick Flip",
+  "description": "Fast arbitrage between SOL and USDC",
+  "tokenPath": [
+    "SOL",
+    "USDC",
+    "SOL"
+  ],
+  "dexes": [
+    "Raydium",
+    "Orca"
+  ],
+  "minProfit": 0.005,
+  "maxSlippage": 0.01,
+  "autoExecute": true,
+  "createdAt": "2025-10-29T21:50:46.743Z"
+}

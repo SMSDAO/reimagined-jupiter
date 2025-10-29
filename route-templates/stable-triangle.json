@@ -1,0 +1,24 @@
+{
+  "id": "stable-triangle",
+  "name": "Stablecoin Triangle",
+  "description": "Triangular arbitrage across stablecoins",
+  "tokenPath": [
+    "USDC",
+    "USDT",
+    "USDH",
+    "USDC"
+  ],
+  "dexes": [
+    "Raydium",
+    "Saber",
+    "Mercurial"
+  ],
+  "minProfit": 0.003,
+  "maxSlippage": 0.005,
+  "autoExecute": true,
+  "executionConditions": {
+    "minLiquidity": 100000,
+    "maxPriceImpact": 0.001
+  },
+  "createdAt": "2025-10-29T21:50:46.743Z"
+}

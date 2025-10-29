@@ -1,0 +1,26 @@
+{
+  "id": "lst-rotation",
+  "name": "LST Rotation Strategy",
+  "description": "Rotate between liquid staking tokens",
+  "tokenPath": [
+    "SOL",
+    "mSOL",
+    "stSOL",
+    "SOL"
+  ],
+  "dexes": [
+    "Raydium",
+    "Orca",
+    "Saber"
+  ],
+  "minProfit": 0.004,
+  "maxSlippage": 0.008,
+  "autoExecute": false,
+  "executionConditions": {
+    "timeWindow": [
+      6,
+      18
+    ]
+  },
+  "createdAt": "2025-10-29T21:50:46.743Z"
+}

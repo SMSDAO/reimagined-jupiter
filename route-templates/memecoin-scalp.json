@@ -1,0 +1,22 @@
+{
+  "id": "memecoin-scalp",
+  "name": "Memecoin Scalping",
+  "description": "High-frequency memecoin trading",
+  "tokenPath": [
+    "SOL",
+    "BONK",
+    "SOL"
+  ],
+  "dexes": [
+    "Raydium",
+    "Orca",
+    "Phoenix"
+  ],
+  "minProfit": 0.015,
+  "maxSlippage": 0.025,
+  "autoExecute": false,
+  "executionConditions": {
+    "maxPriceImpact": 0.02
+  },
+  "createdAt": "2025-10-29T21:50:46.743Z"
+}
