@@ -44,6 +44,36 @@ Click the button below to deploy:
 
 ## Troubleshooting
 
+### Issue: 404 NOT_FOUND Error After Deployment
+
+**Symptoms**: Deployment succeeds but the site shows "404: NOT_FOUND" error.
+
+**Causes and Solutions**:
+
+1. **Root Directory not set correctly**:
+   - Go to Project Settings → General → Root Directory
+   - Set it to `webapp`
+   - Redeploy
+
+2. **Missing Environment Variables**:
+   - Go to Project Settings → Environment Variables
+   - Add `NEXT_PUBLIC_RPC_URL` with value: `https://api.mainnet-beta.solana.com`
+   - Redeploy
+
+3. **Build Command Issues**:
+   - Ensure Build Command is: `npm run build`
+   - Ensure Install Command is: `npm install`
+   - Output Directory should be: `.next`
+
+4. **Framework Detection**:
+   - Ensure Framework Preset is set to "Next.js"
+   - If not detected, manually select it in project settings
+
+**After making any changes, always redeploy**:
+- Go to Deployments tab
+- Click "..." on latest deployment
+- Click "Redeploy"
+
 ### Issue: "Can't see webapp, only src directory"
 
 **Solution**: You must set the **Root Directory** to `webapp` in Vercel's project settings:

@@ -50,6 +50,23 @@ Make sure:
 - Environment variable `NEXT_PUBLIC_RPC_URL` is set
 - Build command is `npm run build` (should be auto-detected)
 
+### "404 NOT_FOUND Error After Deployment"
+
+If deployment succeeds but you get a 404 error:
+
+1. **Verify Root Directory**: Must be set to `webapp` (not `.` or `/`)
+2. **Check Environment Variables**: Add `NEXT_PUBLIC_RPC_URL` in project settings
+3. **Verify Framework**: Should be detected as "Next.js"
+4. **Redeploy**: After making changes, go to Deployments → click "..." → "Redeploy"
+
+**Quick Fix**:
+```bash
+# Delete and reimport the project with correct settings
+# Or use Vercel CLI from webapp directory:
+cd webapp
+vercel --prod
+```
+
 ## What This Deploys
 
 When properly configured with `webapp` as root directory:
