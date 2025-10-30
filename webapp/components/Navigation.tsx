@@ -18,6 +18,7 @@ export default function Navigation() {
     { href: '/launchpad', label: 'Launchpad' },
     { href: '/airdrop', label: 'Airdrop' },
     { href: '/staking', label: 'Staking' },
+    { href: '/api-docs', label: 'API' },
   ];
 
   return (
