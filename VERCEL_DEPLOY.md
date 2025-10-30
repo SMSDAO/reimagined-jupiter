@@ -44,6 +44,20 @@ Click the button below to deploy:
 
 ## Troubleshooting
 
+### Issue: "Application error: a client-side exception has occurred"
+
+**Symptoms**: Deployment succeeds but the site shows a client-side error when loading.
+
+**Cause**: This was caused by Next.js server/client component hydration mismatch.
+
+**Fixed in latest version**: The layout has been restructured to properly separate server and client components.
+
+**If you still see this error after redeploying**:
+1. Clear your browser cache
+2. Hard refresh the page (Ctrl+Shift+R or Cmd+Shift+R)
+3. Check browser console for specific error details
+4. Ensure you've redeployed after pulling latest changes
+
 ### Issue: 404 NOT_FOUND Error After Deployment
 
 **Symptoms**: Deployment succeeds but the site shows "404: NOT_FOUND" error.
