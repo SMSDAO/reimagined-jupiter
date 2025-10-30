@@ -1,19 +1,53 @@
-# GXQ Studio WebApp
+# GXQ Studio WebApp 🚀
 
-This is the Next.js web application for GXQ Studio - The most advanced Solana DeFi platform.
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/SMSDAO/reimagined-jupiter)
 
-## Features
+The most advanced Solana DeFi platform with comprehensive trading, staking, and token launch capabilities.
 
-- 🔄 **Jupiter Swap Integration** - Best rates across all Solana DEXs
-- 🎯 **Sniper Bot** - Monitor and snipe new token launches from Pump.fun + 8-22 DEX programs
-- 🚀 **Token Launchpad** - Launch tokens with 3D airdrop roulette game
-- 🎁 **Airdrop Checker** - Check eligibility and auto-claim with wallet scoring
-- 💎 **Staking** - Stake SOL across Marinade, Lido, Jito, and Kamino
-- ⚡ **Flash Loan Arbitrage** - 5-10 providers with 0.09%-0.20% fees
+## ✨ Features
 
-## Getting Started
+### 🎨 UI/UX Enhancements
+- 🌓 **Dark/Light Mode** - Smooth theme switching with persistent preferences
+- 💫 **Neon Glow Effects** - Blue, purple, green, pink aura effects
+- 🎭 **3D Animations** - Solana-style digital FX with smooth transitions
+- 📱 **Fully Responsive** - Optimized for mobile, tablet, and desktop
+- ⚡ **Modern Design** - Card hover effects, smooth animations, glass morphism
+
+### 💰 DeFi Features
+- 🔄 **Jupiter Swap Integration** - Best rates across all Solana DEXs with dynamic slippage
+- ⚡ **Flash Loan Arbitrage** - 5-10 providers with 0.09%-0.20% fees, MEV protection
+- 🎯 **Advanced Sniper Bot** - Monitor Pump.fun + 8-22 DEX programs with auto-execution
+- 🚀 **Token Launchpad Studio** - Deploy tokens on Jupiter, Raydium, Pump.fun
+- 🎰 **Airdrop Spin Game** - 12-hour cooldown system with progressive rewards
+- 🎁 **Airdrop Checker** - Auto-claim with advanced wallet scoring (WHALE, DEGEN, ACTIVE tiers)
+- 💎 **Multi-Protocol Staking** - Marinade, Lido, Jito, Kamino integration
+
+### 🎰 Airdrop Game Features
+- 12-hour cooldown between spins
+- Strike system tracking (reduce wait time after 3 days)
+- 5 prize tiers with weighted probability
+- Progressive cooldown reduction (up to 50% faster)
+- Local storage for persistent game state
+
+### 📚 Developer Tools
+- 📖 **API Documentation** - Comprehensive docs for Swap, Ultra, Lend, Trigger, Price APIs
+- 🛠️ **Visual SDK** - Accurate pricing, smart slippage, low fees
+- 🔗 **15+ Protocol Integration** - Jupiter, Raydium, Orca, Kamino, Solend, and more
+- 📊 **Real-time Data** - Live market prices and accurate fee calculations
+
+### 🔐 Security & Compliance
+- ⚖️ **Terms of Service** - Complete legal terms and risk disclosure
+- 🔒 **Wallet Security** - Multi-wallet support with secure transactions
+- 📝 **Risk Warnings** - Clear disclosure of trading risks
+- ✅ **No Private Keys** - Never stores or transmits private keys
+
+## 🚀 Quick Start
 
 ```bash
+# Clone the repository
+git clone https://github.com/SMSDAO/reimagined-jupiter.git
+cd reimagined-jupiter/webapp
+
 # Install dependencies
 npm install
 
@@ -29,56 +63,163 @@ npm start
 
 Open [http://localhost:3000](http://localhost:3000) to view the app.
 
-## Environment Variables
+## 🌐 Live Deployment
+
+Production: [https://jup-nine.vercel.app/](https://jup-nine.vercel.app/)
+
+## 📦 Environment Variables
 
 Create a `.env.local` file:
 
 ```env
-NEXT_PUBLIC_RPC_URL=your_solana_rpc_url
+# Solana RPC (Optional - uses public endpoint by default)
+NEXT_PUBLIC_SOLANA_RPC_URL=https://api.mainnet-beta.solana.com
+
+# QuickNode RPC (Optional - for better performance)
+NEXT_PUBLIC_QUICKNODE_RPC_URL=your_quicknode_url_here
+
+# Network (mainnet-beta, devnet, testnet)
+NEXT_PUBLIC_SOLANA_NETWORK=mainnet-beta
+
+# Developer Wallet for Fee Collection
+NEXT_PUBLIC_DEV_WALLET=monads.solana
 ```
 
-## Deployment
+## 🎯 SEO & Discoverability
 
-### Vercel (Recommended)
+The platform includes comprehensive SEO optimization:
+- ✅ Unique meta keywords for Solana DeFi, Flash Loan, Jupiter Swap, etc.
+- ✅ Open Graph tags for social sharing
+- ✅ Twitter Card metadata
+- ✅ Descriptive page titles and meta descriptions
+- ✅ Optimized for search engines
 
-1. Push code to GitHub
-2. Import project in Vercel
-3. Configure environment variables
-4. Deploy
+## 🔧 Tech Stack
 
-### Manual Deployment
+- **Framework**: Next.js 16.0.1 (App Router with Turbopack)
+- **UI Libraries**: React 19.2.0, Framer Motion 12.23.24
+- **Styling**: Tailwind CSS 4 with custom neon effects
+- **3D Graphics**: Three.js 0.180.0, @react-three/fiber 9.4.0
+- **Solana**: @solana/web3.js 1.98.4, @solana/wallet-adapter
+- **DeFi**: Jupiter Aggregator API v6.0.45
+- **TypeScript**: Full type safety
 
-```bash
-npm run build
-npm start
-```
+## 📱 Pages & Routes
 
-## Tech Stack
+- `/` - Home with animated feature cards
+- `/swap` - Jupiter-powered token swaps
+- `/arbitrage` - Flash loan arbitrage dashboard
+- `/sniper` - Token launch sniper bot
+- `/launchpad` - Token deployment with airdrop game
+- `/airdrop` - Airdrop checker with wallet scoring
+- `/staking` - Multi-protocol staking
+- `/api-docs` - Comprehensive API documentation
+- `/terms` - Terms of Service and legal information
 
-- **Next.js 15** - React framework
-- **TypeScript** - Type safety
-- **Tailwind CSS** - Styling
-- **Solana Wallet Adapter** - Wallet connection
-- **Jupiter API** - Swap aggregation
-- **Framer Motion** - Animations
+## 🎨 Design System
 
-## Features Details
+### Color Palette
+- **Purple**: Primary brand color (#9333ea, #a855f7)
+- **Blue**: Secondary accent (#3b82f6, #60a5fa)
+- **Green**: Success & positive (#10b981, #22c55e)
+- **Pink**: Highlights & CTAs (#ec4899, #f472b6)
 
-### Multi-Wallet Support
+### Effects
+- Neon glow with CSS box-shadow
+- Aura border animations
+- 3D card transforms
+- Pulse animations
+- Smooth color transitions
+
+## 💰 Fee Structure
+
+- 10% platform fee on profitable arbitrage trades
+- 0.01 SOL token deployment fee for launchpad
+- Standard network fees apply to all transactions
+- Developer wallet: `monads.solana`
+
+## 🤝 Wallet Support
+
 - Phantom
 - Solflare
 - Backpack
-- Auto-detection of multiple wallets
+- Ledger
+- Trezor
+- Coinbase Wallet
+- Trust Wallet
+- And more via Solana Wallet Adapter
 
-### Responsive Design
-- Mobile-optimized
-- Tablet-optimized
-- Desktop-optimized
-- Modern 3D effects with Solana purple, blue, green theme
+## 📚 API Documentation
 
-### Dev Fee System
-10% of all profits automatically sent to: `monads.solana`
+Full API documentation available at `/api-docs` with:
+- **Swap API** - Token swap execution
+- **Ultra API** - Advanced trading with MEV protection
+- **Lend API** - Lending/borrowing across protocols
+- **Trigger API** - Automated trading triggers
+- **Price API** - Real-time price data
 
-## License
+## 🛠️ Development Scripts
 
-MIT
+```bash
+npm run dev      # Start development server (localhost:3000)
+npm run build    # Create production build
+npm start        # Start production server
+npm run lint     # Run ESLint for code quality
+```
+
+## 📊 Platform Statistics
+
+- **30+** Tokens Supported
+- **8+** DEXs Integrated
+- **5** Flash Loan Providers
+- **15+** Protocol Integrations
+- **10%** Dev Fee Structure
+
+## 🎯 Affiliate Program
+
+Earn GXQ tokens through the affiliate program:
+- Share platform with your network
+- Earn on referred trading volume
+- Get exclusive perks and benefits
+
+## 🔒 Security Best Practices
+
+- ✅ Never share your private keys
+- ✅ Always verify transaction details
+- ✅ Use hardware wallets for large amounts
+- ✅ Enable all wallet security features
+- ✅ Review smart contract interactions
+
+## 📖 Documentation
+
+For detailed deployment instructions, see [DEPLOYMENT.md](./DEPLOYMENT.md)
+
+## 🆘 Support & Issues
+
+- **GitHub Issues**: [Create an issue](https://github.com/SMSDAO/reimagined-jupiter/issues)
+- **Developer Wallet**: monads.solana
+
+## 🤝 Contributing
+
+Contributions are welcome! Please:
+1. Fork the repository
+2. Create a feature branch
+3. Commit your changes
+4. Submit a pull request
+
+## 📄 License
+
+MIT License - see LICENSE file for details
+
+## 🎉 Acknowledgments
+
+- Jupiter Aggregator for swap integration
+- Solana Foundation for blockchain infrastructure
+- The DeFi community for support and feedback
+- All protocol partners (Raydium, Orca, Kamino, etc.)
+
+---
+
+**Built with ❤️ by GXQ Studio** | **Deployed on Vercel** | **Powered by Solana**
+
+*The most advanced Solana DeFi platform - Join the future of decentralized finance!*
