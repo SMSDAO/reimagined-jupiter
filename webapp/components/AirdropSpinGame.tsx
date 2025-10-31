@@ -4,6 +4,13 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useWallet } from '@solana/wallet-adapter-react';
 
+// Constants for cooldown configuration
+const BASE_COOLDOWN_MS = 12 * 60 * 60 * 1000; // 12 hours in milliseconds
+const MIN_COOLDOWN_MS = 1 * 60 * 60 * 1000; // Minimum 1 hour
+const STRIKES_BEFORE_REDUCTION = 6; // After 3 days (6 strikes at 12 hours each)
+const MAX_REDUCTION_STRIKES = 10; // Maximum strikes for reduction calculation
+const REDUCTION_RATE = 0.1; // 10% reduction per strike after threshold
+
 interface SpinGameProps {
   tokenSymbol?: string;
   onWin?: (amount: number) => void;
@@ -19,7 +26,7 @@ export default function AirdropSpinGame({ tokenSymbol = 'GXQ', onWin }: SpinGame
   const [spinning, setSpinning] = useState(false);
   const [lastSpin, setLastSpin] = useState<number | null>(null);
   const [strikes, setStrikes] = useState(0);
-  const [cooldownTime, setCooldownTime] = useState(12 * 60 * 60 * 1000); // 12 hours in milliseconds
+  const [cooldownTime, setCooldownTime] = useState(BASE_COOLDOWN_MS);
   const [timeUntilSpin, setTimeUntilSpin] = useState<string>('');
   const [wonAmount, setWonAmount] = useState<number | null>(null);
 
@@ -35,14 +42,13 @@ export default function AirdropSpinGame({ tokenSymbol = 'GXQ', onWin }: SpinGame
       setStrikes(history.strikes);
       
       // Calculate reduced cooldown based on strikes
-      // After 3 days (6 strikes at 12 hours each), reduce cooldown
-      if (history.strikes >= 6) {
-        const reductionFactor = Math.min(history.strikes - 5, 10) * 0.1; // 10% reduction per strike after day 3
-        const reducedCooldown = cooldownTime * (1 - reductionFactor);
-        setCooldownTime(Math.max(reducedCooldown, 1 * 60 * 60 * 1000)); // Minimum 1 hour
+      if (history.strikes >= STRIKES_BEFORE_REDUCTION) {
+        const reductionFactor = Math.min(history.strikes - (STRIKES_BEFORE_REDUCTION - 1), MAX_REDUCTION_STRIKES) * REDUCTION_RATE;
+        const reducedCooldown = BASE_COOLDOWN_MS * (1 - reductionFactor);
+        setCooldownTime(Math.max(reducedCooldown, MIN_COOLDOWN_MS));
       }
     }
-  }, [publicKey]);
+  }, [publicKey, cooldownTime]);
 
   // Update countdown timer
   useEffect(() => {

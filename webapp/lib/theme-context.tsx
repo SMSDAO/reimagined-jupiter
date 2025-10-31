@@ -18,8 +18,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     setMounted(true);
     // Check localStorage for saved theme
-    const savedTheme = localStorage.getItem('theme') as Theme;
-    if (savedTheme) {
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme === 'dark' || savedTheme === 'light') {
       setTheme(savedTheme);
     } else {
       // Check system preference
@@ -39,10 +39,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
   };
 
-  if (!mounted) {
-    return null;
-  }
-
+  // Render children immediately but with default theme until mounted
+  // This avoids hydration mismatch while minimizing flash
   return (
     <ThemeContext.Provider value={{ theme, toggleTheme }}>
       {children}
