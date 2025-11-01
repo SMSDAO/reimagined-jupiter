@@ -21,18 +21,21 @@ export interface Config {
     saveFinance: PublicKey;
   };
   dexPrograms: {
-    raydium: PublicKey;
-    orca: PublicKey;
+    raydiumV4: PublicKey;
+    raydiumCP: PublicKey;
+    orcaWhirlpool: PublicKey;
+    orcaV2: PublicKey;
+    meteoraPools: PublicKey;
+    meteoraDLMM: PublicKey;
+    phoenix: PublicKey;
+    lifinity: PublicKey;
+    openbook: PublicKey;
+    fluxbeam: PublicKey;
     serum: PublicKey;
     saber: PublicKey;
     mercurial: PublicKey;
-    lifinity: PublicKey;
     aldrin: PublicKey;
     crema: PublicKey;
-    meteora: PublicKey;
-    phoenix: PublicKey;
-    openbook: PublicKey;
-    fluxbeam: PublicKey;
   };
   jupiter: {
     programId: PublicKey;
@@ -41,6 +44,24 @@ export interface Config {
   gxq: {
     tokenMint: PublicKey;
     ecosystemProgramId: PublicKey;
+  };
+  gxqEcosystem: {
+    gxq: PublicKey;
+    smsDao: PublicKey;
+    smsSol: PublicKey;
+    smsUsd: PublicKey;
+    tos: PublicKey;
+  };
+  memePlatforms: {
+    pumpFun: PublicKey;
+    pumpkin: PublicKey;
+    moonshot: PublicKey;
+  };
+  stakingProviders: {
+    marinade: PublicKey;
+    lido: PublicKey;
+    jito: PublicKey;
+    kamino: PublicKey;
   };
   arbitrage: {
     minProfitThreshold: number;
