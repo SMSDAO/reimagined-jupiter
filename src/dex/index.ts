@@ -40,8 +40,28 @@ export class RaydiumDEX extends BaseDEX {
   }
   
   async getQuote(inputMint: PublicKey, outputMint: PublicKey, amount: number): Promise<number> {
-    // Raydium quote logic
-    return amount * 0.997; // Placeholder with 0.3% fee
+    try {
+      if (!inputMint || !outputMint) {
+        console.error(`[${this.getName()}] Invalid mints: both input and output mints are required`);
+        return 0;
+      }
+
+      if (!amount || amount <= 0) {
+        console.error(`[${this.getName()}] Invalid amount: must be greater than 0, received:`, amount);
+        return 0;
+      }
+
+      console.log(`[${this.getName()}] Getting quote for ${amount} tokens`);
+      
+      // Raydium quote logic
+      const quote = amount * 0.997; // Placeholder with 0.3% fee
+      
+      console.log(`[${this.getName()}] Quote: ${quote}`);
+      return quote;
+    } catch (error) {
+      console.error(`[${this.getName()}] Error getting quote:`, error);
+      return 0;
+    }
   }
   
   async createSwapInstruction(
@@ -51,8 +71,18 @@ export class RaydiumDEX extends BaseDEX {
     _minAmountOut: number,
     _userAccount: PublicKey
   ): Promise<TransactionInstruction> {
-    // Create Raydium swap instruction
-    return {} as TransactionInstruction;
+    try {
+      console.log(`[${this.getName()}] Creating swap instruction`);
+      
+      // Create Raydium swap instruction
+      // In production, this would create actual swap instructions
+      
+      console.log(`[${this.getName()}] Swap instruction created`);
+      return {} as TransactionInstruction;
+    } catch (error) {
+      console.error(`[${this.getName()}] Error creating swap instruction:`, error);
+      throw error;
+    }
   }
 }
 

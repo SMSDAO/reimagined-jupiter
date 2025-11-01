@@ -27,37 +27,55 @@ export class WalletScoring {
   }
   
   async analyzeWallet(address: PublicKey): Promise<WalletScore> {
-    console.log(`Analyzing wallet: ${address.toString().slice(0, 8)}...`);
+    if (!address) {
+      throw new Error('[WalletScoring] Invalid address: PublicKey is required');
+    }
+
+    console.log(`[WalletScoring] Analyzing wallet: ${address.toString().slice(0, 8)}...`);
     
-    const factors = {
-      balance: await this.analyzeBalance(address),
-      transactionCount: await this.analyzeTransactionCount(address),
-      nftHoldings: await this.analyzeNFTHoldings(address),
-      defiActivity: await this.analyzeDeFiActivity(address),
-      ageAndConsistency: await this.analyzeAgeAndConsistency(address),
-      diversification: await this.analyzeDiversification(address),
-    };
-    
-    const totalScore = Object.values(factors).reduce((sum, score) => sum + score, 0);
-    const tier = this.determineTier(totalScore);
-    const airdropPriority = this.calculateAirdropPriority(tier, factors);
-    const estimatedAirdropValue = this.estimateAirdropValue(tier, factors);
-    
-    return {
-      address: address.toString(),
-      totalScore,
-      tier,
-      factors,
-      airdropPriority,
-      estimatedAirdropValue,
-      analyzedAt: new Date(),
-    };
+    try {
+      const factors = {
+        balance: await this.analyzeBalance(address),
+        transactionCount: await this.analyzeTransactionCount(address),
+        nftHoldings: await this.analyzeNFTHoldings(address),
+        defiActivity: await this.analyzeDeFiActivity(address),
+        ageAndConsistency: await this.analyzeAgeAndConsistency(address),
+        diversification: await this.analyzeDiversification(address),
+      };
+      
+      const totalScore = Object.values(factors).reduce((sum, score) => sum + score, 0);
+      const tier = this.determineTier(totalScore);
+      const airdropPriority = this.calculateAirdropPriority(tier, factors);
+      const estimatedAirdropValue = this.estimateAirdropValue(tier, factors);
+      
+      console.log(`[WalletScoring] Analysis complete: ${tier} tier, score ${totalScore}/100`);
+      
+      return {
+        address: address.toString(),
+        totalScore,
+        tier,
+        factors,
+        airdropPriority,
+        estimatedAirdropValue,
+        analyzedAt: new Date(),
+      };
+    } catch (error) {
+      console.error('[WalletScoring] Analysis failed:', error);
+      throw error;
+    }
   }
   
   private async analyzeBalance(address: PublicKey): Promise<number> {
     try {
+      if (!this.connection) {
+        console.error('[WalletScoring] Connection not initialized');
+        return 0;
+      }
+
       const balance = await this.connection.getBalance(address);
       const solBalance = balance / 1e9;
+      
+      console.log(`[WalletScoring] Balance: ${solBalance.toFixed(4)} SOL`);
       
       // Score: 0-20 based on SOL balance
       if (solBalance >= 1000) return 20;
@@ -70,7 +88,7 @@ export class WalletScoring {
       if (solBalance >= 0.1) return 6;
       return 4;
     } catch (error) {
-      console.error('Error analyzing balance:', error);
+      console.error('[WalletScoring] Error analyzing balance:', error);
       return 0;
     }
   }

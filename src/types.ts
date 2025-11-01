@@ -33,6 +33,7 @@ export interface Config {
     phoenix: PublicKey;
     openbook: PublicKey;
     fluxbeam: PublicKey;
+    pumpfun: PublicKey;
   };
   jupiter: {
     programId: PublicKey;

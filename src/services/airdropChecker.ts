@@ -20,42 +20,75 @@ export class AirdropChecker {
   }
   
   async checkAllAirdrops(): Promise<AirdropInfo[]> {
+    if (!this.userPublicKey) {
+      console.error('[AirdropChecker] Invalid userPublicKey: public key is required');
+      return [];
+    }
+
+    console.log(`[AirdropChecker] Checking all airdrops for wallet: ${this.userPublicKey.toString().slice(0, 8)}...`);
     const airdrops: AirdropInfo[] = [];
     
-    // Check Jupiter airdrop
-    const jupiterAirdrop = await this.checkJupiterAirdrop();
-    if (jupiterAirdrop) airdrops.push(jupiterAirdrop);
-    
-    // Check Jito airdrop
-    const jitoAirdrop = await this.checkJitoAirdrop();
-    if (jitoAirdrop) airdrops.push(jitoAirdrop);
-    
-    // Check Pyth airdrop
-    const pythAirdrop = await this.checkPythAirdrop();
-    if (pythAirdrop) airdrops.push(pythAirdrop);
-    
-    // Check Kamino airdrop
-    const kaminoAirdrop = await this.checkKaminoAirdrop();
-    if (kaminoAirdrop) airdrops.push(kaminoAirdrop);
-    
-    // Check Marginfi airdrop
-    const marginfiAirdrop = await this.checkMarginfiAirdrop();
-    if (marginfiAirdrop) airdrops.push(marginfiAirdrop);
-    
-    // Check GXQ ecosystem airdrops
-    const gxqAirdrops = await this.checkGXQEcosystemAirdrops();
-    airdrops.push(...gxqAirdrops);
-    
-    return airdrops;
+    try {
+      // Check Jupiter airdrop
+      const jupiterAirdrop = await this.checkJupiterAirdrop();
+      if (jupiterAirdrop) {
+        console.log('[AirdropChecker] Found Jupiter airdrop');
+        airdrops.push(jupiterAirdrop);
+      }
+      
+      // Check Jito airdrop
+      const jitoAirdrop = await this.checkJitoAirdrop();
+      if (jitoAirdrop) {
+        console.log('[AirdropChecker] Found Jito airdrop');
+        airdrops.push(jitoAirdrop);
+      }
+      
+      // Check Pyth airdrop
+      const pythAirdrop = await this.checkPythAirdrop();
+      if (pythAirdrop) {
+        console.log('[AirdropChecker] Found Pyth airdrop');
+        airdrops.push(pythAirdrop);
+      }
+      
+      // Check Kamino airdrop
+      const kaminoAirdrop = await this.checkKaminoAirdrop();
+      if (kaminoAirdrop) {
+        console.log('[AirdropChecker] Found Kamino airdrop');
+        airdrops.push(kaminoAirdrop);
+      }
+      
+      // Check Marginfi airdrop
+      const marginfiAirdrop = await this.checkMarginfiAirdrop();
+      if (marginfiAirdrop) {
+        console.log('[AirdropChecker] Found Marginfi airdrop');
+        airdrops.push(marginfiAirdrop);
+      }
+      
+      // Check GXQ ecosystem airdrops
+      const gxqAirdrops = await this.checkGXQEcosystemAirdrops();
+      if (gxqAirdrops.length > 0) {
+        console.log(`[AirdropChecker] Found ${gxqAirdrops.length} GXQ ecosystem airdrops`);
+      }
+      airdrops.push(...gxqAirdrops);
+      
+      console.log(`[AirdropChecker] Total airdrops found: ${airdrops.length}`);
+      return airdrops;
+    } catch (error) {
+      console.error('[AirdropChecker] Error checking airdrops:', error);
+      return airdrops; // Return partial results
+    }
   }
   
   private async checkJupiterAirdrop(): Promise<AirdropInfo | null> {
     try {
+      console.log('[AirdropChecker] Checking Jupiter airdrop eligibility...');
+      
       const response = await axios.get(
         `https://worker.jup.ag/jup-claim-proof/${this.userPublicKey.toString()}`
       );
       
       if (response.data && response.data.amount) {
+        console.log(`[AirdropChecker] Jupiter airdrop found: ${response.data.amount}`);
         return {
           protocol: 'Jupiter',
           tokenMint: 'JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN',
@@ -64,20 +97,35 @@ export class AirdropChecker {
           claimed: false,
         };
       }
+      
+      console.log('[AirdropChecker] No Jupiter airdrop available');
     } catch (error) {
-      // No airdrop or already claimed
+      if (axios.isAxiosError(error)) {
+        if (error.response?.status === 404) {
+          console.log('[AirdropChecker] No Jupiter airdrop found (404)');
+        } else {
+          console.error('[AirdropChecker] Jupiter airdrop check failed:', {
+            status: error.response?.status,
+            message: error.message,
+          });
+        }
+      } else {
+        console.error('[AirdropChecker] Unexpected Jupiter airdrop check error:', error);
+      }
     }
     return null;
   }
   
   private async checkJitoAirdrop(): Promise<AirdropInfo | null> {
     try {
-      // Check Jito airdrop eligibility
+      console.log('[AirdropChecker] Checking Jito airdrop eligibility...');
+      
       const response = await axios.get(
         `https://kek.jito.network/api/v1/airdrop_allocation/${this.userPublicKey.toString()}`
       );
       
       if (response.data && response.data.allocation) {
+        console.log(`[AirdropChecker] Jito airdrop found: ${response.data.allocation}`);
         return {
           protocol: 'Jito',
           tokenMint: 'jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL',
@@ -86,8 +134,21 @@ export class AirdropChecker {
           claimed: false,
         };
       }
+      
+      console.log('[AirdropChecker] No Jito airdrop available');
     } catch (error) {
-      // No airdrop or already claimed
+      if (axios.isAxiosError(error)) {
+        if (error.response?.status === 404) {
+          console.log('[AirdropChecker] No Jito airdrop found (404)');
+        } else {
+          console.error('[AirdropChecker] Jito airdrop check failed:', {
+            status: error.response?.status,
+            message: error.message,
+          });
+        }
+      } else {
+        console.error('[AirdropChecker] Unexpected Jito airdrop check error:', error);
+      }
     }
     return null;
   }
