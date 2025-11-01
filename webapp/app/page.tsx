@@ -41,6 +41,12 @@ export default function Home() {
       href: '/staking',
       color: 'from-indigo-500 to-purple-500',
     },
+    {
+      title: '🔍 Wallet Analysis',
+      description: 'Social intelligence & risk assessment',
+      href: '/wallet-analysis',
+      color: 'from-cyan-500 to-blue-500',
+    },
   ];
 
   return (
