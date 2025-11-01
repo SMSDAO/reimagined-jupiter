@@ -12,6 +12,9 @@ export interface Config {
     kvUrl: string;
     streamsUrl: string;
   };
+  neynar: {
+    apiKey: string;
+  };
   flashLoanProviders: {
     marginfi: PublicKey;
     solend: PublicKey;
