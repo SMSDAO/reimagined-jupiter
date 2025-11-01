@@ -1,0 +1,88 @@
+# Replace old Vercel preview hostnames with https://gxq.vercel.app (no trailing slash),
+# push changes to branch `gxq`, and create/update a PR to `main`.
+# Triggers: manual (workflow_dispatch) and push to main.
+on:
+  workflow_dispatch: {}
+  push:
+    branches:
+      - main
+
+jobs:
+  replace-and-pr:
+    name: Replace Vercel hostnames and open PR
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Setup Git identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Search and replace Vercel hostnames
+        id: replace
+        run: |
+          set -euo pipefail
+
+          OLD1='https://jup-git-copilot-optimize-wallet-data-ui-enhancements-tradeos.vercel.app'
+          OLD2='https://reimagined-jupiter-git-copilot-optimize-wallet-d-edc02a-tradeos.vercel.app'
+          NEW='https://gxq.vercel.app'
+
+          # Build list of likely text files to scan
+          FILES=$(git ls-files | grep -Ei '\.md$|\.markdown$|\.json$|\.toml$|\.yml$|\.yaml$|\.env|\.js$|\.ts$|\.html$|\.css$|manifest|README' || true)
+          if [ -z "$FILES" ]; then
+            FILES=$(git ls-files)
+          fi
+
+          CHANGED=0
+          for f in $FILES; do
+            [ -f "$f" ] || continue
+            case "$f" in
+              *.png|*.jpg|*.jpeg|*.gif|*.ico|*.svg|*.woff|*.woff2|*.ttf|*.eot) continue ;;
+            esac
+
+            perl -0777 -pe "s#\Q${OLD1}\E/?#${NEW}#g; s#\Q${OLD2}\E/?#${NEW}#g" "$f" > "$f.tmp" || true
+            if ! cmp -s "$f" "$f.tmp"; then
+              mv "$f.tmp" "$f"
+              git add "$f"
+              CHANGED=1
+            else
+              rm -f "$f.tmp"
+            fi
+          done
+
+          echo "changed=$CHANGED" >> $GITHUB_OUTPUT
+
+      - name: Commit changes if any
+        if: steps.replace.outputs.changed == '1'
+        run: |
+          git commit -m "chore: replace Vercel preview hostnames with https://gxq.vercel.app" || echo "no new commit"
+
+      - name: Push to branch gxq
+        if: steps.replace.outputs.changed == '1'
+        env:
+          TARGET_BRANCH: gxq
+        run: |
+          git push origin HEAD:${TARGET_BRANCH} --force
+
+      - name: Create or update PR to main
+        if: steps.replace.outputs.changed == '1'
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.REPO_WRITE_TOKEN || github.token }}
+          commit-message: chore: replace Vercel preview hostnames with https://gxq.vercel.app
+          branch: gxq
+          base: main
+          title: Rename Vercel hostnames to gxq.vercel.app and update deployment metadata
+          body: |
+            This automated PR replaces old Vercel preview hostnames with https://gxq.vercel.app across the repository.
+            Only URL and deployment metadata updates are included — no UI/design changes.
+          labels: automated, infra
+          draft: false
