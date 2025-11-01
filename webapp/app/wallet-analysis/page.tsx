@@ -428,7 +428,7 @@ export default function WalletAnalysis() {
             className="external-links"
           >
             <a
-              href={`https://solscan.io/account/${walletAddress}`}
+              href={`https://solscan.io/account/${encodeURIComponent(walletAddress)}`}
               target="_blank"
               rel="noopener noreferrer"
               className="external-link"
@@ -438,7 +438,7 @@ export default function WalletAnalysis() {
 
             {analysis.farcaster_username && (
               <a
-                href={`https://warpcast.com/${analysis.farcaster_username}`}
+                href={`https://warpcast.com/${encodeURIComponent(analysis.farcaster_username)}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="external-link farcaster-link"
