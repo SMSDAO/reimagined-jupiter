@@ -30,7 +30,7 @@ This repository contains the GXQ STUDIO - Advanced Solana DeFi Platform with fla
 - Target ES2022 with ES2022 modules
 - Always use explicit types; avoid `any` (warning level in ESLint)
 - Use ESM syntax (`import`/`export`, not `require`)
-- Prefix unused parameters with underscore (`_param`)
+- Prefix unused parameters with underscore (`_param`) to match ESLint rule `argsIgnorePattern: "^_"`
 
 ### Code Style
 - Follow `.eslintrc.json` rules for backend
@@ -127,8 +127,9 @@ npm start            # Start production server
 - `npm start airdrops` - Check available airdrops
 - `npm start claim` - Auto-claim airdrops
 - `npm start scan` - Scan for arbitrage opportunities
-- `npm start start` - Start auto-execution mode
+- `npm start start` - Start auto-execution mode (first 'start' is npm script, second is CLI argument)
 - `npm start manual` - Manual execution mode
+- `npm start providers` - Show flash loan providers
 
 ## Architecture Guidelines
 
@@ -169,7 +170,7 @@ npm start            # Start production server
 - Dynamic slippage based on volatility
 - Support for triangular and flash loan arbitrage
 - MEV protection via Jito bundles
-- Dev fee system (10% of profits)
+- Dev fee system (configurable via `DEV_FEE_PERCENTAGE` env var, default 10% of profits)
 
 ## Documentation
 
