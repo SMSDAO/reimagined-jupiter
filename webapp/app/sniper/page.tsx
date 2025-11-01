@@ -20,6 +20,48 @@ export default function SniperPage() {
   const [buyAmount, setBuyAmount] = useState('0.1');
   const [slippage, setSlippage] = useState(10);
   const [monitoring, setMonitoring] = useState(false);
+  const [detectedCount, setDetectedCount] = useState(0);
+
+  // Listen for pool creation events
+  useEffect(() => {
+    const handlePoolCreation = (event: CustomEvent) => {
+      const poolData = event.detail;
+      console.log('[SniperUI] Pool creation detected:', poolData);
+      
+      setDetectedCount(prev => prev + 1);
+      
+      // Add to targets list
+      const newTarget: SniperTarget = {
+        name: `Token_${poolData.tokenMint?.slice(0, 6) || 'NEW'}`,
+        mint: poolData.tokenMint || poolData.poolAddress,
+        platform: poolData.dex,
+        liquidity: poolData.initialLiquidity || 0,
+        holders: 0,
+        status: 'ready',
+      };
+      
+      setTargets(prev => [newTarget, ...prev].slice(0, 10)); // Keep last 10
+    };
+
+    window.addEventListener('pool-creation-detected', handlePoolCreation as EventListener);
+    
+    return () => {
+      window.removeEventListener('pool-creation-detected', handlePoolCreation as EventListener);
+    };
+  }, []);
+
+  // Listen for wallet connection
+  useEffect(() => {
+    const handleWalletConnect = (event: CustomEvent) => {
+      console.log('[SniperUI] Wallet connected:', event.detail);
+    };
+
+    window.addEventListener('wallet-connected', handleWalletConnect as EventListener);
+    
+    return () => {
+      window.removeEventListener('wallet-connected', handleWalletConnect as EventListener);
+    };
+  }, []);
 
   const platforms = [
     { name: 'Pump.fun', active: true, launches: 143 },
@@ -33,21 +75,41 @@ export default function SniperPage() {
   ];
 
   const startMonitoring = () => {
+    if (!publicKey) {
+      alert('Please connect your wallet first!');
+      return;
+    }
+
     setMonitoring(true);
-    // Simulate monitoring
-    const mockTargets: SniperTarget[] = [
-      {
-        name: 'PEPE2.0',
-        mint: '7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU',
-        platform: 'Pump.fun',
-        liquidity: 50000,
-        holders: 245,
-        status: 'ready',
-      },
-      {
-        name: 'BONK2',
-        mint: '8xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU',
-        platform: 'Raydium',
+    console.log('[SniperUI] Starting monitoring with config:', {
+      buyAmount,
+      slippage,
+      autoSnipe,
+    });
+
+    // Simulate monitoring with mock data for UI
+    setTimeout(() => {
+      const mockTargets: SniperTarget[] = [
+        {
+          name: 'PEPE2.0',
+          mint: '7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU',
+          platform: 'Pump.fun',
+          liquidity: 50000,
+          holders: 245,
+          status: 'ready',
+        },
+        {
+          name: 'BONK2',
+          mint: '8xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU',
+          platform: 'Raydium',
+          liquidity: 120000,
+          holders: 567,
+          status: 'monitoring',
+        },
+      ];
+      setTargets(mockTargets);
+    }, 2000);
+  };
         liquidity: 120000,
         holders: 567,
         status: 'monitoring',
@@ -74,8 +136,13 @@ export default function SniperPage() {
       >
         <h1 className="text-5xl font-bold text-white mb-2">🎯 Sniper Bot</h1>
         <p className="text-gray-300 mb-8">
-          Monitor and snipe new token launches across Pump.fun + 8-22 DEX programs
+          Monitor and snipe new token launches across Pump.fun + Raydium, Orca, Meteora, Phoenix & more DEXs
         </p>
+        {monitoring && detectedCount > 0 && (
+          <div className="bg-green-600 text-white px-4 py-2 rounded-lg mb-4 inline-block">
+            ✅ {detectedCount} pool{detectedCount !== 1 ? 's' : ''} detected
+          </div>
+        )}
 
         {/* Configuration Panel */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
