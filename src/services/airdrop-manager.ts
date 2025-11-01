@@ -1,4 +1,4 @@
-import { Connection, PublicKey, Keypair, Transaction } from '@solana/web3.js';
+import { Connection, PublicKey, Keypair } from '@solana/web3.js';
 import axios from 'axios';
 
 // Wallet Scoring: 6-factor analysis
@@ -490,7 +490,7 @@ export class AirdropManager {
     return history;
   }
   
-  private async claimJupiterAirdrop(userKeypair: Keypair): Promise<string> {
+  private async claimJupiterAirdrop(_userKeypair: Keypair): Promise<string> {
     // Implementation would create and send claim transaction
     // Placeholder for now
     console.log('Claiming Jupiter airdrop...');
@@ -505,22 +505,22 @@ export class AirdropManager {
     return '';
   }
   
-  private async claimJitoAirdrop(userKeypair: Keypair): Promise<string> {
+  private async claimJitoAirdrop(_userKeypair: Keypair): Promise<string> {
     console.log('Claiming Jito airdrop...');
     return '';
   }
   
-  private async claimKaminoAirdrop(userKeypair: Keypair): Promise<string> {
+  private async claimKaminoAirdrop(_userKeypair: Keypair): Promise<string> {
     console.log('Claiming Kamino airdrop...');
     return '';
   }
   
-  private async claimParclAirdrop(userKeypair: Keypair): Promise<string> {
+  private async claimParclAirdrop(_userKeypair: Keypair): Promise<string> {
     console.log('Claiming Parcl airdrop...');
     return '';
   }
   
-  private async claimTensorAirdrop(userKeypair: Keypair): Promise<string> {
+  private async claimTensorAirdrop(_userKeypair: Keypair): Promise<string> {
     console.log('Claiming Tensor airdrop...');
     return '';
   }

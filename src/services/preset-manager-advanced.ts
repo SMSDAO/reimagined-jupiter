@@ -1,6 +1,5 @@
 import fs from 'fs/promises';
 import path from 'path';
-import { PublicKey } from '@solana/web3.js';
 
 // Address Presets: Wallets, programs, tokens with labels/tags/notes
 export interface AddressPreset {
