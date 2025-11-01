@@ -4,11 +4,65 @@
  * GXQ Studio - Advanced Solana DeFi Platform
  */
 
-const axios = require('axios');
+import axios from 'axios';
 
 // Neynar API configuration
 const NEYNAR_API_KEY = process.env.NEYNAR_API_KEY || '';
 const NEYNAR_BASE_URL = 'https://api.neynar.com/v2';
+
+// Types
+interface FarcasterUser {
+    fid: number;
+    username: string;
+    display_name: string;
+    profile?: {
+        bio?: {
+            text: string;
+        };
+    };
+    follower_count: number;
+    following_count: number;
+    cast_count: number;
+    verified_addresses?: {
+        eth_addresses?: string[];
+        sol_addresses?: string[];
+    };
+    power_badge?: boolean;
+    active_status?: string;
+}
+
+interface FarcasterCast {
+    text: string;
+    timestamp: string;
+    reactions?: {
+        likes_count: number;
+        recasts_count: number;
+    };
+    replies?: {
+        count: number;
+    };
+}
+
+interface GMStats {
+    gm_casts_count: number;
+    gm_total_likes: number;
+    gm_total_recasts: number;
+    gm_total_replies: number;
+    gm_engagement_rate: number;
+    gm_consistency_days: number;
+    period_days: number;
+}
+
+interface TrustScoreResult {
+    trust_score: number;
+    trust_breakdown: {
+        inverse_risk: number;
+        farcaster: number;
+        gm: number;
+        age_bonus: number;
+    };
+    social_verification_bonus: number;
+}
 
 // API client
 const neynarClient = axios.create({
@@ -22,10 +76,8 @@ const neynarClient = axios.create({
 
 /**
  * Get Farcaster user by wallet address
- * @param {string} walletAddress - Solana or Ethereum wallet address
- * @returns {Promise<Object|null>} Farcaster user data or null
  */
-async function getUserByWallet(walletAddress) {
+export async function getUserByWallet(walletAddress: string): Promise<FarcasterUser | null> {
     try {
         console.log(`Fetching Farcaster profile for wallet: ${walletAddress}`);
         
@@ -44,21 +96,23 @@ async function getUserByWallet(walletAddress) {
         return null;
         
     } catch (error) {
-        if (error.response?.status === 404) {
-            console.log('ℹ️ Wallet not connected to Farcaster');
-            return null;
+        if (error && typeof error === 'object' && 'response' in error) {
+            const axiosError = error as { response?: { status: number } };
+            if (axiosError.response?.status === 404) {
+                console.log('ℹ️ Wallet not connected to Farcaster');
+                return null;
+            }
         }
-        console.error('Error fetching Farcaster profile:', error.message);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        console.error('Error fetching Farcaster profile:', errorMessage);
         return null;
     }
 }
 
 /**
  * Get Farcaster user by FID
- * @param {number} fid - Farcaster ID
- * @returns {Promise<Object|null>} Farcaster user data or null
  */
-async function getUserByFID(fid) {
+export async function getUserByFID(fid: number): Promise<FarcasterUser | null> {
     try {
         console.log(`Fetching Farcaster profile for FID: ${fid}`);
         
@@ -75,18 +129,16 @@ async function getUserByFID(fid) {
         return null;
         
     } catch (error) {
-        console.error('Error fetching Farcaster profile by FID:', error.message);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        console.error('Error fetching Farcaster profile by FID:', errorMessage);
         return null;
     }
 }
 
 /**
  * Get user's casts
- * @param {number} fid - Farcaster ID
- * @param {number} limit - Number of casts to fetch (default: 25, max: 100)
- * @returns {Promise<Array>} Array of casts
  */
-async function getUserCasts(fid, limit = 25) {
+export async function getUserCasts(fid: number, limit = 25): Promise<FarcasterCast[]> {
     try {
         const response = await neynarClient.get('/farcaster/casts', {
             params: {
@@ -98,7 +150,8 @@ async function getUserCasts(fid, limit = 25) {
         return response.data?.casts || [];
         
     } catch (error) {
-        console.error('Error fetching user casts:', error.message);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        console.error('Error fetching user casts:', errorMessage);
         return [];
     }
 }
@@ -106,11 +159,8 @@ async function getUserCasts(fid, limit = 25) {
 /**
  * Calculate Farcaster Score (0-100)
  * Algorithm: Followers(30pts) + Casts(20pts) + Power Badge(25pts) + Verified(15pts) + Influencer(10pts)
- * 
- * @param {Object} user - Farcaster user object
- * @returns {number} Score from 0-100
  */
-function calculateFarcasterScore(user) {
+export function calculateFarcasterScore(user: FarcasterUser | null): number {
     if (!user) return 0;
     
     let score = 0;
@@ -138,8 +188,8 @@ function calculateFarcasterScore(user) {
     
     // 4. Verified (15 points)
     // Check if user has verified addresses
-    const hasVerifiedAddresses = user.verified_addresses?.eth_addresses?.length > 0 || 
-                                 user.verified_addresses?.sol_addresses?.length > 0;
+    const hasVerifiedAddresses = (user.verified_addresses?.eth_addresses?.length ?? 0) > 0 || 
+                                 (user.verified_addresses?.sol_addresses?.length ?? 0) > 0;
     if (hasVerifiedAddresses) {
         score += 15;
     }
@@ -157,11 +207,8 @@ function calculateFarcasterScore(user) {
 
 /**
  * Get GM casts for a user
- * @param {number} fid - Farcaster ID
- * @param {number} daysBack - Days to look back (default: 30)
- * @returns {Promise<Object>} GM cast statistics
  */
-async function getGMCasts(fid, daysBack = 30) {
+export async function getGMCasts(fid: number, daysBack = 30): Promise<GMStats> {
     try {
         const casts = await getUserCasts(fid, 100);
         
@@ -200,13 +247,14 @@ async function getGMCasts(fid, daysBack = 30) {
             gm_total_likes: totalLikes,
             gm_total_recasts: totalRecasts,
             gm_total_replies: totalReplies,
-            gm_engagement_rate: parseFloat(engagementRate),
+            gm_engagement_rate: parseFloat(engagementRate.toString()),
             gm_consistency_days: uniqueDays,
             period_days: daysBack
         };
         
     } catch (error) {
-        console.error('Error fetching GM casts:', error.message);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        console.error('Error fetching GM casts:', errorMessage);
         return {
             gm_casts_count: 0,
             gm_total_likes: 0,
@@ -222,11 +270,8 @@ async function getGMCasts(fid, daysBack = 30) {
 /**
  * Calculate GM Score (0-100)
  * Factors: GM frequency, engagement, consistency
- * 
- * @param {Object} gmStats - GM cast statistics
- * @returns {number} Score from 0-100
  */
-function calculateGMScore(gmStats) {
+export function calculateGMScore(gmStats: GMStats): number {
     if (!gmStats || gmStats.gm_casts_count === 0) return 0;
     
     let score = 0;
@@ -253,10 +298,8 @@ function calculateGMScore(gmStats) {
 
 /**
  * Get complete Farcaster profile with scores
- * @param {string} walletAddress - Wallet address to lookup
- * @returns {Promise<Object>} Complete profile data with scores
  */
-async function getCompleteProfile(walletAddress) {
+export async function getCompleteProfile(walletAddress: string) {
     try {
         // Get basic profile
         const user = await getUserByWallet(walletAddress);
@@ -285,8 +328,8 @@ async function getCompleteProfile(walletAddress) {
             farcaster_followers: user.follower_count || 0,
             farcaster_following: user.following_count || 0,
             farcaster_casts: user.cast_count || 0,
-            farcaster_verified: (user.verified_addresses?.eth_addresses?.length > 0 || 
-                                user.verified_addresses?.sol_addresses?.length > 0),
+            farcaster_verified: ((user.verified_addresses?.eth_addresses?.length ?? 0) > 0 || 
+                                (user.verified_addresses?.sol_addresses?.length ?? 0) > 0),
             farcaster_power_badge: user.power_badge || false,
             farcaster_active_badge: user.active_status === 'active',
             farcaster_score: farcasterScore,
@@ -295,7 +338,8 @@ async function getCompleteProfile(walletAddress) {
         };
         
     } catch (error) {
-        console.error('Error getting complete Farcaster profile:', error.message);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        console.error('Error getting complete Farcaster profile:', errorMessage);
         return {
             found: false,
             farcaster_score: 0,
@@ -307,14 +351,13 @@ async function getCompleteProfile(walletAddress) {
 /**
  * Calculate Trust Score (0-100)
  * Formula: 40% inverse risk + 30% Farcaster + 20% GM + 10% GXQ age bonus
- * 
- * @param {number} riskScore - Risk score (0-100, higher = more risky)
- * @param {number} farcasterScore - Farcaster score (0-100)
- * @param {number} gmScore - GM score (0-100)
- * @param {number} walletAgeDays - Age of wallet in days
- * @returns {Object} Trust score and breakdown
  */
-function calculateTrustScore(riskScore, farcasterScore, gmScore, walletAgeDays) {
+export function calculateTrustScore(
+    riskScore: number, 
+    farcasterScore: number, 
+    gmScore: number, 
+    walletAgeDays: number
+): TrustScoreResult {
     // 1. Inverse Risk (40% weight)
     const inverseRisk = (100 - riskScore) * 0.40;
     
@@ -348,14 +391,3 @@ function calculateTrustScore(riskScore, farcasterScore, gmScore, walletAgeDays) 
         social_verification_bonus: socialBonus
     };
 }
-
-module.exports = {
-    getUserByWallet,
-    getUserByFID,
-    getUserCasts,
-    getGMCasts,
-    calculateFarcasterScore,
-    calculateGMScore,
-    calculateTrustScore,
-    getCompleteProfile
-};

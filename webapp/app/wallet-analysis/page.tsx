@@ -5,15 +5,70 @@ import { useWallet } from '@solana/wallet-adapter-react';
 import { motion } from 'framer-motion';
 import './styles.css';
 
+// Solana address length constants
+const SOLANA_ADDRESS_LENGTH_LONG = 44;
+const SOLANA_ADDRESS_LENGTH_SHORT = 43;
+
+// Wallet analysis response interface
+interface WalletAnalysis {
+  wallet_address: string;
+  age_days: number;
+  first_transaction_date: string;
+  total_sol_transacted: number;
+  total_transactions: number;
+  protocol_diversity: number;
+  token_count: number;
+  portfolio_value_usd: number;
+  current_balance_sol: number;
+  swap_count: number;
+  lp_stake_count: number;
+  airdrop_count: number;
+  nft_mint_count: number;
+  nft_sale_count: number;
+  risk_score: number;
+  risk_level: string;
+  wallet_type: string;
+  is_honeypot: boolean;
+  is_bot: boolean;
+  is_scam: boolean;
+  farcaster_fid?: number;
+  farcaster_username?: string;
+  farcaster_display_name?: string;
+  farcaster_bio?: string;
+  farcaster_followers?: number;
+  farcaster_following?: number;
+  farcaster_casts?: number;
+  farcaster_verified?: boolean;
+  farcaster_power_badge?: boolean;
+  farcaster_active_badge?: boolean;
+  farcaster_score?: number;
+  gm_casts_count?: number;
+  gm_total_likes?: number;
+  gm_total_recasts?: number;
+  gm_engagement_rate?: number;
+  gm_consistency_days?: number;
+  gm_score?: number;
+  trust_score: number;
+  trust_breakdown?: {
+    inverse_risk: number;
+    farcaster: number;
+    gm: number;
+    age_bonus: number;
+  };
+  social_verification_bonus?: number;
+  last_updated: string;
+  analysis_version: string;
+}
+
 export default function WalletAnalysis() {
   const { publicKey } = useWallet();
   const [walletAddress, setWalletAddress] = useState('');
-  const [analysis, setAnalysis] = useState<any>(null);
+  const [analysis, setAnalysis] = useState<WalletAnalysis | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   const analyzeWallet = async (address: string) => {
-    if (!address || address.length !== 44 && address.length !== 43) {
+    if (!address || (address.length !== SOLANA_ADDRESS_LENGTH_LONG && address.length !== SOLANA_ADDRESS_LENGTH_SHORT)) {
       setError('Invalid Solana wallet address');
       return;
     }
@@ -351,7 +406,7 @@ export default function WalletAnalysis() {
                 {analysis.is_honeypot && <span className="risk-badge">⚠️ Honeypot Pattern</span>}
                 {analysis.is_bot && <span className="risk-badge">🤖 Bot-like Behavior</span>}
                 {analysis.is_scam && <span className="risk-badge">🚨 Scam Indicators</span>}
-                {analysis.social_verification_bonus > 0 && (
+                {(analysis.social_verification_bonus ?? 0) > 0 && (
                   <span className="risk-badge bonus">✓ Social Verified (-{analysis.social_verification_bonus})</span>
                 )}
               </div>
