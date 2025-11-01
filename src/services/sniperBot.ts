@@ -1,4 +1,4 @@
-import { Connection, PublicKey, Logs } from '@solana/web3.js';
+import { Connection, Logs } from '@solana/web3.js';
 import { config } from '../config/index.js';
 
 export interface PoolCreationEvent {
@@ -108,8 +108,8 @@ export class SniperBot {
 
   private async monitorPumpFunPools(): Promise<void> {
     try {
-      // Pump.fun program ID (mainnet)
-      const pumpFunProgramId = new PublicKey('6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P');
+      // Pump.fun program ID from config
+      const pumpFunProgramId = config.dexPrograms.pumpfun;
       console.log(`[SniperBot] Monitoring Pump.fun pools: ${pumpFunProgramId.toString().slice(0, 8)}...`);
 
       const subscriptionId = this.connection.onLogs(
@@ -314,11 +314,16 @@ export class SniperBot {
     });
 
     // Dispatch custom event for UI (only in browser environment)
-    if (typeof globalThis !== 'undefined' && 'dispatchEvent' in globalThis) {
-      const customEvent = new CustomEvent('pool-creation-detected', {
-        detail: event,
-      });
-      (globalThis as any).dispatchEvent(customEvent);
+    try {
+      if (typeof globalThis !== 'undefined' && typeof (globalThis as any).dispatchEvent === 'function') {
+        const customEvent = new CustomEvent('pool-creation-detected', {
+          detail: event,
+        });
+        // Use globalThis directly with any cast to avoid window type issues in Node
+        (globalThis as any).dispatchEvent(customEvent);
+      }
+    } catch (error) {
+      // Ignore errors in non-browser environments
     }
 
     // Auto-snipe if enabled

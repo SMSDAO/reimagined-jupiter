@@ -30,8 +30,8 @@ export class JupiterV6Integration {
     slippageBps: number = 50
   ): Promise<JupiterQuote | null> {
     // Null safety checks
-    if (!inputMint || !outputMint) {
-      console.error('[Jupiter] Invalid parameters: inputMint and outputMint are required');
+    if (!inputMint || inputMint.trim() === '' || !outputMint || outputMint.trim() === '') {
+      console.error('[Jupiter] Invalid parameters: inputMint and outputMint are required and must not be empty');
       return null;
     }
     
@@ -223,8 +223,8 @@ export class JupiterV6Integration {
   
   async getPriceInUSD(tokenMint: string): Promise<number | null> {
     // Null safety checks
-    if (!tokenMint) {
-      console.error('[Jupiter] Invalid tokenMint: token mint address is required');
+    if (!tokenMint || tokenMint.trim() === '') {
+      console.error('[Jupiter] Invalid tokenMint: token mint address is required and must not be empty');
       return null;
     }
 

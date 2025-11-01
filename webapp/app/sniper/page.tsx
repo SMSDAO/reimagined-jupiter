@@ -110,13 +110,6 @@ export default function SniperPage() {
       setTargets(mockTargets);
     }, 2000);
   };
-        liquidity: 120000,
-        holders: 567,
-        status: 'monitoring',
-      },
-    ];
-    setTargets(mockTargets);
-  };
 
   const snipeToken = async (target: SniperTarget) => {
     if (!publicKey) {
