@@ -25,19 +25,22 @@ export const config: Config = {
     saveFinance: new PublicKey(process.env.SAVE_FINANCE_PROGRAM_ID || 'SAVEg4Je7HZcJk2X1FTr1vfLhQqrpXPTvAWmYnYY1Wy'),
   },
   dexPrograms: {
-    raydium: new PublicKey('675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8'),
-    orca: new PublicKey('9W959DqEETiGZocYWCQPaJ6sBmUzgfxXfqGeTEdp3aQP'),
+    raydiumV4: new PublicKey('675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8'),
+    raydiumCP: new PublicKey('CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C'),
+    orcaWhirlpool: new PublicKey('whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc'),
+    orcaV2: new PublicKey('9W959DqEETiGZocYWCQPaJ6sBmUzgfxXfqGeTEdp3aQP'),
+    meteoraPools: new PublicKey('Eo7WjKq67rjJQSZxS6z3YkapzY3eMj6Xy8X5EQVn5UaB'),
+    meteoraDLMM: new PublicKey('LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo'),
+    phoenix: new PublicKey('PhoeNiXZ8ByJGLkxNfZRnkUfjvmuYqLR89jjFHGqdXY'),
+    lifinity: new PublicKey('EewxydAPCCVuNEyrVN68PuSYdQ7wKn27V9Gjeoi8dy3S'),
+    openbook: new PublicKey('srmqPvymJeFKQ4zGQed1GFppgkRHL9kaELCbyksJtPX'),
+    fluxbeam: new PublicKey('FLUXubRmkEi2q6K3Y9kBPg9248ggaZVsoSFhtJHSrm1X'),
+    // Legacy DEXs (kept for compatibility)
     serum: new PublicKey('9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin'),
     saber: new PublicKey('SSwpkEEcbUqx4vtoEByFjSkhKdCT862DNVb52nZg1UZ'),
     mercurial: new PublicKey('MERLuDFBMmsHnsBPZw2sDQZHvXFMwp8EdjudcU2HKky'),
-    lifinity: new PublicKey('EewxydAPCCVuNEyrVN68PuSYdQ7wKn27V9Gjeoi8dy3S'),
     aldrin: new PublicKey('AMM55ShdkoGRB5jVYPjWziwk8m5MpwyDgsMWHaMSQWH6'),
     crema: new PublicKey('CLMM9tUoggJu2wagPkkqs9eFG4BWhVBZWkP1qv3Sp7tR'),
-    // Additional mainnet-grade DEXs
-    meteora: new PublicKey('Eo7WjKq67rjJQSZxS6z3YkapzY3eMj6Xy8X5EQVn5UaB'),
-    phoenix: new PublicKey('PhoeNiXZ8ByJGLkxNfZRnkUfjvmuYqLR89jjFHGqdXY'),
-    openbook: new PublicKey('srmqPvymJeFKQ4zGQed1GFppgkRHL9kaELCbyksJtPX'),
-    fluxbeam: new PublicKey('FLUXubRmkEi2q6K3Y9kBPg9248ggaZVsoSFhtJHSrm1X'),
   },
   jupiter: {
     programId: new PublicKey(process.env.JUPITER_V6_PROGRAM_ID || 'JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4'),
@@ -46,6 +49,24 @@ export const config: Config = {
   gxq: {
     tokenMint: new PublicKey(process.env.GXQ_TOKEN_MINT || '11111111111111111111111111111111'),
     ecosystemProgramId: new PublicKey(process.env.GXQ_ECOSYSTEM_PROGRAM_ID || '11111111111111111111111111111111'),
+  },
+  gxqEcosystem: {
+    gxq: new PublicKey('D4JvG7eGEvyGY9jx2SF4HCBztLxdYihRzGqu3jNTpkin'),
+    smsDao: new PublicKey('DmtAdUSzFvcBymUmRFgPVawvoXbqdS2o18eZNpe5XcWW'),
+    smsSol: new PublicKey('5kCDPvH6BH6mQxWj3JBeYyEEfvpu84dyMCS18EM6jCNf'),
+    smsUsd: new PublicKey('4NhTmQhAPHrrh7c5iFEwXtdnc6SiVmUk9GJM4o9MobTd'),
+    tos: new PublicKey('9PLBhxczwH8ExKJjTSg1GmPpP2aUu9nZ85VxQjJZpkin'),
+  },
+  memePlatforms: {
+    pumpFun: new PublicKey('6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P'),
+    pumpkin: new PublicKey('PUMPKiNu8jSWz6vJ1XyhfzLYkwbdnvSfRGrJt11q8HM'),
+    moonshot: new PublicKey('MoonShoT1qfFQMLT4s5Wg8S4D8V1gLw5m8pXy2z6pzP'),
+  },
+  stakingProviders: {
+    marinade: new PublicKey('MarBmsSgKXdrN1egZf5sqe1TMai9K1rChYNDJgjq7aD'),
+    lido: new PublicKey('CgntPoLka5pD5fesJYhGmUCF8KU1QS1ZmZiuAuMZr2az'),
+    jito: new PublicKey('Jito4APyf642JPZPx3hGc6WWJ8zPKtRbRs4P815Awbb'),
+    kamino: new PublicKey('KLend2g3cP87fffoy8q1mQqGKjrxjC8boSyAYavgmjD'),
   },
   arbitrage: {
     minProfitThreshold: parseFloat(process.env.MIN_PROFIT_THRESHOLD || '0.005'),
@@ -100,10 +121,12 @@ export const SUPPORTED_TOKENS: TokenConfig[] = [
   { symbol: 'WEN', mint: new PublicKey('WENWENvqqNya429ubCdR81ZmD69brwQaaBYY6p3LCpk'), decimals: 5, category: 'memecoin' },
   { symbol: 'PYTH', mint: new PublicKey('HZ1JovNiVvGrGNiiYvEozEVgZ58xaU3RKwX8eACQBCt3'), decimals: 6, category: 'native' },
   
-  // GXQ Ecosystem
-  { symbol: 'GXQ', mint: config.gxq.tokenMint, decimals: 9, category: 'gxq' },
-  { symbol: 'sGXQ', mint: new PublicKey('11111111111111111111111111111111'), decimals: 9, category: 'gxq' },
-  { symbol: 'xGXQ', mint: new PublicKey('11111111111111111111111111111111'), decimals: 9, category: 'gxq' },
+  // GXQ Ecosystem (5 tokens)
+  { symbol: 'GXQ', mint: new PublicKey('D4JvG7eGEvyGY9jx2SF4HCBztLxdYihRzGqu3jNTpkin'), decimals: 9, category: 'gxq' },
+  { symbol: 'SMS DAO', mint: new PublicKey('DmtAdUSzFvcBymUmRFgPVawvoXbqdS2o18eZNpe5XcWW'), decimals: 9, category: 'gxq' },
+  { symbol: 'smsSOL', mint: new PublicKey('5kCDPvH6BH6mQxWj3JBeYyEEfvpu84dyMCS18EM6jCNf'), decimals: 9, category: 'gxq' },
+  { symbol: 'smsUSD', mint: new PublicKey('4NhTmQhAPHrrh7c5iFEwXtdnc6SiVmUk9GJM4o9MobTd'), decimals: 6, category: 'gxq' },
+  { symbol: 'TOS', mint: new PublicKey('9PLBhxczwH8ExKJjTSg1GmPpP2aUu9nZ85VxQjJZpkin'), decimals: 9, category: 'gxq' },
 ];
 
 export const FLASH_LOAN_FEES = {
