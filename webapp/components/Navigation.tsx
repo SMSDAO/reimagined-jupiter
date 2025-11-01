@@ -12,7 +12,7 @@ export default function Navigation() {
     { href: '/swap', label: 'Swap' },
     { href: '/arbitrage', label: 'Arbitrage' },
     { href: '/sniper', label: 'Sniper' },
-    { href: '/launchpad', label: 'Launchpad' },
+    { href: '/launchpad', label: '🚀 Launchpad' },
     { href: '/airdrop', label: 'Airdrop' },
     { href: '/staking', label: 'Staking' },
   ];
