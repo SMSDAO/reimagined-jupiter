@@ -1,4 +1,5 @@
 import { Connection, PublicKey } from '@solana/web3.js';
+import { FarcasterScoring, FarcasterScore, GMScore, TrustScore } from './farcasterScoring.js';
 
 export type WalletTier = 'WHALE' | 'DEGEN' | 'ACTIVE' | 'CASUAL' | 'NOVICE';
 
@@ -14,6 +15,12 @@ export interface WalletScore {
     ageAndConsistency: number; // 0-15
     diversification: number; // 0-15
   };
+  socialIntelligence?: {
+    farcasterScore: FarcasterScore;
+    gmScore: GMScore;
+    trustScore: TrustScore;
+    riskAdjustment: number;
+  };
   airdropPriority: number; // 1-5 (5 = highest)
   estimatedAirdropValue: number;
   analyzedAt: Date;
@@ -21,12 +28,16 @@ export interface WalletScore {
 
 export class WalletScoring {
   private connection: Connection;
+  private farcasterScoring?: FarcasterScoring;
   
-  constructor(connection: Connection) {
+  constructor(connection: Connection, neynarApiKey?: string) {
     this.connection = connection;
+    if (neynarApiKey) {
+      this.farcasterScoring = new FarcasterScoring(neynarApiKey);
+    }
   }
   
-  async analyzeWallet(address: PublicKey): Promise<WalletScore> {
+  async analyzeWallet(address: PublicKey, includeSocial: boolean = true): Promise<WalletScore> {
     console.log(`Analyzing wallet: ${address.toString().slice(0, 8)}...`);
     
     const factors = {
@@ -43,7 +54,7 @@ export class WalletScoring {
     const airdropPriority = this.calculateAirdropPriority(tier, factors);
     const estimatedAirdropValue = this.estimateAirdropValue(tier, factors);
     
-    return {
+    const result: WalletScore = {
       address: address.toString(),
       totalScore,
       tier,
@@ -52,6 +63,49 @@ export class WalletScoring {
       estimatedAirdropValue,
       analyzedAt: new Date(),
     };
+
+    // Add social intelligence if enabled and Farcaster is configured
+    if (includeSocial && this.farcasterScoring) {
+      try {
+        const walletAddress = address.toString();
+        const farcasterScore = await this.farcasterScoring.calculateFarcasterScore(walletAddress);
+        const gmScore = await this.farcasterScoring.calculateGMScore(walletAddress);
+        
+        // Calculate risk score for trust calculation (based on wallet age and activity)
+        const signatures = await this.connection.getSignaturesForAddress(address, { limit: 1000 });
+        const oldestTx = signatures[signatures.length - 1]?.blockTime;
+        const walletAgeInDays = oldestTx ? (Date.now() / 1000 - oldestTx) / 86400 : 0;
+        
+        // Simple risk calculation: new wallets with low activity = higher risk
+        const baseRisk = Math.max(0, 100 - totalScore);
+        const ageRiskAdjustment = Math.max(0, 30 - walletAgeInDays) * 2; // Penalty for new wallets
+        const riskScore = Math.min(100, baseRisk + ageRiskAdjustment);
+        
+        const trustScore = await this.farcasterScoring.calculateTrustScore(
+          walletAddress,
+          riskScore,
+          walletAgeInDays
+        );
+        
+        const socialVerificationBonus = await this.farcasterScoring.getSocialVerificationBonus(walletAddress);
+        
+        result.socialIntelligence = {
+          farcasterScore,
+          gmScore,
+          trustScore,
+          riskAdjustment: socialVerificationBonus,
+        };
+        
+        // Boost airdrop priority for wallets with good social scores
+        if (farcasterScore.totalScore > 50) {
+          result.airdropPriority = Math.min(5, result.airdropPriority + 1);
+        }
+      } catch (error) {
+        console.error('Error analyzing social intelligence:', error);
+      }
+    }
+    
+    return result;
   }
   
   private async analyzeBalance(address: PublicKey): Promise<number> {
