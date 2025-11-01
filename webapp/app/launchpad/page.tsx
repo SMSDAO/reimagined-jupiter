@@ -132,8 +132,9 @@ export default function LaunchpadPage() {
         programId
       );
       
-      // Mint initial supply
-      const supplyAmount = BigInt(parseFloat(totalSupply) * Math.pow(10, decimals));
+      // Mint initial supply - use string multiplication to avoid floating point precision loss
+      const supplyStr = totalSupply.includes('.') ? totalSupply.split('.')[0] : totalSupply;
+      const supplyAmount = BigInt(supplyStr) * BigInt(Math.pow(10, decimals));
       const mintToIx = createMintToInstruction(
         mintKeypair.publicKey,
         associatedTokenAccount,
@@ -614,8 +615,8 @@ export default function LaunchpadPage() {
                   className="w-full h-2 bg-white/20 rounded-lg appearance-none cursor-pointer accent-green-500"
                 />
                 <div className="flex justify-between text-gray-300 text-sm mt-2">
-                  <span>For Circulation: {(parseFloat(totalSupply || '0') * (100 - airdropPercent) / 100).toLocaleString()}</span>
-                  <span>For Roulette: {(parseFloat(totalSupply || '0') * airdropPercent / 100).toLocaleString()}</span>
+                  <span>For Circulation: {Math.floor(Number(totalSupply || '0') * (100 - airdropPercent) / 100).toLocaleString()}</span>
+                  <span>For Roulette: {Math.floor(Number(totalSupply || '0') * airdropPercent / 100).toLocaleString()}</span>
                 </div>
               </div>
 
