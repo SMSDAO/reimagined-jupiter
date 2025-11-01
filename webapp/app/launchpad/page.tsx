@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useConnection, useWallet } from '@solana/wallet-adapter-react';
+import { useWallet } from '@solana/wallet-adapter-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Connection,
@@ -9,7 +9,6 @@ import {
   SystemProgram,
   Transaction,
   clusterApiUrl,
-  LAMPORTS_PER_SOL,
 } from '@solana/web3.js';
 import {
   createInitializeMintInstruction,
@@ -38,7 +37,6 @@ interface DeploymentResult {
 }
 
 export default function LaunchpadPage() {
-  const { connection } = useConnection();
   const { publicKey, signTransaction } = useWallet();
   
   // Token Configuration
