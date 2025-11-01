@@ -23,20 +23,49 @@ export class QuickNodeIntegration {
   }
   
   async callRpcMethod(method: string, params: any[]): Promise<any> {
+    // Null safety checks
+    if (!method) {
+      console.error('[QuickNode] Invalid method: method name is required');
+      return null;
+    }
+    
+    if (!config.quicknode.rpcUrl) {
+      console.error('[QuickNode] RPC URL not configured');
+      return null;
+    }
+
     try {
+      console.log(`[QuickNode] Calling RPC method: ${method}`);
+      
       const response = await axios.post(config.quicknode.rpcUrl, {
         jsonrpc: '2.0',
         id: 1,
         method,
-        params,
+        params: params || [],
       }, {
         headers: {
           'Content-Type': 'application/json',
         },
       });
+      
+      if (response.data.error) {
+        console.error('[QuickNode] RPC error response:', response.data.error);
+        return null;
+      }
+      
+      console.log(`[QuickNode] RPC method ${method} completed successfully`);
       return response.data.result;
     } catch (error) {
-      console.error('QuickNode RPC error:', error);
+      if (axios.isAxiosError(error)) {
+        console.error('[QuickNode] RPC request failed:', {
+          method,
+          status: error.response?.status,
+          message: error.message,
+          data: error.response?.data,
+        });
+      } else {
+        console.error('[QuickNode] Unexpected RPC error:', error);
+      }
       throw error;
     }
   }
@@ -44,23 +73,41 @@ export class QuickNodeIntegration {
   // QuickNode Functions
   async invokeFunction(functionName: string, params: any): Promise<any> {
     if (!this.functionsUrl) {
-      console.warn('QuickNode Functions URL not configured');
+      console.warn('[QuickNode] Functions URL not configured');
+      return null;
+    }
+    
+    if (!functionName) {
+      console.error('[QuickNode] Invalid functionName: function name is required');
       return null;
     }
     
     try {
+      console.log(`[QuickNode] Invoking function: ${functionName}`);
+      
       const response = await axios.post(this.functionsUrl, {
         function: functionName,
-        params,
+        params: params || {},
       }, {
         headers: {
           'X-API-KEY': this.apiKey,
           'Content-Type': 'application/json',
         },
       });
+      
+      console.log(`[QuickNode] Function ${functionName} completed successfully`);
       return response.data;
     } catch (error) {
-      console.error('QuickNode Functions error:', error);
+      if (axios.isAxiosError(error)) {
+        console.error('[QuickNode] Function invocation failed:', {
+          function: functionName,
+          status: error.response?.status,
+          message: error.message,
+          data: error.response?.data,
+        });
+      } else {
+        console.error('[QuickNode] Unexpected function error:', error);
+      }
       throw error;
     }
   }
@@ -68,19 +115,40 @@ export class QuickNodeIntegration {
   // QuickNode Key-Value Store
   async kvGet(key: string): Promise<any> {
     if (!this.kvUrl) {
-      console.warn('QuickNode KV URL not configured');
+      console.warn('[QuickNode] KV URL not configured');
+      return null;
+    }
+    
+    if (!key) {
+      console.error('[QuickNode] Invalid key: key is required');
       return null;
     }
     
     try {
+      console.log(`[QuickNode] Getting KV value for key: ${key}`);
+      
       const response = await axios.get(`${this.kvUrl}/${key}`, {
         headers: {
           'X-API-KEY': this.apiKey,
         },
       });
+      
+      console.log(`[QuickNode] KV get successful for key: ${key}`);
       return response.data;
     } catch (error) {
-      console.error('QuickNode KV Get error:', error);
+      if (axios.isAxiosError(error)) {
+        if (error.response?.status === 404) {
+          console.log(`[QuickNode] Key not found: ${key}`);
+        } else {
+          console.error('[QuickNode] KV get failed:', {
+            key,
+            status: error.response?.status,
+            message: error.message,
+          });
+        }
+      } else {
+        console.error('[QuickNode] Unexpected KV get error:', error);
+      }
       return null;
     }
   }
