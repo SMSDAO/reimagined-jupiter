@@ -3,10 +3,10 @@ import { NextRequest, NextResponse } from 'next/server';
 // Mock data for demonstration - in production, this would query the database
 export async function GET(
   request: NextRequest,
-  { params }: { params: { address: string } }
+  { params }: { params: Promise<{ address: string }> }
 ) {
   try {
-    const { address } = params;
+    const { address } = await params;
 
     // Validate wallet address
     if (!address || (address.length !== 44 && address.length !== 43)) {
