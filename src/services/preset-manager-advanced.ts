@@ -114,7 +114,7 @@ export class PresetManagerAdvanced {
   
   // Address Presets Management
   async createAddressPreset(preset: Omit<AddressPreset, 'id' | 'createdAt' | 'useCount'>): Promise<string> {
-    const id = `addr-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const id = `addr-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
     const newPreset: AddressPreset = {
       ...preset,
       id,
@@ -181,7 +181,7 @@ export class PresetManagerAdvanced {
   
   // Route Presets Management
   async createRoutePreset(preset: Omit<RoutePreset, 'id' | 'createdAt' | 'useCount' | 'totalProfit'>): Promise<string> {
-    const id = `route-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const id = `route-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
     const newPreset: RoutePreset = {
       ...preset,
       id,
@@ -244,7 +244,7 @@ export class PresetManagerAdvanced {
   
   // Config Presets Management
   async createConfigPreset(preset: Omit<ConfigPreset, 'id' | 'createdAt' | 'useCount'>): Promise<string> {
-    const id = `config-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const id = `config-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
     const newPreset: ConfigPreset = {
       ...preset,
       id,

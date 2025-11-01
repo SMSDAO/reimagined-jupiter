@@ -196,11 +196,14 @@ export class AirdropManager {
         { limit: 1 }
       );
       
-      if (signatures.length > 0 && signatures[0].blockTime) {
-        const firstTxTime = signatures[signatures.length - 1].blockTime! * 1000;
-        const now = Date.now();
-        const ageInDays = (now - firstTxTime) / (1000 * 60 * 60 * 24);
-        return Math.floor(ageInDays);
+      if (signatures.length > 0) {
+        const firstTxBlockTime = signatures[signatures.length - 1].blockTime;
+        if (firstTxBlockTime !== null && firstTxBlockTime !== undefined) {
+          const firstTxTime = firstTxBlockTime * 1000;
+          const now = Date.now();
+          const ageInDays = (now - firstTxTime) / (1000 * 60 * 60 * 24);
+          return Math.floor(ageInDays);
+        }
       }
       return 0;
     } catch {

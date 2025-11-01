@@ -397,6 +397,11 @@ export class QuickNodeClient extends EventEmitter {
   
   // WebSocket with Auto-Reconnect (Exponential Backoff)
   public connectWebSocket(): void {
+    if (typeof WebSocket === 'undefined') {
+      this.emit('ws:error', 'WebSocket is not available in this environment');
+      return;
+    }
+    
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
       return;
     }
@@ -453,6 +458,11 @@ export class QuickNodeClient extends EventEmitter {
   }
   
   public sendWebSocketMessage(message: any): boolean {
+    if (typeof WebSocket === 'undefined') {
+      this.emit('ws:send-error', 'WebSocket is not available');
+      return false;
+    }
+    
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
       this.emit('ws:send-error', 'WebSocket not connected');
       return false;
