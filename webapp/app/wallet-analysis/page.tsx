@@ -555,7 +555,7 @@ export default function WalletAnalysis() {
           {/* Solscan Link */}
           <div className="text-center">
             <a
-              href={`https://solscan.io/account/${analysis.address}`}
+              href={`https://solscan.io/account/${encodeURIComponent(analysis.address)}`}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-lg font-semibold hover:from-blue-600 hover:to-cyan-600 transition-all"
