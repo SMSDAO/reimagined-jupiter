@@ -141,7 +141,7 @@ webapp/
    - Add environment variable: `NEXT_PUBLIC_RPC_URL`
    - Click Deploy
 
-3. **Done!** Your app is live at `https://your-project.vercel.app`
+3. **Done!** Your app is live at `https://gxq.vercel.app/`
 
 ### Deploy Backend for Automated Trading (Optional)
 
