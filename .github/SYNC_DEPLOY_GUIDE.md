@@ -92,8 +92,7 @@ The workflow automatically:
 
 ## Matching the Reference Deployment
 
-To ensure your local changes match the version at:
-`https://reimagined-jupiter-git-copilot-optimize-wallet-d-edc02a-tradeos.vercel.app/`
+To ensure your local changes are properly synced for deployment.
 
 ### Current Features (All Implemented)
 
