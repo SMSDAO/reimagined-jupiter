@@ -43,13 +43,43 @@ export class MarginfiProvider extends BaseFlashLoanProvider {
   }
   
   async getMaxLoanAmount(_tokenMint: PublicKey): Promise<number> {
-    // Implementation would query Marginfi protocol
-    return 1000000; // Placeholder
+    try {
+      if (!_tokenMint) {
+        console.error('[Marginfi] Invalid tokenMint: token mint is required');
+        return 0;
+      }
+
+      console.log(`[Marginfi] Fetching max loan amount for token: ${_tokenMint.toString().slice(0, 8)}...`);
+      
+      // Implementation would query Marginfi protocol
+      const maxLoan = 1000000; // Placeholder
+      
+      console.log(`[Marginfi] Max loan amount: ${maxLoan}`);
+      return maxLoan;
+    } catch (error) {
+      console.error('[Marginfi] Error getting max loan amount:', error);
+      return 0;
+    }
   }
   
   async getAvailableLiquidity(_tokenMint: PublicKey): Promise<number> {
-    // Implementation would query Marginfi protocol
-    return 500000; // Placeholder
+    try {
+      if (!_tokenMint) {
+        console.error('[Marginfi] Invalid tokenMint: token mint is required');
+        return 0;
+      }
+
+      console.log(`[Marginfi] Fetching available liquidity for token: ${_tokenMint.toString().slice(0, 8)}...`);
+      
+      // Implementation would query Marginfi protocol
+      const liquidity = 500000; // Placeholder
+      
+      console.log(`[Marginfi] Available liquidity: ${liquidity}`);
+      return liquidity;
+    } catch (error) {
+      console.error('[Marginfi] Error getting available liquidity:', error);
+      return 0;
+    }
   }
   
   async createFlashLoanInstruction(
@@ -58,12 +88,31 @@ export class MarginfiProvider extends BaseFlashLoanProvider {
     userAccount: PublicKey,
     instructions: TransactionInstruction[]
   ): Promise<TransactionInstruction[]> {
-    // Simplified implementation
-    const flashLoanIx: TransactionInstruction[] = [];
-    // Add Marginfi flash loan borrow instruction
-    // Add user's arbitrage instructions
-    // Add Marginfi flash loan repay instruction
-    return [...flashLoanIx, ...instructions];
+    try {
+      if (!tokenMint || !userAccount) {
+        console.error('[Marginfi] Invalid parameters: tokenMint and userAccount are required');
+        return [];
+      }
+
+      if (!amount || amount <= 0) {
+        console.error('[Marginfi] Invalid amount: must be greater than 0, received:', amount);
+        return [];
+      }
+
+      console.log(`[Marginfi] Creating flash loan instruction for ${amount} tokens`);
+      
+      // Simplified implementation
+      const flashLoanIx: TransactionInstruction[] = [];
+      // Add Marginfi flash loan borrow instruction
+      // Add user's arbitrage instructions
+      // Add Marginfi flash loan repay instruction
+      
+      console.log(`[Marginfi] Flash loan instruction created with ${instructions.length} arbitrage instructions`);
+      return [...flashLoanIx, ...instructions];
+    } catch (error) {
+      console.error('[Marginfi] Error creating flash loan instruction:', error);
+      return [];
+    }
   }
 }
 

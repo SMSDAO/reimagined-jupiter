@@ -29,7 +29,20 @@ export class JupiterV6Integration {
     amount: number,
     slippageBps: number = 50
   ): Promise<JupiterQuote | null> {
+    // Null safety checks
+    if (!inputMint || inputMint.trim() === '' || !outputMint || outputMint.trim() === '') {
+      console.error('[Jupiter] Invalid parameters: inputMint and outputMint are required and must not be empty');
+      return null;
+    }
+    
+    if (!amount || amount <= 0) {
+      console.error('[Jupiter] Invalid amount: must be greater than 0, received:', amount);
+      return null;
+    }
+
     try {
+      console.log(`[Jupiter] Fetching quote: ${inputMint.slice(0, 8)}... -> ${outputMint.slice(0, 8)}..., amount: ${amount}`);
+      
       const response = await axios.get(`${this.apiUrl}/quote`, {
         params: {
           inputMint,
@@ -40,9 +53,25 @@ export class JupiterV6Integration {
           asLegacyTransaction: false,
         },
       });
+      
+      if (!response.data) {
+        console.error('[Jupiter] Empty response from quote API');
+        return null;
+      }
+      
+      console.log(`[Jupiter] Quote received: out amount ${response.data.outAmount}`);
       return response.data;
     } catch (error) {
-      console.error('Jupiter quote error:', error);
+      if (axios.isAxiosError(error)) {
+        console.error('[Jupiter] Quote API error:', {
+          status: error.response?.status,
+          statusText: error.response?.statusText,
+          message: error.message,
+          data: error.response?.data,
+        });
+      } else {
+        console.error('[Jupiter] Unexpected quote error:', error);
+      }
       return null;
     }
   }
@@ -52,7 +81,20 @@ export class JupiterV6Integration {
     userPublicKey: string,
     wrapUnwrapSOL: boolean = true
   ): Promise<VersionedTransaction | null> {
+    // Null safety checks
+    if (!quote) {
+      console.error('[Jupiter] Invalid quote: quote object is required');
+      return null;
+    }
+    
+    if (!userPublicKey) {
+      console.error('[Jupiter] Invalid userPublicKey: public key is required');
+      return null;
+    }
+
     try {
+      console.log(`[Jupiter] Creating swap transaction for user: ${userPublicKey.slice(0, 8)}...`);
+      
       const response = await axios.post(`${this.apiUrl}/swap`, {
         quoteResponse: quote,
         userPublicKey,
@@ -61,10 +103,27 @@ export class JupiterV6Integration {
         prioritizationFeeLamports: 'auto',
       });
       
+      if (!response.data || !response.data.swapTransaction) {
+        console.error('[Jupiter] Invalid swap response: missing swapTransaction');
+        return null;
+      }
+      
       const swapTransactionBuf = Buffer.from(response.data.swapTransaction, 'base64');
-      return VersionedTransaction.deserialize(swapTransactionBuf);
+      const transaction = VersionedTransaction.deserialize(swapTransactionBuf);
+      
+      console.log('[Jupiter] Swap transaction created successfully');
+      return transaction;
     } catch (error) {
-      console.error('Jupiter swap transaction error:', error);
+      if (axios.isAxiosError(error)) {
+        console.error('[Jupiter] Swap API error:', {
+          status: error.response?.status,
+          statusText: error.response?.statusText,
+          message: error.message,
+          data: error.response?.data,
+        });
+      } else {
+        console.error('[Jupiter] Unexpected swap error:', error);
+      }
       return null;
     }
   }
@@ -76,10 +135,18 @@ export class JupiterV6Integration {
     userPublicKey: PublicKey,
     slippageBps: number = 50
   ): Promise<string | null> {
+    // Null safety checks
+    if (!userPublicKey) {
+      console.error('[Jupiter] Invalid userPublicKey: PublicKey is required');
+      return null;
+    }
+
     try {
+      console.log(`[Jupiter] Executing swap for ${amount} of ${inputMint.slice(0, 8)}...`);
+      
       const quote = await this.getQuote(inputMint, outputMint, amount, slippageBps);
       if (!quote) {
-        console.error('Failed to get quote');
+        console.error('[Jupiter] Failed to get quote, cannot execute swap');
         return null;
       }
       
@@ -90,17 +157,18 @@ export class JupiterV6Integration {
       );
       
       if (!swapTransaction) {
-        console.error('Failed to get swap transaction');
+        console.error('[Jupiter] Failed to get swap transaction, cannot execute swap');
         return null;
       }
       
+      console.log('[Jupiter] Swap transaction ready for signing and execution');
       // Transaction would be signed and sent here
       // const signature = await this.connection.sendTransaction(swapTransaction);
       // return signature;
       
       return 'mock_signature';
     } catch (error) {
-      console.error('Jupiter execute swap error:', error);
+      console.error('[Jupiter] Execute swap error:', error);
       return null;
     }
   }
@@ -154,11 +222,40 @@ export class JupiterV6Integration {
   }
   
   async getPriceInUSD(tokenMint: string): Promise<number | null> {
+    // Null safety checks
+    if (!tokenMint || tokenMint.trim() === '') {
+      console.error('[Jupiter] Invalid tokenMint: token mint address is required and must not be empty');
+      return null;
+    }
+
     try {
+      console.log(`[Jupiter] Fetching USD price for token: ${tokenMint.slice(0, 8)}...`);
+      
       const response = await axios.get(`https://price.jup.ag/v4/price?ids=${tokenMint}`);
-      return response.data.data[tokenMint]?.price || null;
+      
+      if (!response.data || !response.data.data) {
+        console.error('[Jupiter] Invalid price response: missing data');
+        return null;
+      }
+      
+      const price = response.data.data[tokenMint]?.price;
+      
+      if (price === undefined || price === null) {
+        console.warn(`[Jupiter] No price available for token: ${tokenMint.slice(0, 8)}...`);
+        return null;
+      }
+      
+      console.log(`[Jupiter] Price fetched: $${price}`);
+      return price;
     } catch (error) {
-      console.error('Jupiter price error:', error);
+      if (axios.isAxiosError(error)) {
+        console.error('[Jupiter] Price API error:', {
+          status: error.response?.status,
+          message: error.message,
+        });
+      } else {
+        console.error('[Jupiter] Unexpected price fetch error:', error);
+      }
       return null;
     }
   }
