@@ -16,6 +16,30 @@ The most advanced Solana DeFi platform with flash loan arbitrage, sniper bot, to
 - 📱 **Responsive Design** - Mobile, tablet, and desktop optimized
 - 🎨 **Modern UI** - Solana-themed with purple, blue, green gradients and 3D effects
 
+### 🔄 Automated Deployment Workflow
+
+This repository includes a GitHub Actions workflow that automatically syncs changes to the `gxq` branch for Vercel deployment:
+
+1. **Push to main** → Workflow triggers automatically
+2. **Workflow syncs** → Changes copied to `gxq` branch
+3. **PR created** → Review changes via pull request (gxq → main)
+4. **Vercel deploys** → Automatic deployment from `gxq` branch
+
+**Quick Start:**
+```bash
+# Make your changes
+git add .
+git commit -m "Update UI/features"
+git push origin main
+
+# GitHub Actions automatically:
+# - Creates/updates gxq branch
+# - Creates PR for review
+# - Triggers Vercel deployment
+```
+
+See [.github/SYNC_DEPLOY_GUIDE.md](.github/SYNC_DEPLOY_GUIDE.md) for detailed instructions.
+
 ### Quick Deploy to Vercel
 
 **⚠️ IMPORTANT**: When deploying to Vercel, set **Root Directory** to `webapp` in the project settings.
@@ -23,9 +47,10 @@ The most advanced Solana DeFi platform with flash loan arbitrage, sniper bot, to
 #### Via Vercel Dashboard:
 1. Go to https://vercel.com/new
 2. Import: `SMSDAO/reimagined-jupiter`
-3. **Set Root Directory**: `webapp` ← **REQUIRED**
-4. Add env: `NEXT_PUBLIC_RPC_URL`
-5. Deploy
+3. **Deploy from branch**: `gxq` ← **RECOMMENDED for automatic sync**
+4. **Set Root Directory**: `webapp` ← **REQUIRED**
+5. Add env: `NEXT_PUBLIC_RPC_URL`
+6. Deploy
 
 #### Via Vercel CLI:
 ```bash
