@@ -244,7 +244,8 @@ export class ProviderManager {
     const providersInfo = [];
     
     // Use SOL as default token for liquidity check
-    const solMint = new PublicKey('So11111111111111111111111111111111111111112');
+    const { DEFAULT_LIQUIDITY_CHECK_MINT } = await import('../constants.js');
+    const solMint = DEFAULT_LIQUIDITY_CHECK_MINT;
     
     for (const [name, provider] of this.providers) {
       try {
@@ -281,7 +282,8 @@ export class ProviderManager {
     console.log('[ProviderManager] Running health check on all providers...');
     
     const healthStatus = new Map<string, boolean>();
-    const solMint = new PublicKey('So11111111111111111111111111111111111111112');
+    const { DEFAULT_LIQUIDITY_CHECK_MINT } = await import('../constants.js');
+    const solMint = DEFAULT_LIQUIDITY_CHECK_MINT;
     
     for (const [name, provider] of this.providers) {
       try {

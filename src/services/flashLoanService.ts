@@ -227,12 +227,46 @@ export class FlashLoanService {
     outputMint: string
   ): Promise<{ valid: boolean; reason?: string }> {
     try {
-      // For now, we consider validation successful if we can proceed
-      // In production, map mint addresses to Pyth symbols and validate
       console.log('[FlashLoan] Price validation via Pyth Network...');
       
-      // This is a placeholder - in production, you'd map mints to symbols
-      // and get actual prices from Pyth
+      // Import mint to symbol mapping from constants
+      const { MINT_TO_SYMBOL } = await import('../constants.js');
+      
+      const inputSymbol = MINT_TO_SYMBOL[inputMint];
+      const outputSymbol = MINT_TO_SYMBOL[outputMint];
+      
+      // If we can't map to a symbol, we skip validation but log a warning
+      if (!inputSymbol || !outputSymbol) {
+        console.warn('[FlashLoan] Cannot validate prices - tokens not in Pyth mapping');
+        return { valid: true, reason: 'Price validation skipped - token not mapped' };
+      }
+      
+      // Get prices from Pyth
+      const inputPrice = await this.pyth.getPrice(inputSymbol);
+      const outputPrice = await this.pyth.getPrice(outputSymbol);
+      
+      // Validate both prices are available
+      if (!inputPrice || !outputPrice) {
+        return { valid: false, reason: 'Failed to fetch prices from Pyth' };
+      }
+      
+      // Validate price freshness (60 seconds)
+      if (!this.pyth.isPriceFresh(inputPrice.timestamp, 60)) {
+        return { valid: false, reason: 'Input price is stale' };
+      }
+      if (!this.pyth.isPriceFresh(outputPrice.timestamp, 60)) {
+        return { valid: false, reason: 'Output price is stale' };
+      }
+      
+      // Validate confidence intervals (1% max)
+      if (!this.pyth.isConfidenceAcceptable(inputPrice.price, inputPrice.confidence, 1.0)) {
+        return { valid: false, reason: 'Input price confidence too high' };
+      }
+      if (!this.pyth.isConfidenceAcceptable(outputPrice.price, outputPrice.confidence, 1.0)) {
+        return { valid: false, reason: 'Output price confidence too high' };
+      }
+      
+      console.log('[FlashLoan] Price validation successful');
       return { valid: true };
     } catch (error) {
       console.error('[FlashLoan] Pyth validation error:', error);
@@ -360,13 +394,17 @@ export class FlashLoanService {
         return null;
       }
       
-      // In a real implementation, you would:
-      // 1. Add flash loan borrow instruction from provider
-      // 2. Add swap instructions from Jupiter
-      // 3. Add flash loan repay instruction
+      // Note: In a production implementation, you would:
+      // 1. Extract instructions from swapTransaction
+      // 2. Add flash loan borrow instruction from provider at the beginning
+      // 3. Add the swap instructions from Jupiter in the middle
+      // 4. Add flash loan repay instruction at the end
       // This creates an atomic bundle that must all succeed or all fail
       
-      console.log('[FlashLoan] Atomic transaction built successfully');
+      // For now, we extract the message from versioned transaction and add to legacy transaction
+      // This is a simplified approach - production would need proper instruction handling
+      console.log('[FlashLoan] Atomic transaction structure prepared');
+      console.warn('[FlashLoan] Note: Flash loan borrow/repay instructions need provider-specific implementation');
       
       // Get recent blockhash
       const { blockhash } = await this.connection.getLatestBlockhash();
