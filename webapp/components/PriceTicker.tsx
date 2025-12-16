@@ -37,11 +37,14 @@ export default function PriceTicker() {
         
         const priceData: TokenPrice[] = POPULAR_TOKENS.map(token => {
           const priceInfo = data.data[token.mint];
+          // Use random 24h change for demo purposes (-5% to +5%)
+          // In production, this should come from historical price data
+          const mockChange = (Math.random() - 0.5) * 10;
           return {
             symbol: token.symbol,
             mint: token.mint,
             price: priceInfo?.price || 0,
-            change24h: ((priceInfo?.price || 0) - (priceInfo?.price || 0) * 0.98) / (priceInfo?.price || 1) * 100 // Mock 24h change
+            change24h: mockChange
           };
         });
 

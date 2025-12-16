@@ -111,6 +111,7 @@ export default function ArbitragePage() {
 
     try {
       // Save trade to history (mock execution)
+      // Date.now() is safe here - this is an async event handler, not a render function
       // eslint-disable-next-line react-hooks/purity
       const now = Date.now(); // Capture timestamp once
       const trade = {

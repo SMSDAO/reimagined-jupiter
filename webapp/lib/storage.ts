@@ -27,6 +27,8 @@ const HISTORY_KEY = 'gxq_trade_history';
 
 // User Settings
 export const saveUserSettings = (settings: UserSettings): void => {
+  if (typeof window === 'undefined') return;
+  
   try {
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
   } catch (error) {
@@ -35,6 +37,9 @@ export const saveUserSettings = (settings: UserSettings): void => {
 };
 
 export const loadUserSettings = (): UserSettings | null => {
+  // Check if we're in a browser environment
+  if (typeof window === 'undefined') return null;
+  
   try {
     const data = localStorage.getItem(SETTINGS_KEY);
     if (!data) return null;
@@ -55,6 +60,8 @@ export const getDefaultSettings = (): UserSettings => ({
 
 // Trade History
 export const saveTradeHistory = (trade: TradeHistory): void => {
+  if (typeof window === 'undefined') return;
+  
   try {
     const history = loadTradeHistory();
     const updated = [trade, ...history].slice(0, 100); // Keep last 100 trades
@@ -65,6 +72,8 @@ export const saveTradeHistory = (trade: TradeHistory): void => {
 };
 
 export const loadTradeHistory = (): TradeHistory[] => {
+  if (typeof window === 'undefined') return [];
+  
   try {
     const data = localStorage.getItem(HISTORY_KEY);
     if (!data) return [];
@@ -76,6 +85,8 @@ export const loadTradeHistory = (): TradeHistory[] => {
 };
 
 export const clearTradeHistory = (): void => {
+  if (typeof window === 'undefined') return;
+  
   try {
     localStorage.removeItem(HISTORY_KEY);
   } catch (error) {

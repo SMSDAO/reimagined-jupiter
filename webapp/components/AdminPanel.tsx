@@ -1,28 +1,17 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { loadUserSettings, saveUserSettings, getDefaultSettings, clearTradeHistory } from '@/lib/storage';
 import { notifySuccess, requestNotificationPermission } from '@/lib/notifications';
 
 export default function AdminPanel() {
   const [isOpen, setIsOpen] = useState(false);
-  const [settings, setSettings] = useState(getDefaultSettings());
-  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default');
-
-  useEffect(() => {
-    // Load settings on mount
-    const savedSettings = loadUserSettings();
-    if (savedSettings) {
-      // This is intentional on mount - we're initializing from localStorage
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setSettings(savedSettings);
-    }
-
-    if ('Notification' in window) {
-      setNotificationPermission(Notification.permission);
-    }
-  }, []);
+  // Use lazy initialization to avoid useState in useEffect
+  const [settings, setSettings] = useState(() => loadUserSettings() || getDefaultSettings());
+  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>(() => 
+    typeof window !== 'undefined' && 'Notification' in window ? Notification.permission : 'default'
+  );
 
   const handleSave = () => {
     saveUserSettings(settings);
