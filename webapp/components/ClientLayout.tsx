@@ -2,6 +2,9 @@
 
 import { WalletContextProvider } from "@/lib/wallet-context-provider";
 import Navigation from "@/components/Navigation";
+import PriceTicker from "@/components/PriceTicker";
+import NotificationToast from "@/components/NotificationToast";
+import AdminPanel from "@/components/AdminPanel";
 
 export default function ClientLayout({
   children,
@@ -12,6 +15,9 @@ export default function ClientLayout({
     <WalletContextProvider>
       <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-green-900 font-sans">
         <Navigation />
+        <PriceTicker />
+        <NotificationToast />
+        <AdminPanel />
         <main className="container mx-auto px-4 py-8">
           {children}
         </main>
