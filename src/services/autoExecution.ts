@@ -4,6 +4,9 @@ import { FlashLoanArbitrage, TriangularArbitrage } from '../strategies/arbitrage
 import { PresetManager } from '../services/presetManager.js';
 import { QuickNodeIntegration } from '../integrations/quicknode.js';
 import { websocketService } from '../services/websocketService.js';
+import { ProfitDistributionService } from '../services/profitDistribution.js';
+import { AnalyticsLogger } from '../services/analyticsLogger.js';
+import { DAOAirdropService } from '../services/daoAirdrop.js';
 
 export class MEVProtection {
   private connection: Connection;
@@ -111,6 +114,9 @@ export class AutoExecutionEngine {
   private presetManager: PresetManager;
   private mevProtection: MEVProtection;
   private quicknode: QuickNodeIntegration;
+  private profitDistribution: ProfitDistributionService | null = null;
+  private analyticsLogger: AnalyticsLogger;
+  private daoAirdrop: DAOAirdropService | null = null;
   private isRunning: boolean = false;
   
   constructor(
@@ -126,6 +132,32 @@ export class AutoExecutionEngine {
     this.presetManager = presetManager;
     this.mevProtection = new MEVProtection(connection);
     this.quicknode = quicknode;
+    this.analyticsLogger = new AnalyticsLogger('./logs');
+    
+    // Initialize profit distribution if enabled
+    this.initializeProfitDistribution();
+  }
+  
+  private async initializeProfitDistribution(): Promise<void> {
+    const { config } = await import('../config/index.js');
+    
+    if (config.profitDistribution.enabled) {
+      this.profitDistribution = new ProfitDistributionService(this.connection, {
+        reserveWallet: config.profitDistribution.reserveWallet,
+        gasWallet: config.profitDistribution.gasWallet,
+        daoWallet: config.profitDistribution.daoWallet,
+      });
+      
+      this.daoAirdrop = new DAOAirdropService(
+        this.connection,
+        config.profitDistribution.daoWallet
+      );
+      
+      console.log('✅ Profit Distribution System initialized');
+      console.log(`   Reserve: ${config.profitDistribution.reserveWallet.toBase58().slice(0, 8)}... (70%)`);
+      console.log(`   Gas: ${config.profitDistribution.gasWallet.toBase58().slice(0, 8)}... (20%)`);
+      console.log(`   DAO: ${config.profitDistribution.daoWallet.toBase58().slice(0, 8)}... (10%)`);
+    }
   }
   
   async start(): Promise<void> {
@@ -262,6 +294,21 @@ export class AutoExecutionEngine {
       if (signature) {
         console.log(`✅ Successfully executed arbitrage! Signature: ${signature}`);
         
+        // Log the transaction
+        this.analyticsLogger.logTransaction({
+          type: 'arbitrage',
+          signature,
+          success: true,
+          profit: opportunity.estimatedProfit,
+          cost: 0.005, // Estimate gas cost
+          netProfit: opportunity.estimatedProfit - 0.005,
+          details: {
+            strategy: opportunity.type,
+            tokens: opportunity.path.map(t => t.symbol),
+            confidence: opportunity.confidence,
+          },
+        });
+        
         // Broadcast trade execution to WebSocket clients
         websocketService.broadcastTradeExecution({
           signature,
@@ -271,13 +318,79 @@ export class AutoExecutionEngine {
           timestamp: Date.now(),
         });
         
-        // Handle dev fee if enabled
+        // Handle profit distribution if enabled (new system)
+        await this.handleProfitDistribution(opportunity.estimatedProfit);
+        
+        // Handle legacy dev fee if still enabled
         await this.handleDevFee(opportunity.estimatedProfit);
       } else {
         console.log('❌ Failed to execute arbitrage');
+        
+        // Log failed transaction
+        this.analyticsLogger.logTransaction({
+          type: 'arbitrage',
+          success: false,
+          details: {
+            strategy: opportunity.type,
+            tokens: opportunity.path.map(t => t.symbol),
+            error: 'Execution failed',
+          },
+        });
       }
     } catch (error) {
       console.error('Error executing opportunity:', error);
+    }
+  }
+  
+  private async handleProfitDistribution(profit: number): Promise<void> {
+    if (!this.profitDistribution) {
+      return;
+    }
+    
+    try {
+      console.log('\n💰 Initiating Profit Distribution...');
+      
+      // Distribute profits (70% reserve, 20% gas, 10% DAO)
+      const result = await this.profitDistribution.distributeProfit(
+        profit,
+        undefined, // Native SOL
+        this.userKeypair
+      );
+      
+      if (result.success) {
+        // Log profit allocation
+        this.analyticsLogger.logProfitAllocation({
+          totalProfit: profit,
+          reserveAmount: result.breakdown.reserve.amount,
+          gasAmount: result.breakdown.gas.amount,
+          daoAmount: result.breakdown.dao.amount,
+          signature: result.signature,
+          success: true,
+        });
+        
+        console.log('✅ Profit distribution completed successfully');
+        
+        // Create DAO airdrop campaign with the 10% share
+        if (this.daoAirdrop && result.breakdown.dao.amount > 0) {
+          console.log('🎁 Creating DAO community airdrop campaign...');
+          // This would be executed based on wallet scores and community participation
+          // For now, just log it
+          console.log(`   DAO Treasury funded: $${result.breakdown.dao.amount.toFixed(6)}`);
+        }
+      } else {
+        console.error(`❌ Profit distribution failed: ${result.error}`);
+        
+        // Log failed distribution
+        this.analyticsLogger.logProfitAllocation({
+          totalProfit: profit,
+          reserveAmount: 0,
+          gasAmount: 0,
+          daoAmount: 0,
+          success: false,
+        });
+      }
+    } catch (error) {
+      console.error('Error in profit distribution:', error);
     }
   }
   
@@ -289,7 +402,7 @@ export class AutoExecutionEngine {
     }
     
     const devFeeAmount = profit * config.devFee.percentage;
-    console.log(`💰 Dev fee: $${devFeeAmount.toFixed(4)} (${(config.devFee.percentage * 100).toFixed(1)}%) to ${config.devFee.wallet.toBase58().slice(0, 8)}...`);
+    console.log(`💰 Dev fee (legacy): $${devFeeAmount.toFixed(4)} (${(config.devFee.percentage * 100).toFixed(1)}%) to ${config.devFee.wallet.toBase58().slice(0, 8)}...`);
     
     // In production, this would send the actual fee
     // await sendDevFee(devFeeAmount, config.devFee.wallet);

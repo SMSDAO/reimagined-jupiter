@@ -12,6 +12,10 @@ import { RouteTemplateManager } from './services/routeTemplates.js';
 import { PythPriceStreamService } from './services/pythPriceStream.js';
 import { EnhancedArbitrageScanner } from './services/enhancedArbitrage.js';
 import { MarginfiV2Integration } from './integrations/marginfiV2.js';
+import { EncryptionService } from './utils/encryption.js';
+import { AnalyticsLogger } from './services/analyticsLogger.js';
+import { ProfitDistributionService } from './services/profitDistribution.js';
+import { DAOAirdropService } from './services/daoAirdrop.js';
 
 class GXQStudio {
   private connection: Connection;
@@ -28,6 +32,10 @@ class GXQStudio {
   private pythStream: PythPriceStreamService;
   private enhancedScanner: EnhancedArbitrageScanner;
   private marginfiV2: MarginfiV2Integration;
+  private encryption: EncryptionService;
+  private analyticsLogger: AnalyticsLogger;
+  private profitDistribution: ProfitDistributionService | null = null;
+  private daoAirdrop: DAOAirdropService | null = null;
   
   constructor() {
     // Initialize QuickNode first
@@ -46,6 +54,22 @@ class GXQStudio {
     this.pythStream = new PythPriceStreamService('https://hermes.pyth.network');
     this.enhancedScanner = new EnhancedArbitrageScanner(this.connection, this.pythStream);
     this.marginfiV2 = new MarginfiV2Integration(this.connection);
+    this.encryption = new EncryptionService();
+    this.analyticsLogger = new AnalyticsLogger('./logs');
+    
+    // Initialize profit distribution if enabled
+    if (config.profitDistribution.enabled && this.userKeypair) {
+      this.profitDistribution = new ProfitDistributionService(this.connection, {
+        reserveWallet: config.profitDistribution.reserveWallet,
+        gasWallet: config.profitDistribution.gasWallet,
+        daoWallet: config.profitDistribution.daoWallet,
+      });
+      
+      this.daoAirdrop = new DAOAirdropService(
+        this.connection,
+        config.profitDistribution.daoWallet
+      );
+    }
     
     // Initialize user keypair if available
     if (config.solana.walletPrivateKey) {
@@ -100,6 +124,13 @@ class GXQStudio {
     console.log(`⚡ Auto-Execution: ${this.autoExecutionEngine ? '✓' : '✗'}`);
     console.log(`🛡️  MEV Protection: ✓`);
     console.log(`💎 GXQ Ecosystem: ${config.gxq.tokenMint.toBase58().slice(0, 8)}...`);
+    console.log(`💰 Profit Distribution: ${config.profitDistribution.enabled ? '✓' : '✗'}`);
+    if (config.profitDistribution.enabled) {
+      console.log(`   - Reserve (70%): ${config.profitDistribution.reserveWallet.toBase58().slice(0, 8)}...`);
+      console.log(`   - Gas (20%): ${config.profitDistribution.gasWallet.toBase58().slice(0, 8)}...`);
+      console.log(`   - DAO (10%): ${config.profitDistribution.daoWallet.toBase58().slice(0, 8)}...`);
+    }
+    console.log(`🔐 Encryption: ${config.encryption.enabled ? '✓' : '✗'}`);
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
   }
   
@@ -438,6 +469,114 @@ class GXQStudio {
         console.log('Unknown setting. Use: minProfit, maxSlippage, maxGas, scanInterval');
     }
   }
+  
+  async generateEncryptionKey(): Promise<void> {
+    console.log('🔐 Generating Master Encryption Key\n');
+    EncryptionService.generateMasterKey();
+    console.log('\nAdd this to your .env file as ENCRYPTION_KEY');
+  }
+  
+  async encryptPrivateKey(privateKey?: string): Promise<void> {
+    if (!privateKey) {
+      console.error('Usage: npm start encrypt-key <private_key>');
+      return;
+    }
+    
+    const password = config.encryption.masterKey;
+    if (!password) {
+      console.error('ENCRYPTION_KEY not set in .env file. Generate one first with: npm start generate-key');
+      return;
+    }
+    
+    const encrypted = this.encryption.encryptPrivateKey(privateKey, password);
+    console.log('🔐 Encrypted Private Key:');
+    console.log(encrypted);
+    console.log('\nAdd this to your .env file as WALLET_PRIVATE_KEY_ENCRYPTED');
+  }
+  
+  async viewAnalytics(): Promise<void> {
+    console.log('📊 Analytics Report\n');
+    const report = this.analyticsLogger.generateReport();
+    console.log(report);
+  }
+  
+  async viewProfitDistribution(): Promise<void> {
+    if (!this.profitDistribution) {
+      console.error('Profit distribution not enabled');
+      return;
+    }
+    
+    console.log('💰 Profit Distribution Statistics\n');
+    const stats = this.profitDistribution.getStats();
+    
+    console.log(`Total Distributions: ${stats.totalDistributions}`);
+    console.log(`Successful: ${stats.successfulDistributions}`);
+    console.log(`Failed: ${stats.failedDistributions}`);
+    console.log(`\nTotal Distributed: $${stats.totalDistributed.toFixed(2)}`);
+    console.log(`  Reserve (70%): $${stats.reserveTotal.toFixed(2)}`);
+    console.log(`  Gas (20%): $${stats.gasTotal.toFixed(2)}`);
+    console.log(`  DAO (10%): $${stats.daoTotal.toFixed(2)}`);
+    
+    // Show recent history
+    const history = this.profitDistribution.getHistory(5);
+    if (history.length > 0) {
+      console.log('\n📜 Recent Distributions:');
+      for (const dist of history) {
+        const status = dist.success ? '✅' : '❌';
+        console.log(`  ${status} ${dist.timestamp.toISOString()}`);
+        console.log(`     Total: $${dist.totalDistributed.toFixed(6)}`);
+        if (dist.signature) {
+          console.log(`     Signature: ${dist.signature}`);
+        }
+      }
+    }
+  }
+  
+  async viewDaoAirdrops(): Promise<void> {
+    if (!this.daoAirdrop) {
+      console.error('DAO airdrop service not enabled');
+      return;
+    }
+    
+    console.log('🎁 DAO Airdrop Campaigns\n');
+    const report = this.daoAirdrop.generateReport();
+    console.log(report);
+  }
+  
+  async testProfitDistribution(amount?: string): Promise<void> {
+    if (!this.profitDistribution || !this.userKeypair) {
+      console.error('Profit distribution not available');
+      return;
+    }
+    
+    const testAmount = amount ? parseFloat(amount) : 1.0; // Default 1 SOL
+    
+    console.log(`🧪 Testing Profit Distribution with ${testAmount} SOL\n`);
+    console.log('⚠️  This is a test. It will perform an actual transaction.\n');
+    
+    const result = await this.profitDistribution.distributeProfit(
+      testAmount,
+      undefined, // Native SOL
+      this.userKeypair
+    );
+    
+    if (result.success) {
+      console.log('\n✅ Test successful!');
+      console.log(`Signature: ${result.signature}`);
+      
+      // Log the test
+      this.analyticsLogger.logProfitAllocation({
+        totalProfit: testAmount,
+        reserveAmount: result.breakdown.reserve.amount,
+        gasAmount: result.breakdown.gas.amount,
+        daoAmount: result.breakdown.dao.amount,
+        signature: result.signature,
+        success: true,
+      });
+    } else {
+      console.log(`\n❌ Test failed: ${result.error}`);
+    }
+  }
 }
 
 // CLI Interface
@@ -497,6 +636,24 @@ async function main() {
     case 'config':
       await studio.configureScannerSettings(args.slice(1));
       break;
+    case 'generate-key':
+      await studio.generateEncryptionKey();
+      break;
+    case 'encrypt-key':
+      await studio.encryptPrivateKey(args[1]);
+      break;
+    case 'analytics':
+      await studio.viewAnalytics();
+      break;
+    case 'profit-stats':
+      await studio.viewProfitDistribution();
+      break;
+    case 'dao-airdrops':
+      await studio.viewDaoAirdrops();
+      break;
+    case 'test-distribution':
+      await studio.testProfitDistribution(args[1]);
+      break;
     default:
       console.log('Usage:');
       console.log('  npm start airdrops    - Check for claimable airdrops');
@@ -519,6 +676,14 @@ async function main() {
       console.log('  npm start enhanced-scan      - Enhanced arbitrage scanner (1s intervals)');
       console.log('  npm start marginfi-v2        - Show Marginfi v2 provider info');
       console.log('  npm start config [setting] [value] - Configure scanner settings');
+      console.log('');
+      console.log('Security & Management:');
+      console.log('  npm start generate-key       - Generate encryption master key');
+      console.log('  npm start encrypt-key <key>  - Encrypt a private key');
+      console.log('  npm start analytics          - View analytics report');
+      console.log('  npm start profit-stats       - View profit distribution stats');
+      console.log('  npm start dao-airdrops       - View DAO airdrop campaigns');
+      console.log('  npm start test-distribution [amount] - Test profit distribution (default 1 SOL)');
       break;
   }
 }

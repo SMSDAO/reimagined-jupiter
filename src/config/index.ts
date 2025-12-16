@@ -54,9 +54,19 @@ export const config: Config = {
     gasBuffer: parseFloat(process.env.GAS_BUFFER || '1.5'),
   },
   devFee: {
-    enabled: process.env.DEV_FEE_ENABLED !== 'false',
+    enabled: process.env.DEV_FEE_ENABLED === 'true',
     percentage: parseFloat(process.env.DEV_FEE_PERCENTAGE || '0.10'), // 10% default
     wallet: new PublicKey(process.env.DEV_FEE_WALLET || '11111111111111111111111111111111'), // Placeholder, use real wallet in production
+  },
+  profitDistribution: {
+    enabled: process.env.PROFIT_DISTRIBUTION_ENABLED !== 'false',
+    reserveWallet: new PublicKey(process.env.RESERVE_WALLET || '11111111111111111111111111111111'), // 70% - monads.skr
+    gasWallet: new PublicKey(process.env.GAS_WALLET || '11111111111111111111111111111111'), // 20% - user wallet for gas coverage
+    daoWallet: new PublicKey(process.env.DAO_WALLET || 'DmtAdUSzFvcBymUmRFgPVawvoXbqdS2o18eZNpe5XcWW'), // 10% - DAO community wallet
+  },
+  encryption: {
+    enabled: process.env.ENCRYPTION_ENABLED !== 'false',
+    masterKey: process.env.ENCRYPTION_KEY || '',
   },
 };
 
