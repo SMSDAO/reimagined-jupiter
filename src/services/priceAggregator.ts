@@ -40,7 +40,10 @@ export class JupiterPriceProvider implements PriceProvider {
 
   async isAvailable(): Promise<boolean> {
     try {
-      const response = await axios.get('https://price.jup.ag/v4/health');
+      // Test with actual price endpoint since Jupiter v6 uses different API structure
+      const response = await axios.get('https://price.jup.ag/v6/price?ids=So11111111111111111111111111111111111111112', {
+        timeout: 3000,
+      });
       return response.status === 200;
     } catch {
       return false;

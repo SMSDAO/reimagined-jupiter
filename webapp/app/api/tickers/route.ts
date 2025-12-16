@@ -117,7 +117,8 @@ async function checkProviderStatus(): Promise<Record<string, boolean>> {
 
   // Check other providers (simplified for now)
   try {
-    const response = await fetch('https://price.jup.ag/v4/health', {
+    // Test with actual price endpoint since Jupiter v6 uses different API structure
+    const response = await fetch('https://price.jup.ag/v6/price?ids=So11111111111111111111111111111111111111112', {
       signal: AbortSignal.timeout(3000),
     });
     status.jupiter = response.ok;

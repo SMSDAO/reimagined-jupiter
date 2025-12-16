@@ -34,7 +34,7 @@ export const PYTH_PRICE_FEEDS: Record<string, string> = {
   'BONK/USD': '72b021217ca3fe68922a19aaf990109cb9d84e9ad004b4d2025ad6f529314419',
   'JUP/USD': 'g6eRCbboSwK4tSWngn773RCMexr1APQr4uA9bGZBYfo',
   'WIF/USD': '4ca4beeca86f0d164160323817a4e42b10010a724c2217c6ee41b54cd4cc61fc',
-  'PYTH/USD': '0bbf28e9a42a1e5f9b67c3d1c23a8c5a8d7d3b3e6e1d4f1e7e7f3f9f3f9f3f9f',
+  'PYTH/USD': '0bbf28e9a42a1e5f9b67c3d1c23a8c5a8d7d3b3e6e1d4f1e7e7f3f9f3f9f3f9f', // Note: Replace with actual Pyth price feed ID when available
 };
 
 export class TickerService extends EventEmitter {
