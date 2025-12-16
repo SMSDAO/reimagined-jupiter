@@ -90,66 +90,66 @@ export default function AirdropPage() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto">
+    <div className="max-w-7xl mx-auto px-4">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
       >
-        <h1 className="text-5xl font-bold text-white mb-2">🎁 Airdrop Checker</h1>
-        <p className="text-gray-300 mb-8">
+        <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-2">🎁 Airdrop Checker</h1>
+        <p className="text-sm sm:text-base text-gray-300 mb-6 sm:mb-8">
           Check eligibility and auto-claim airdrops with advanced wallet scoring
         </p>
 
         {!publicKey ? (
-          <div className="bg-white/10 backdrop-blur-md rounded-xl p-12 text-center">
-            <div className="text-6xl mb-4">🔐</div>
-            <h2 className="text-2xl font-bold text-white mb-2">Connect Your Wallet</h2>
-            <p className="text-gray-300">Connect your wallet to check for claimable airdrops</p>
+          <div className="bg-white/10 backdrop-blur-md rounded-xl p-8 sm:p-12 text-center border border-white/10">
+            <div className="text-5xl sm:text-6xl mb-4">🔐</div>
+            <h2 className="text-xl sm:text-2xl font-bold text-white mb-2">Connect Your Wallet</h2>
+            <p className="text-sm sm:text-base text-gray-300">Connect your wallet to check for claimable airdrops</p>
           </div>
         ) : loading ? (
-          <div className="bg-white/10 backdrop-blur-md rounded-xl p-12 text-center">
-            <div className="text-6xl mb-4">⏳</div>
-            <h2 className="text-2xl font-bold text-white">Analyzing Wallet...</h2>
+          <div className="bg-white/10 backdrop-blur-md rounded-xl p-8 sm:p-12 text-center border border-white/10">
+            <div className="text-5xl sm:text-6xl mb-4 animate-pulse">⏳</div>
+            <h2 className="text-xl sm:text-2xl font-bold text-white">Analyzing Wallet...</h2>
           </div>
         ) : (
-          <div className="space-y-8">
+          <div className="space-y-6 sm:space-y-8">
             {/* Wallet Score Card */}
             {walletScore && (
               <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="bg-white/10 backdrop-blur-md rounded-xl p-6"
+                className="bg-white/10 backdrop-blur-md rounded-xl p-4 sm:p-6 border border-white/10"
               >
-                <h2 className="text-2xl font-bold text-white mb-6">📊 Wallet Score</h2>
+                <h2 className="text-xl sm:text-2xl font-bold text-white mb-4 sm:mb-6">📊 Wallet Score</h2>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+                  <div className="text-center md:text-left">
                     <div className="mb-4">
-                      <div className={`inline-block px-6 py-3 rounded-full bg-gradient-to-r ${getTierColor(walletScore.tier)} text-white font-bold text-2xl`}>
+                      <div className={`inline-block px-4 sm:px-6 py-2 sm:py-3 rounded-full bg-gradient-to-r ${getTierColor(walletScore.tier)} text-white font-bold text-xl sm:text-2xl shadow-lg`}>
                         {walletScore.tier}
                       </div>
                     </div>
-                    <div className="text-6xl font-bold text-white mb-2">
+                    <div className="text-5xl sm:text-6xl font-bold text-white mb-2">
                       {walletScore.totalScore}/100
                     </div>
-                    <div className="text-gray-300">Overall Score</div>
+                    <div className="text-sm sm:text-base text-gray-300">Overall Score</div>
                   </div>
 
                   <div className="space-y-3">
-                    <div className="flex justify-between">
-                      <span className="text-gray-300">Balance:</span>
-                      <span className="text-white font-bold">{walletScore.balance.toFixed(2)} SOL</span>
+                    <div className="flex justify-between items-center p-2 bg-white/5 rounded-lg">
+                      <span className="text-sm sm:text-base text-gray-300">Balance:</span>
+                      <span className="text-sm sm:text-base text-white font-bold">{walletScore.balance.toFixed(2)} SOL</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-300">Transactions:</span>
-                      <span className="text-white font-bold">{walletScore.txCount}</span>
+                    <div className="flex justify-between items-center p-2 bg-white/5 rounded-lg">
+                      <span className="text-sm sm:text-base text-gray-300">Transactions:</span>
+                      <span className="text-sm sm:text-base text-white font-bold">{walletScore.txCount}</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-300">NFTs:</span>
-                      <span className="text-white font-bold">{walletScore.nftCount}</span>
+                    <div className="flex justify-between items-center p-2 bg-white/5 rounded-lg">
+                      <span className="text-sm sm:text-base text-gray-300">NFTs:</span>
+                      <span className="text-sm sm:text-base text-white font-bold">{walletScore.nftCount}</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-300">Airdrop Priority:</span>
+                    <div className="flex justify-between items-center p-2 bg-white/5 rounded-lg">
+                      <span className="text-sm sm:text-base text-gray-300">Airdrop Priority:</span>
                       <span className="text-yellow-400 font-bold">⭐⭐⭐⭐</span>
                     </div>
                   </div>
@@ -162,53 +162,55 @@ export default function AirdropPage() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.2 }}
-              className="bg-white/10 backdrop-blur-md rounded-xl p-6"
+              className="bg-white/10 backdrop-blur-md rounded-xl p-4 sm:p-6 border border-white/10"
             >
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold text-white">💰 Claimable Airdrops</h2>
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0 mb-4 sm:mb-6">
+                <h2 className="text-xl sm:text-2xl font-bold text-white">💰 Claimable Airdrops</h2>
                 <button
                   onClick={claimAll}
                   disabled={!airdrops.some((a) => a.claimable)}
-                  className="bg-gradient-to-r from-green-600 to-emerald-600 text-white px-6 py-3 rounded-lg font-bold hover:from-green-700 hover:to-emerald-700 transition disabled:opacity-50"
+                  className="w-full sm:w-auto bg-gradient-to-r from-green-600 to-emerald-600 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg font-bold hover:from-green-700 hover:to-emerald-700 transition-all disabled:opacity-50 text-sm sm:text-base shadow-lg"
                 >
                   Claim All
                 </button>
               </div>
 
-              <div className="space-y-4">
+              <div className="space-y-3 sm:space-y-4">
                 {airdrops.map((airdrop, index) => (
                   <motion.div
                     key={airdrop.protocol}
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.3 + index * 0.1 }}
-                    className="bg-white/5 rounded-xl p-4 flex items-center justify-between"
+                    className="bg-white/5 rounded-xl p-3 sm:p-4 hover:bg-white/10 transition-colors"
                   >
-                    <div className="flex-1">
-                      <h3 className="text-xl font-bold text-white">{airdrop.protocol}</h3>
-                      <div className="flex gap-4 mt-1">
-                        <span className="text-purple-400">{airdrop.amount}</span>
-                        <span className="text-green-400">{airdrop.value}</span>
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                      <div className="flex-1 w-full">
+                        <h3 className="text-lg sm:text-xl font-bold text-white mb-1">{airdrop.protocol}</h3>
+                        <div className="flex gap-3 sm:gap-4 text-sm sm:text-base">
+                          <span className="text-purple-400">{airdrop.amount}</span>
+                          <span className="text-green-400 font-semibold">{airdrop.value}</span>
+                        </div>
                       </div>
+                      {airdrop.claimable ? (
+                        <button
+                          onClick={() => claimAirdrop(airdrop)}
+                          className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg font-bold transition-colors text-sm sm:text-base shadow-lg"
+                        >
+                          Claim
+                        </button>
+                      ) : (
+                        <span className="text-gray-400 px-4 sm:px-6 py-2 sm:py-3 text-sm sm:text-base">Not Eligible</span>
+                      )}
                     </div>
-                    {airdrop.claimable ? (
-                      <button
-                        onClick={() => claimAirdrop(airdrop)}
-                        className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-bold transition"
-                      >
-                        Claim
-                      </button>
-                    ) : (
-                      <span className="text-gray-400 px-6 py-3">Not Eligible</span>
-                    )}
                   </motion.div>
                 ))}
               </div>
 
-              <div className="mt-6 p-4 bg-purple-900/30 rounded-lg">
-                <div className="flex justify-between text-white">
-                  <span className="font-bold">Total Claimable Value:</span>
-                  <span className="text-2xl font-bold text-green-400">
+              <div className="mt-4 sm:mt-6 p-3 sm:p-4 bg-purple-900/30 rounded-lg border border-purple-500/30">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 text-white">
+                  <span className="font-bold text-sm sm:text-base">Total Claimable Value:</span>
+                  <span className="text-xl sm:text-2xl font-bold text-green-400">
                     ${airdrops.filter((a) => a.claimable).reduce((sum, a) => sum + parseFloat(a.value.replace('$', '')), 0).toFixed(2)}
                   </span>
                 </div>
@@ -220,12 +222,12 @@ export default function AirdropPage() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.4 }}
-              className="bg-white/10 backdrop-blur-md rounded-xl p-6"
+              className="bg-white/10 backdrop-blur-md rounded-xl p-4 sm:p-6 border border-white/10"
             >
-              <h2 className="text-2xl font-bold text-white mb-4">🌐 Supported Protocols</h2>
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              <h2 className="text-xl sm:text-2xl font-bold text-white mb-4">🌐 Supported Protocols</h2>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 sm:gap-4">
                 {['Jupiter', 'Jito', 'Pyth', 'Kamino', 'Marginfi', 'Solend', 'Mango', 'Marinade', 'Lido', 'GXQ'].map((protocol) => (
-                  <div key={protocol} className="bg-white/5 rounded-lg p-3 text-center text-white">
+                  <div key={protocol} className="bg-white/5 rounded-lg p-2 sm:p-3 text-center text-white hover:bg-white/10 transition-colors text-sm sm:text-base">
                     {protocol}
                   </div>
                 ))}
@@ -234,7 +236,7 @@ export default function AirdropPage() {
           </div>
         )}
 
-        <div className="mt-8 text-center text-sm text-gray-400">
+        <div className="mt-6 sm:mt-8 text-center text-xs sm:text-sm text-gray-400">
           💰 10% of claimed airdrops go to dev wallet: monads.solana
         </div>
       </motion.div>
