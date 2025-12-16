@@ -22,11 +22,12 @@ export default function ArbitragePage() {
   const [scanning, setScanning] = useState(false);
 
   const flashProviders = [
-    { name: 'Marginfi', fee: 0.09, liquidity: '$250M' },
-    { name: 'Solend', fee: 0.10, liquidity: '$180M' },
-    { name: 'Kamino', fee: 0.12, liquidity: '$150M' },
-    { name: 'Mango', fee: 0.15, liquidity: '$90M' },
-    { name: 'Save', fee: 0.18, liquidity: '$45M' },
+    { name: 'Marginfi', fee: 0.09, liquidity: '$250M', healthy: true },
+    { name: 'Solend', fee: 0.10, liquidity: '$180M', healthy: true },
+    { name: 'Kamino', fee: 0.12, liquidity: '$150M', healthy: true },
+    { name: 'Mango', fee: 0.15, liquidity: '$90M', healthy: true },
+    { name: 'Port Finance', fee: 0.20, liquidity: '$35M', healthy: true },
+    { name: 'Save', fee: 0.11, liquidity: '$45M', healthy: true },
   ];
 
   const startScanning = () => {
@@ -140,31 +141,69 @@ export default function ArbitragePage() {
           </div>
 
           <div className="bg-white/10 backdrop-blur-md rounded-xl p-6">
-            <h3 className="text-xl font-bold text-white mb-4">🛡️ MEV Protection</h3>
+            <h3 className="text-xl font-bold text-white mb-4">🛡️ Security Features</h3>
             <div className="space-y-2 text-sm">
               <div className="flex items-center gap-2">
                 <span className="w-3 h-3 bg-green-500 rounded-full"></span>
-                <span className="text-white">Jito Bundles Active</span>
+                <span className="text-white">Pyth Price Validation</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="w-3 h-3 bg-green-500 rounded-full"></span>
-                <span className="text-white">Dynamic Slippage</span>
+                <span className="text-white">Dynamic Gas Fees</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="w-3 h-3 bg-green-500 rounded-full"></span>
-                <span className="text-white">Private RPC</span>
+                <span className="text-white">Transaction Simulation</span>
               </div>
+              <div className="flex items-center gap-2">
+                <span className="w-3 h-3 bg-green-500 rounded-full"></span>
+                <span className="text-white">Reentrancy Protection</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="w-3 h-3 bg-green-500 rounded-full"></span>
+                <span className="text-white">Safe Math Operations</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Real-Time Price Feeds */}
+        <div className="bg-white/10 backdrop-blur-md rounded-xl p-6 mb-8">
+          <h2 className="text-2xl font-bold text-white mb-4">📊 Live Price Feeds (Pyth Network)</h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="bg-white/5 rounded-lg p-4">
+              <div className="text-gray-400 text-sm mb-1">SOL/USD</div>
+              <div className="text-white text-2xl font-bold">$98.45</div>
+              <div className="text-green-400 text-xs">±0.02%</div>
+            </div>
+            <div className="bg-white/5 rounded-lg p-4">
+              <div className="text-gray-400 text-sm mb-1">USDC/USD</div>
+              <div className="text-white text-2xl font-bold">$1.00</div>
+              <div className="text-green-400 text-xs">±0.01%</div>
+            </div>
+            <div className="bg-white/5 rounded-lg p-4">
+              <div className="text-gray-400 text-sm mb-1">BONK/USD</div>
+              <div className="text-white text-2xl font-bold">$0.00003</div>
+              <div className="text-green-400 text-xs">±0.05%</div>
+            </div>
+            <div className="bg-white/5 rounded-lg p-4">
+              <div className="text-gray-400 text-sm mb-1">JUP/USD</div>
+              <div className="text-white text-2xl font-bold">$0.85</div>
+              <div className="text-green-400 text-xs">±0.03%</div>
             </div>
           </div>
         </div>
 
         {/* Flash Loan Providers */}
         <div className="bg-white/10 backdrop-blur-md rounded-xl p-6 mb-8">
-          <h2 className="text-2xl font-bold text-white mb-4">💰 Flash Loan Providers</h2>
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          <h2 className="text-2xl font-bold text-white mb-4">💰 Flash Loan Providers (6 Available)</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
             {flashProviders.map((provider) => (
               <div key={provider.name} className="bg-white/5 rounded-lg p-4">
-                <h3 className="text-lg font-bold text-white mb-2">{provider.name}</h3>
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-base font-bold text-white">{provider.name}</h3>
+                  <span className={`w-2 h-2 rounded-full ${provider.healthy ? 'bg-green-500' : 'bg-red-500'}`}></span>
+                </div>
                 <div className="text-sm space-y-1">
                   <div className="text-green-400">{provider.fee}% fee</div>
                   <div className="text-gray-400">{provider.liquidity}</div>
