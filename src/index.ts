@@ -9,6 +9,9 @@ import { FlashLoanArbitrage, TriangularArbitrage } from './strategies/arbitrage.
 import { AddressBook } from './services/addressBook.js';
 import { WalletScoring } from './services/walletScoring.js';
 import { RouteTemplateManager } from './services/routeTemplates.js';
+import { PythPriceStreamService } from './services/pythPriceStream.js';
+import { EnhancedArbitrageScanner } from './services/enhancedArbitrage.js';
+import { MarginfiV2Integration } from './integrations/marginfiV2.js';
 
 class GXQStudio {
   private connection: Connection;
@@ -22,6 +25,9 @@ class GXQStudio {
   private addressBook: AddressBook;
   private walletScoring: WalletScoring;
   private routeTemplates: RouteTemplateManager;
+  private pythStream: PythPriceStreamService;
+  private enhancedScanner: EnhancedArbitrageScanner;
+  private marginfiV2: MarginfiV2Integration;
   
   constructor() {
     // Initialize QuickNode first
@@ -35,6 +41,11 @@ class GXQStudio {
     this.addressBook = new AddressBook('./address-book');
     this.walletScoring = new WalletScoring(this.connection);
     this.routeTemplates = new RouteTemplateManager('./route-templates');
+    
+    // Initialize new features
+    this.pythStream = new PythPriceStreamService('https://hermes.pyth.network');
+    this.enhancedScanner = new EnhancedArbitrageScanner(this.connection, this.pythStream);
+    this.marginfiV2 = new MarginfiV2Integration(this.connection);
     
     // Initialize user keypair if available
     if (config.solana.walletPrivateKey) {
@@ -70,8 +81,10 @@ class GXQStudio {
     console.log('📊 System Information:');
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     console.log(`🌐 QuickNode Integration: ${config.quicknode.rpcUrl ? '✓' : '✗'}`);
+    console.log(`📡 Pyth Price Streaming: ✓ (Hermes WebSocket)`);
+    console.log(`⚡ Enhanced Arbitrage Scanner: ✓ (1s intervals)`);
     console.log(`💰 Flash Loan Providers: 6`);
-    console.log(`   - Marginfi (${config.flashLoanProviders.marginfi.toBase58().slice(0, 8)}...) - 0.09% fee`);
+    console.log(`   - Marginfi v2 (${config.flashLoanProviders.marginfi.toBase58().slice(0, 8)}...) - 0.09% fee - Multi-DEX routing`);
     console.log(`   - Solend (${config.flashLoanProviders.solend.toBase58().slice(0, 8)}...) - 0.10% fee`);
     console.log(`   - Save Finance (${config.flashLoanProviders.saveFinance.toBase58().slice(0, 8)}...) - 0.11% fee`);
     console.log(`   - Kamino (${config.flashLoanProviders.kamino.toBase58().slice(0, 8)}...) - 0.12% fee`);
@@ -309,6 +322,122 @@ class GXQStudio {
       console.log('❌ Failed to sync presets');
     }
   }
+  
+  async startLivePrices(tokens?: string[]): Promise<void> {
+    const defaultTokens = ['SOL', 'USDC', 'USDT', 'BTC', 'ETH', 'JUP', 'RAY', 'ORCA', 'BONK'];
+    const tokensToTrack = tokens || defaultTokens;
+    
+    console.log('📡 Starting Pyth live price stream...');
+    console.log(`Tracking: ${tokensToTrack.join(', ')}\n`);
+    
+    // Listen for price updates
+    this.pythStream.on('price-update', (update) => {
+      console.log(`[${update.symbol}] $${update.price.toFixed(4)} ± $${update.confidence.toFixed(4)} | ${new Date(update.publishTime * 1000).toISOString()}`);
+    });
+    
+    await this.pythStream.start(tokensToTrack);
+    
+    console.log('\nPress Ctrl+C to stop...\n');
+    
+    // Keep process alive
+    process.on('SIGINT', () => {
+      console.log('\n\nStopping price stream...');
+      this.pythStream.stop();
+      process.exit(0);
+    });
+  }
+  
+  async startEnhancedScanner(): Promise<void> {
+    console.log('⚡ Starting Enhanced Arbitrage Scanner...\n');
+    
+    const tokens = ['SOL', 'USDC', 'USDT', 'RAY', 'ORCA', 'JUP'];
+    
+    // Display configuration
+    const scannerConfig = this.enhancedScanner.getConfig();
+    console.log('Configuration:');
+    console.log(`  Scan Interval: ${scannerConfig.scanIntervalMs}ms`);
+    console.log(`  Min Profit: ${(scannerConfig.minProfitThreshold * 100).toFixed(2)}%`);
+    console.log(`  Max Slippage: ${(scannerConfig.maxSlippage * 100).toFixed(2)}%`);
+    console.log(`  Max Gas: ${scannerConfig.prioritizationFeeLamports} lamports`);
+    console.log(`  Aggregators: ${scannerConfig.enabledAggregators.join(', ')}\n`);
+    
+    await this.enhancedScanner.startScanning(tokens);
+    
+    console.log('Press Ctrl+C to stop...\n');
+    
+    // Display opportunities every 5 seconds
+    const displayInterval = setInterval(() => {
+      const opportunities = this.enhancedScanner.getOpportunities();
+      if (opportunities.length > 0) {
+        console.log(`\n📊 Current Opportunities: ${opportunities.length}`);
+        opportunities.slice(0, 5).forEach((opp, idx) => {
+          console.log(`  ${idx + 1}. ${opp.path.map(t => t.symbol).join(' -> ')}`);
+          console.log(`     Profit: $${opp.estimatedProfit.toFixed(4)} | Aggregators: ${opp.aggregators.join(', ')}`);
+        });
+      }
+    }, 5000);
+    
+    process.on('SIGINT', () => {
+      console.log('\n\nStopping scanner...');
+      clearInterval(displayInterval);
+      this.enhancedScanner.stopScanning();
+      process.exit(0);
+    });
+  }
+  
+  async showMarginfiV2Info(): Promise<void> {
+    console.log('💰 Marginfi v2 Flash Loan Provider\n');
+    
+    const info = this.marginfiV2.getProviderInfo();
+    console.log(`Name: ${info.name}`);
+    console.log(`Version: ${info.version}`);
+    console.log(`Program ID: ${info.programId.slice(0, 16)}...`);
+    console.log(`Fee: ${info.fee}%`);
+    console.log('\n✨ Features:');
+    info.features.forEach(feature => {
+      console.log(`  ✓ ${feature}`);
+    });
+  }
+  
+  async configureScannerSettings(args: string[]): Promise<void> {
+    console.log('⚙️  Enhanced Scanner Configuration\n');
+    
+    if (args.length === 0) {
+      const config = this.enhancedScanner.getConfig();
+      console.log('Current Settings:');
+      console.log(`  Min Profit Threshold: ${(config.minProfitThreshold * 100).toFixed(2)}%`);
+      console.log(`  Max Slippage: ${(config.maxSlippage * 100).toFixed(2)}%`);
+      console.log(`  Prioritization Fee: ${config.prioritizationFeeLamports} lamports`);
+      console.log(`  Scan Interval: ${config.scanIntervalMs}ms`);
+      console.log(`  Enabled Aggregators: ${config.enabledAggregators.join(', ')}`);
+      console.log('\nUsage: npm start config <setting> <value>');
+      console.log('Settings: minProfit, maxSlippage, maxGas, scanInterval');
+      return;
+    }
+    
+    const [setting, value] = args;
+    
+    switch (setting) {
+      case 'minProfit':
+        this.enhancedScanner.updateConfig({ minProfitThreshold: parseFloat(value) / 100 });
+        console.log(`✓ Min profit threshold set to ${value}%`);
+        break;
+      case 'maxSlippage':
+        this.enhancedScanner.updateConfig({ maxSlippage: parseFloat(value) / 100 });
+        console.log(`✓ Max slippage set to ${value}%`);
+        break;
+      case 'maxGas':
+        this.enhancedScanner.updateConfig({ prioritizationFeeLamports: parseInt(value) });
+        console.log(`✓ Max gas set to ${value} lamports`);
+        break;
+      case 'scanInterval':
+        this.enhancedScanner.updateConfig({ scanIntervalMs: parseInt(value) });
+        console.log(`✓ Scan interval set to ${value}ms`);
+        break;
+      default:
+        console.log('Unknown setting. Use: minProfit, maxSlippage, maxGas, scanInterval');
+    }
+  }
 }
 
 // CLI Interface
@@ -356,6 +485,18 @@ async function main() {
     case 'sync':
       await studio.syncToCloud();
       break;
+    case 'prices':
+      await studio.startLivePrices(args.slice(1));
+      break;
+    case 'enhanced-scan':
+      await studio.startEnhancedScanner();
+      break;
+    case 'marginfi-v2':
+      await studio.showMarginfiV2Info();
+      break;
+    case 'config':
+      await studio.configureScannerSettings(args.slice(1));
+      break;
     default:
       console.log('Usage:');
       console.log('  npm start airdrops    - Check for claimable airdrops');
@@ -372,6 +513,12 @@ async function main() {
       console.log('  npm start templates          - View route templates');
       console.log('  npm start export [type]      - Export config (presets/templates/addresses)');
       console.log('  npm start sync               - Sync presets to QuickNode KV');
+      console.log('');
+      console.log('Enhanced Features (NEW):');
+      console.log('  npm start prices [tokens]    - Start Pyth live price streaming');
+      console.log('  npm start enhanced-scan      - Enhanced arbitrage scanner (1s intervals)');
+      console.log('  npm start marginfi-v2        - Show Marginfi v2 provider info');
+      console.log('  npm start config [setting] [value] - Configure scanner settings');
       break;
   }
 }
