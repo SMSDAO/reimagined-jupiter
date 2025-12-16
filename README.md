@@ -2,6 +2,17 @@
 
 The most advanced Solana DeFi platform with flash loan arbitrage, sniper bot, token launchpad, and comprehensive Web3 UI.
 
+## 🚀 Latest Updates (December 2025)
+
+**Enhanced with cutting-edge DeFi features!**
+
+- 📡 **Pyth Hermes WebSocket**: Live 1-second price updates for SOL, USDC, and 10+ tokens
+- ⚡ **Enhanced Arbitrage Scanner**: Multi-aggregator scanning (Raydium, Orca, Meteora, Pump) with 1-second intervals
+- 🎯 **Advanced Gas Tuning**: Dynamic prioritization fees (max 10M lamports) and user-defined slippage
+- 💰 **Marginfi v2 Integration**: Seamless multi-DEX flash loan routing with atomic transactions
+- 🔐 **MEV Protection**: Jito bundle integration for front-running prevention
+- 💼 **Phantom Wallet**: Full Phantom wallet integration in webapp
+
 ## 🤖 CI/CD & Automation
 
 **Fully automated testing, deployment, and monitoring!**
@@ -187,6 +198,47 @@ npm start manual
 ### Show Flash Loan Providers
 ```bash
 npm start providers
+```
+
+### Enhanced Features (NEW)
+
+#### Live Price Streaming
+Stream real-time prices from Pyth Network (1-second updates):
+```bash
+npm start prices
+# Or specify tokens
+npm start prices SOL USDC BTC ETH
+```
+
+#### Enhanced Arbitrage Scanner
+Multi-aggregator scanning with 1-second intervals:
+```bash
+npm start enhanced-scan
+```
+
+#### Marginfi v2 Info
+View Marginfi v2 flash loan provider details:
+```bash
+npm start marginfi-v2
+```
+
+#### Configure Scanner Settings
+Adjust arbitrage scanner parameters:
+```bash
+# View current settings
+npm start config
+
+# Set minimum profit threshold (in %)
+npm start config minProfit 0.5
+
+# Set maximum slippage (in %)
+npm start config maxSlippage 1.0
+
+# Set maximum gas fee (in lamports, max 10M)
+npm start config maxGas 5000000
+
+# Set scan interval (in milliseconds)
+npm start config scanInterval 1000
 ```
 
 ## 📋 Preset Strategies
