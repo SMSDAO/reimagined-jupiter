@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useConnection, useWallet } from '@solana/wallet-adapter-react';
 import { motion } from 'framer-motion';
-import { PublicKey, Transaction, VersionedTransaction } from '@solana/web3.js';
+import { VersionedTransaction } from '@solana/web3.js';
 
 export default function SwapPage() {
   const { connection } = useConnection();
@@ -95,6 +95,7 @@ export default function SwapPage() {
       if (inputAmount) getQuote();
     }, 500);
     return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [inputAmount, inputToken, outputToken, slippage]);
 
   return (

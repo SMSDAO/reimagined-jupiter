@@ -77,6 +77,7 @@ export default function AirdropPage() {
     if (publicKey) {
       checkAirdrops();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [publicKey]);
 
   const getTierColor = (tier: string) => {
