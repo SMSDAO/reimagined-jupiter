@@ -5,6 +5,7 @@ import { useWallet } from '@solana/wallet-adapter-react';
 import { motion } from 'framer-motion';
 import { ArbitrageScanner, ArbitrageOpportunity } from '@/lib/arbitrage-scanner';
 import { saveUserSettings, loadUserSettings, getDefaultSettings, saveTradeHistory } from '@/lib/storage';
+import { notifySuccess, notifyError, notifyOpportunity, notifyTradeExecution, requestNotificationPermission } from '@/lib/notifications';
 import TradeHistory from '@/components/TradeHistory';
 
 export default function ArbitragePage() {
@@ -52,9 +53,12 @@ export default function ArbitragePage() {
 
   const startScanning = async () => {
     if (!publicKey) {
-      alert('Connect wallet first!');
+      notifyError('Wallet Required', 'Please connect your wallet to start scanning');
       return;
     }
+
+    // Request notification permission
+    await requestNotificationPermission();
 
     setScanning(true);
     setOpportunities([]);
@@ -71,15 +75,21 @@ export default function ArbitragePage() {
           const updated = [opportunity, ...prev].slice(0, 20);
           return updated;
         });
+
+        // Notify about high-value opportunities
+        if (opportunity.profitUSD > 100) {
+          notifyOpportunity(opportunity.profitUSD, opportunity.tokens);
+        }
       });
 
       // Start scanning
       await scannerRef.current.startScanning(minProfit);
 
+      notifySuccess('Scanner Started', `Scanning for opportunities with min profit ${minProfit}%`);
       console.log('[ArbitragePage] Scanner started with min profit:', minProfit);
     } catch (error) {
       console.error('[ArbitragePage] Error starting scanner:', error);
-      alert('Failed to start scanner. Check console for details.');
+      notifyError('Scanner Failed', 'Failed to start scanner. Check console for details.');
       setScanning(false);
     }
   };
@@ -90,11 +100,12 @@ export default function ArbitragePage() {
       scannerRef.current = null;
     }
     setScanning(false);
+    notifySuccess('Scanner Stopped', 'Arbitrage scanner has been stopped');
   };
 
   const executeArbitrage = async (opp: ArbitrageOpportunity) => {
     if (!publicKey) {
-      alert('Connect wallet first!');
+      notifyError('Wallet Required', 'Connect your wallet first to execute trades');
       return;
     }
 
@@ -115,7 +126,7 @@ export default function ArbitragePage() {
       };
 
       saveTradeHistory(trade);
-      alert(`Arbitrage executed! Profit: $${opp.profitUSD.toFixed(2)}`);
+      notifyTradeExecution(true, opp.tokens, opp.profitUSD);
       
       // Refresh history view if open
       if (showHistory) {
@@ -124,7 +135,7 @@ export default function ArbitragePage() {
       }
     } catch (error) {
       console.error('[ArbitragePage] Execution error:', error);
-      alert('Failed to execute trade. Check console for details.');
+      notifyTradeExecution(false, opp.tokens);
     }
   };
 
