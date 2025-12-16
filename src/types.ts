@@ -53,6 +53,13 @@ export interface Config {
     percentage: number;
     wallet: PublicKey;
   };
+  profitDistribution: {
+    reserveWallet: string; // SNS address or PublicKey
+    reservePercentage: number;
+    gasSlippagePercentage: number;
+    daoWallet: PublicKey;
+    daoPercentage: number;
+  };
 }
 
 export interface TokenConfig {

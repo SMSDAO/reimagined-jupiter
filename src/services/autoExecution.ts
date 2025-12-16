@@ -284,15 +284,12 @@ export class AutoExecutionEngine {
   private async handleDevFee(profit: number): Promise<void> {
     const { config } = await import('../config/index.js');
     
-    if (!config.devFee.enabled) {
-      return;
-    }
-    
-    const devFeeAmount = profit * config.devFee.percentage;
-    console.log(`💰 Dev fee: $${devFeeAmount.toFixed(4)} (${(config.devFee.percentage * 100).toFixed(1)}%) to ${config.devFee.wallet.toBase58().slice(0, 8)}...`);
-    
-    // In production, this would send the actual fee
-    // await sendDevFee(devFeeAmount, config.devFee.wallet);
+    // Note: Profit distribution is now handled directly in the arbitrage execution
+    // This includes: 70% to reserve, 20% for gas/slippage, 10% to DAO
+    console.log(`💰 Profit of $${profit.toFixed(4)} will be distributed according to configured splits`);
+    console.log(`   70% -> Reserve wallet (monads.skr)`);
+    console.log(`   20% -> Calling wallet (gas/slippage coverage)`);
+    console.log(`   10% -> DAO wallet (${config.profitDistribution.daoWallet.toBase58().slice(0, 8)}...)`);
   }
   
   async manualExecute(opportunityId?: string): Promise<string | null> {

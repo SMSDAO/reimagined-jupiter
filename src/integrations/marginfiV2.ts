@@ -94,12 +94,17 @@ export class MarginfiV2Integration {
       // 4. Wait for confirmation
       // 5. Calculate and return profit
       
-      console.log('[MarginfiV2] Flash loan executed successfully');
+      console.log('[MarginfiV2] Flash loan transaction ready for execution');
+      console.log('[MarginfiV2] Note: This requires actual Marginfi SDK implementation for production');
+      
+      // In production, this would:
+      // 1. Use TransactionExecutor to execute with proper priority fees
+      // 2. Return actual transaction signature
+      // 3. Calculate real profit from on-chain state changes
       
       return {
-        success: true,
-        signature: 'mock_signature_' + Date.now(),
-        profit: params.amount * 0.005, // Mock 0.5% profit
+        success: false,
+        error: 'Flash loan execution requires Marginfi SDK integration. This is a framework implementation.',
       };
     } catch (error) {
       console.error('[MarginfiV2] Flash loan execution error:', error);
@@ -197,18 +202,35 @@ export class MarginfiV2Integration {
   }
   
   /**
-   * Get available liquidity for a token
+   * Get available liquidity for a token from Marginfi v2 protocol
    */
   async getAvailableLiquidity(tokenMint: PublicKey): Promise<number> {
     try {
       console.log(`[MarginfiV2] Fetching liquidity for ${tokenMint.toString().slice(0, 8)}...`);
       
-      // In production, this would query Marginfi v2 protocol state
-      // For now, return a mock value
-      const mockLiquidity = 10000000; // 10M tokens
+      // In production, this would:
+      // 1. Derive the bank PDA for the token
+      // 2. Fetch the bank account data
+      // 3. Parse the available liquidity from account state
+      // 4. Return actual available liquidity
       
-      console.log(`[MarginfiV2] Available liquidity: ${mockLiquidity}`);
-      return mockLiquidity;
+      // For now, attempt to fetch account info as a basic check
+      const accountInfo = await this.connection.getAccountInfo(this.programId);
+      
+      if (!accountInfo) {
+        console.warn('[MarginfiV2] Program account not found');
+        return 0;
+      }
+      
+      console.log(`[MarginfiV2] Program exists, but actual liquidity query requires Marginfi SDK`);
+      console.log(`[MarginfiV2] Returning conservative estimate`);
+      
+      // Return conservative estimate based on typical lending protocol TVL
+      // This should be replaced with actual on-chain data query
+      const estimatedLiquidity = 1000000; // 1M tokens conservative estimate
+      
+      console.log(`[MarginfiV2] Estimated liquidity: ${estimatedLiquidity}`);
+      return estimatedLiquidity;
     } catch (error) {
       console.error('[MarginfiV2] Liquidity fetch error:', error);
       return 0;
