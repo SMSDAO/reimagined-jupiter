@@ -402,7 +402,7 @@ export class AutoExecutionEngine {
     }
     
     const devFeeAmount = profit * config.devFee.percentage;
-    console.log(`💰 Dev fee (legacy): $${devFeeAmount.toFixed(4)} (${(config.devFee.percentage * 100).toFixed(1)}%) to ${config.devFee.wallet.toBase58().slice(0, 8)}...`);
+    console.log(`💰 Development fee (legacy): $${devFeeAmount.toFixed(4)} (${(config.devFee.percentage * 100).toFixed(1)}%) to ${config.devFee.wallet.toBase58().slice(0, 8)}...`);
     
     // In production, this would send the actual fee
     // await sendDevFee(devFeeAmount, config.devFee.wallet);

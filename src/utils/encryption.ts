@@ -37,8 +37,10 @@ export class EncryptionService {
       const cipher = crypto.createCipheriv(this.algorithm, key, iv) as crypto.CipherGCM;
 
       // Encrypt
-      let encrypted = cipher.update(plaintext, 'utf8', 'hex');
-      encrypted += cipher.final('hex');
+      const encrypted = Buffer.concat([
+        cipher.update(plaintext, 'utf8'),
+        cipher.final(),
+      ]);
 
       // Get auth tag
       const tag = cipher.getAuthTag();
@@ -48,7 +50,7 @@ export class EncryptionService {
         salt,
         iv,
         tag,
-        Buffer.from(encrypted, 'hex'),
+        encrypted,
       ]).toString('base64');
 
       return result;
@@ -91,8 +93,10 @@ export class EncryptionService {
       decipher.setAuthTag(tag);
 
       // Decrypt
-      let decrypted = decipher.update(encrypted.toString('hex'), 'hex', 'utf8');
-      decrypted += decipher.final('utf8');
+      const decrypted = Buffer.concat([
+        decipher.update(encrypted),
+        decipher.final(),
+      ]).toString('utf8');
 
       return decrypted;
     } catch (error) {

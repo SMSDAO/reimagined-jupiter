@@ -263,8 +263,9 @@ export class DAOAirdropService {
         
         try {
           const account = await getAccount(this.connection, tokenAccount);
-          // Convert from token amount to decimal
-          return Number(account.amount);
+          // Return token amount as number (may need decimal conversion based on token decimals)
+          // For production: divide by 10^decimals to get human-readable amount
+          return Number(account.amount) / Math.pow(10, 9); // Assuming 9 decimals (SOL standard)
         } catch (error) {
           // Token account doesn't exist
           return 0;

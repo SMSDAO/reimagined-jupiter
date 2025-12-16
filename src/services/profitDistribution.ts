@@ -112,12 +112,14 @@ export class ProfitDistributionService {
         );
 
         // Add transfer instructions
+        // Note: Token amounts should already be in the smallest unit (e.g., lamports for SOL)
+        // If totalProfit is in token decimals, it needs to be converted first
         transaction.add(
           createTransferInstruction(
             payerTokenAccount,
             reserveTokenAccount,
             payerKeypair.publicKey,
-            Math.floor(reserveAmount)
+            BigInt(Math.floor(reserveAmount))
           )
         );
 
@@ -126,7 +128,7 @@ export class ProfitDistributionService {
             payerTokenAccount,
             gasTokenAccount,
             payerKeypair.publicKey,
-            Math.floor(gasAmount)
+            BigInt(Math.floor(gasAmount))
           )
         );
 
@@ -135,7 +137,7 @@ export class ProfitDistributionService {
             payerTokenAccount,
             daoTokenAccount,
             payerKeypair.publicKey,
-            Math.floor(daoAmount)
+            BigInt(Math.floor(daoAmount))
           )
         );
       } else {
