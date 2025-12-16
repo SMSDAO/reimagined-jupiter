@@ -2,6 +2,19 @@
 
 The most advanced Solana DeFi platform with flash loan arbitrage, sniper bot, token launchpad, and comprehensive Web3 UI.
 
+## 🤖 CI/CD & Automation
+
+**Fully automated testing, deployment, and monitoring!**
+
+- ✅ **Automated Testing**: CI runs on every PR with comprehensive checks
+- 🔄 **Auto-Merge**: Smart PR merging with approval and test requirements
+- 🔧 **Failed Job Recovery**: Automatic retry and issue creation for CI failures
+- 📊 **Performance Monitoring**: Regular dependency, security, and build analysis
+- 🌐 **Real-Time Data**: WebSocket service with Pyth Network price feeds
+- ⚡ **Live Updates**: Real-time arbitrage opportunities and trade notifications
+
+See [CI_CD_GUIDE.md](CI_CD_GUIDE.md) for complete documentation and [REALTIME_MONITORING.md](REALTIME_MONITORING.md) for WebSocket integration.
+
 ## 🌐 Web Application (NEW!)
 
 **Production-ready Next.js web app with full Solana integration!**
@@ -84,6 +97,8 @@ See [VERCEL_DEPLOY.md](VERCEL_DEPLOY.md) for detailed instructions and troublesh
 - 💰 **Dev Fee System**: Automatic 10% profit sharing to development wallet
 - 📊 **Dynamic Slippage**: Market-aware slippage calculation for optimal execution
 - 💎 **GXQ Ecosystem Integration**: Native support for GXQ tokens
+- 🌐 **WebSocket Service**: Real-time data streaming for prices, opportunities, and trades
+- 📡 **Pyth Network Integration**: High-frequency, low-latency price feeds
 
 ## 📦 Installation
 
