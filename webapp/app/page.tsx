@@ -70,7 +70,7 @@ export default function Home() {
       </motion.div>
 
       {/* Features Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
         {features.map((feature, index) => (
           <motion.div
             key={feature.href}
@@ -79,11 +79,11 @@ export default function Home() {
             transition={{ delay: index * 0.1 }}
           >
             <Link href={feature.href}>
-              <div className={`p-6 rounded-xl bg-gradient-to-br ${feature.color} hover:scale-105 transition-transform cursor-pointer`}>
-                <h3 className="text-2xl font-bold text-white mb-2">
+              <div className={`p-4 md:p-6 rounded-xl bg-gradient-to-br ${feature.color} hover:scale-105 transition-transform cursor-pointer shadow-lg hover:shadow-2xl`}>
+                <h3 className="text-xl md:text-2xl font-bold text-white mb-2">
                   {feature.title}
                 </h3>
-                <p className="text-white/90">
+                <p className="text-sm md:text-base text-white/90">
                   {feature.description}
                 </p>
               </div>
@@ -97,23 +97,23 @@ export default function Home() {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.6 }}
-        className="grid grid-cols-1 md:grid-cols-4 gap-6 mt-12"
+        className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mt-12"
       >
-        <div className="bg-white/10 backdrop-blur-md rounded-xl p-6 text-center">
-          <div className="text-3xl font-bold text-purple-400">30+</div>
-          <div className="text-gray-300">Tokens Supported</div>
+        <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 md:p-6 text-center">
+          <div className="text-2xl md:text-3xl font-bold text-purple-400">30+</div>
+          <div className="text-sm md:text-base text-gray-300">Tokens Supported</div>
         </div>
-        <div className="bg-white/10 backdrop-blur-md rounded-xl p-6 text-center">
-          <div className="text-3xl font-bold text-pink-400">8+ DEXs</div>
-          <div className="text-gray-300">Integrated</div>
+        <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 md:p-6 text-center">
+          <div className="text-2xl md:text-3xl font-bold text-pink-400">8+ DEXs</div>
+          <div className="text-sm md:text-base text-gray-300">Integrated</div>
         </div>
-        <div className="bg-white/10 backdrop-blur-md rounded-xl p-6 text-center">
-          <div className="text-3xl font-bold text-blue-400">5 Providers</div>
-          <div className="text-gray-300">Flash Loans</div>
+        <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 md:p-6 text-center">
+          <div className="text-2xl md:text-3xl font-bold text-blue-400">5 Providers</div>
+          <div className="text-sm md:text-base text-gray-300">Flash Loans</div>
         </div>
-        <div className="bg-white/10 backdrop-blur-md rounded-xl p-6 text-center">
-          <div className="text-3xl font-bold text-green-400">10% Fee</div>
-          <div className="text-gray-300">To Dev Wallet</div>
+        <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 md:p-6 text-center">
+          <div className="text-2xl md:text-3xl font-bold text-green-400">10% Fee</div>
+          <div className="text-sm md:text-base text-gray-300">To Dev Wallet</div>
         </div>
       </motion.div>
 

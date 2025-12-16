@@ -1,18 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { motion } from 'framer-motion';
-
-interface ArbitrageOpportunity {
-  id: string;
-  type: 'flash' | 'triangular';
-  tokens: string[];
-  profitPercent: number;
-  profitUSD: number;
-  provider?: string;
-  route?: string;
-}
+import { ArbitrageScanner, ArbitrageOpportunity } from '@/lib/arbitrage-scanner';
 
 export default function ArbitragePage() {
   const { publicKey } = useWallet();
@@ -20,6 +11,7 @@ export default function ArbitragePage() {
   const [autoExecute, setAutoExecute] = useState(false);
   const [minProfit, setMinProfit] = useState(0.5);
   const [scanning, setScanning] = useState(false);
+  const scannerRef = useRef<ArbitrageScanner | null>(null);
 
   const flashProviders = [
     { name: 'Marginfi', fee: 0.09, liquidity: '$250M' },
@@ -29,40 +21,55 @@ export default function ArbitragePage() {
     { name: 'Save', fee: 0.18, liquidity: '$45M' },
   ];
 
-  const startScanning = () => {
-    setScanning(true);
-    
-    // Mock opportunities
-    const mockOpportunities: ArbitrageOpportunity[] = [
-      {
-        id: '1',
-        type: 'flash',
-        tokens: ['SOL', 'USDC'],
-        profitPercent: 1.2,
-        profitUSD: 243,
-        provider: 'Marginfi',
-        route: 'Raydium → Orca',
-      },
-      {
-        id: '2',
-        type: 'triangular',
-        tokens: ['SOL', 'USDC', 'USDT', 'SOL'],
-        profitPercent: 0.8,
-        profitUSD: 156,
-        route: 'Jupiter v6',
-      },
-      {
-        id: '3',
-        type: 'flash',
-        tokens: ['BONK', 'USDC'],
-        profitPercent: 2.5,
-        profitUSD: 478,
-        provider: 'Solend',
-        route: 'Meteora → Phoenix',
-      },
-    ];
+  useEffect(() => {
+    // Cleanup scanner on unmount
+    return () => {
+      if (scannerRef.current) {
+        scannerRef.current.stopScanning();
+      }
+    };
+  }, []);
 
-    setOpportunities(mockOpportunities);
+  const startScanning = async () => {
+    if (!publicKey) {
+      alert('Connect wallet first!');
+      return;
+    }
+
+    setScanning(true);
+    setOpportunities([]);
+
+    try {
+      // Initialize scanner with RPC URL
+      const rpcUrl = process.env.NEXT_PUBLIC_RPC_URL || 'https://api.mainnet-beta.solana.com';
+      scannerRef.current = new ArbitrageScanner(rpcUrl);
+
+      // Set up opportunity callback
+      scannerRef.current.onOpportunity((opportunity) => {
+        setOpportunities((prev) => {
+          // Keep only last 20 opportunities
+          const updated = [opportunity, ...prev].slice(0, 20);
+          return updated;
+        });
+      });
+
+      // Start scanning
+      await scannerRef.current.startScanning(minProfit);
+
+      console.log('[ArbitragePage] Scanner started with min profit:', minProfit);
+    } catch (error) {
+      console.error('[ArbitragePage] Error starting scanner:', error);
+      alert('Failed to start scanner. Check console for details.');
+      setScanning(false);
+    }
+  };
+
+  const stopScanning = () => {
+    if (scannerRef.current) {
+      scannerRef.current.stopScanning();
+      scannerRef.current = null;
+    }
+    setScanning(false);
   };
 
   const executeArbitrage = async (opp: ArbitrageOpportunity) => {
@@ -133,7 +140,7 @@ export default function ArbitragePage() {
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-300">Today's Profit:</span>
+                <span className="text-gray-300">Today&apos;s Profit:</span>
                 <span className="text-green-400 font-bold">$234.56</span>
               </div>
             </div>
@@ -175,13 +182,27 @@ export default function ArbitragePage() {
         </div>
 
         {/* Scan Button */}
-        <button
-          onClick={startScanning}
-          disabled={scanning || !publicKey}
-          className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold py-4 rounded-xl hover:from-purple-700 hover:to-pink-700 transition disabled:opacity-50 mb-8"
-        >
-          {scanning ? '🔍 Scanning for Opportunities...' : publicKey ? '🔍 Start Scanning' : 'Connect Wallet'}
-        </button>
+        <div className="flex gap-4 mb-8">
+          <button
+            onClick={scanning ? stopScanning : startScanning}
+            disabled={!publicKey}
+            className={`flex-1 ${
+              scanning 
+                ? 'bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700' 
+                : 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700'
+            } text-white font-bold py-4 rounded-xl transition disabled:opacity-50`}
+          >
+            {scanning ? '⏹️ Stop Scanning' : publicKey ? '🔍 Start Scanning' : 'Connect Wallet'}
+          </button>
+          {scanning && (
+            <button
+              onClick={() => setOpportunities([])}
+              className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-4 px-6 rounded-xl transition"
+            >
+              Clear
+            </button>
+          )}
+        </div>
 
         {/* Opportunities */}
         {opportunities.length > 0 && (
@@ -211,17 +232,31 @@ export default function ArbitragePage() {
                       <div className="text-white font-bold">
                         {opp.tokens.join(' → ')}
                       </div>
+                      {opp.confidence && (
+                        <span className={`px-2 py-1 rounded text-xs font-bold ${
+                          opp.confidence >= 80 ? 'bg-green-600 text-white' : 
+                          opp.confidence >= 65 ? 'bg-yellow-600 text-white' : 
+                          'bg-orange-600 text-white'
+                        }`}>
+                          {opp.confidence.toFixed(0)}% Confidence
+                        </span>
+                      )}
                     </div>
                     <div className="flex gap-6 text-sm">
                       {opp.provider && (
                         <span className="text-gray-300">Provider: <span className="text-white">{opp.provider}</span></span>
                       )}
                       <span className="text-gray-300">Route: <span className="text-white">{opp.route}</span></span>
+                      {opp.timestamp && (
+                        <span className="text-gray-300">
+                          {new Date(opp.timestamp).toLocaleTimeString()}
+                        </span>
+                      )}
                     </div>
                   </div>
                   <div className="text-right mr-6">
-                    <div className="text-3xl font-bold text-green-400">{opp.profitPercent}%</div>
-                    <div className="text-xl text-white">${opp.profitUSD}</div>
+                    <div className="text-3xl font-bold text-green-400">{opp.profitPercent.toFixed(2)}%</div>
+                    <div className="text-xl text-white">${opp.profitUSD.toFixed(2)}</div>
                   </div>
                   <button
                     onClick={() => executeArbitrage(opp)}

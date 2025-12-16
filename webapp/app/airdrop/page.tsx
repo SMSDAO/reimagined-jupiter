@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useWallet, useConnection } from '@solana/wallet-adapter-react';
 import { motion } from 'framer-motion';
 
@@ -27,7 +27,7 @@ export default function AirdropPage() {
   const [airdrops, setAirdrops] = useState<Airdrop[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const checkAirdrops = async () => {
+  const checkAirdrops = useCallback(async () => {
     if (!publicKey) return;
     
     setLoading(true);
@@ -60,7 +60,7 @@ export default function AirdropPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [publicKey, connection]);
 
   const claimAirdrop = async (airdrop: Airdrop) => {
     alert(`Claiming ${airdrop.amount} from ${airdrop.protocol}...`);
@@ -77,7 +77,7 @@ export default function AirdropPage() {
     if (publicKey) {
       checkAirdrops();
     }
-  }, [publicKey]);
+  }, [publicKey, checkAirdrops]);
 
   const getTierColor = (tier: string) => {
     switch (tier) {
