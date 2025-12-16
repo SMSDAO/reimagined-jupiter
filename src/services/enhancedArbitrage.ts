@@ -176,24 +176,16 @@ export class EnhancedArbitrageScanner {
   
   /**
    * Check arbitrage opportunity for a token pair
+   * Note: tokenA and tokenB should be mint addresses, not symbols
    */
   private async checkPairOpportunity(
-    tokenA: string,
-    tokenB: string,
+    tokenAMint: string,
+    tokenBMint: string,
     pythPrices: Record<string, number>
   ): Promise<EnhancedOpportunity | null> {
     try {
-      // Get price difference from Pyth (if available) for quick filtering
-      if (pythPrices[tokenA] && pythPrices[tokenB]) {
-        const priceDiff = Math.abs(
-          (pythPrices[tokenA] - pythPrices[tokenB]) / pythPrices[tokenA]
-        );
-        
-        // Skip if price difference is too small
-        if (priceDiff < this.config.minProfitThreshold) {
-          return null;
-        }
-      }
+      // Note: For production use, symbols should be resolved to mint addresses
+      // via a token registry (e.g., Jupiter token list)
       
       // Use Jupiter to get actual quotes across aggregators
       // This will check multiple DEXs including Raydium, Orca, Meteora, etc.
@@ -201,8 +193,8 @@ export class EnhancedArbitrageScanner {
       
       // Jupiter v6 automatically routes through multiple aggregators
       const forwardQuote = await this.jupiter.getQuote(
-        tokenA,
-        tokenB,
+        tokenAMint,
+        tokenBMint,
         amount,
         this.config.maxSlippage * 10000 // Convert to bps
       );
@@ -212,8 +204,8 @@ export class EnhancedArbitrageScanner {
       const receivedAmount = parseInt(forwardQuote.outAmount);
       
       const reverseQuote = await this.jupiter.getQuote(
-        tokenB,
-        tokenA,
+        tokenBMint,
+        tokenAMint,
         receivedAmount,
         this.config.maxSlippage * 10000
       );
@@ -228,12 +220,24 @@ export class EnhancedArbitrageScanner {
         // Extract aggregators from route plan
         const aggregators = this.extractAggregators(forwardQuote, reverseQuote);
         
+        // Create TokenConfig with proper mint addresses
+        const tokenA: TokenConfig = {
+          symbol: 'TOKEN_A', // Would be resolved from token registry
+          mint: new PublicKey(tokenAMint),
+          decimals: 9, // Would be fetched from token metadata
+          category: 'native', // Would be determined from token registry
+        };
+        
+        const tokenB: TokenConfig = {
+          symbol: 'TOKEN_B', // Would be resolved from token registry
+          mint: new PublicKey(tokenBMint),
+          decimals: 9, // Would be fetched from token metadata
+          category: 'native', // Would be determined from token registry
+        };
+        
         return {
           type: 'triangular',
-          path: [
-            { symbol: tokenA, mint: new PublicKey(tokenA), decimals: 9 } as TokenConfig,
-            { symbol: tokenB, mint: new PublicKey(tokenB), decimals: 9 } as TokenConfig,
-          ],
+          path: [tokenA, tokenB],
           estimatedProfit: profit,
           requiredCapital: amount,
           confidence: 0.85,
@@ -253,6 +257,9 @@ export class EnhancedArbitrageScanner {
   
   /**
    * Extract aggregator names from Jupiter route plan
+   * Note: Using 'any' type because Jupiter quote response structure is complex
+   * and may change between versions. For production, consider defining proper
+   * interfaces based on @jup-ag/api types.
    */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private extractAggregators(forwardQuote: any, reverseQuote: any): string[] {

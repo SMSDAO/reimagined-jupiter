@@ -81,7 +81,7 @@ class GXQStudio {
     console.log('📊 System Information:');
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     console.log(`🌐 QuickNode Integration: ${config.quicknode.rpcUrl ? '✓' : '✗'}`);
-    console.log(`📡 Pyth Price Streaming: ✓ (Hermes WebSocket)`);
+    console.log(`📡 Pyth Price Streaming: ✓ (Hermes HTTP API - 1s polling)`);
     console.log(`⚡ Enhanced Arbitrage Scanner: ✓ (1s intervals)`);
     console.log(`💰 Flash Loan Providers: 6`);
     console.log(`   - Marginfi v2 (${config.flashLoanProviders.marginfi.toBase58().slice(0, 8)}...) - 0.09% fee - Multi-DEX routing`);

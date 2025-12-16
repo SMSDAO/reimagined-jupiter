@@ -24,7 +24,7 @@ export const PYTH_PRICE_FEED_IDS: Record<string, string> = {
   'PYTH': '0x0bbf28e9a841a1cc788f6a361b17ca072d0ea3098a1e5df1c3922d06719579ff',
   'JTO': '0xb43660a5f790c69354b0729a5ef9d50d68f1df92107540210b9cccba1f947cc2',
   'WIF': '0x4ca4beeca86f0d164160323817a4e42b10010a724c2217c6ee41b54cd4cc61fc',
-  'RENDER': '0xab6e3a6a7e3b6b6e4d3b8f3f7b9f3d6b6e3b6b6e3b6b6e3b6b6e3b6b6e3b6b6e',
+  // Note: RENDER feed ID to be added when officially supported by Pyth
 };
 
 export class PythPriceStreamService extends EventEmitter {
