@@ -75,6 +75,16 @@ See [VERCEL_DEPLOY.md](VERCEL_DEPLOY.md) for detailed instructions and troublesh
 - **Memecoins**: BONK, WIF, SAMO, MYRO, POPCAT, WEN
 - **GXQ Ecosystem**: GXQ, sGXQ, xGXQ
 
+### Enhanced Scanner (NEW!)
+- 🔍 **Multi-Angle Scanning**: Flash loan, triangular, and cross-DEX arbitrage detection
+- ⚡ **1-Second Polling**: Real-time opportunity detection with configurable intervals
+- 🌐 **20+ Aggregators**: Jupiter + 12 direct DEX integrations for comprehensive coverage
+- 💾 **Historical Analysis**: Database-backed tracking and analytics
+- 📊 **Dynamic Gas Estimation**: Real-time compute unit estimation via Solana RPC
+- 🎯 **User-Configurable Slippage**: Set maximum slippage tolerance
+- 🔔 **Live Notifications**: Real-time alerts for profitable opportunities
+- 📈 **Performance Metrics**: Detailed statistics and success rate tracking
+
 ### Additional Features
 - 🎁 **Airdrop Checker**: Automatic detection and claiming of airdrops
 - 📋 **Preset Management**: Pre-configured strategies for different market conditions
@@ -82,7 +92,6 @@ See [VERCEL_DEPLOY.md](VERCEL_DEPLOY.md) for detailed instructions and troublesh
 - ⚡ **Auto-Execution**: Continuous monitoring and execution of profitable opportunities
 - 🔧 **Manual Execution**: Review and manually execute opportunities with "sweet profit"
 - 💰 **Dev Fee System**: Automatic 10% profit sharing to development wallet
-- 📊 **Dynamic Slippage**: Market-aware slippage calculation for optimal execution
 - 💎 **GXQ Ecosystem Integration**: Native support for GXQ tokens
 
 ## 📦 Installation
@@ -169,6 +178,24 @@ npm start manual
 ```bash
 npm start providers
 ```
+
+### Enhanced Scanner (NEW!)
+**Real-time multi-angle arbitrage detection with 1-second polling:**
+```bash
+# Start enhanced scanner
+npm start enhanced-scan
+
+# View scanner statistics
+npm start scanner-stats
+
+# View database statistics
+npm start db-stats
+
+# Historical analysis
+npm start history
+```
+
+See [ENHANCED_SCANNER.md](ENHANCED_SCANNER.md) for complete documentation.
 
 ## 📋 Preset Strategies
 

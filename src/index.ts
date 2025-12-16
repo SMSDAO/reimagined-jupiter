@@ -9,6 +9,8 @@ import { FlashLoanArbitrage, TriangularArbitrage } from './strategies/arbitrage.
 import { AddressBook } from './services/addressBook.js';
 import { WalletScoring } from './services/walletScoring.js';
 import { RouteTemplateManager } from './services/routeTemplates.js';
+import { EnhancedArbitrageScanner } from './services/enhancedScanner.js';
+import { ArbitrageDatabase } from './services/database.js';
 
 class GXQStudio {
   private connection: Connection;
@@ -22,6 +24,8 @@ class GXQStudio {
   private addressBook: AddressBook;
   private walletScoring: WalletScoring;
   private routeTemplates: RouteTemplateManager;
+  private enhancedScanner: EnhancedArbitrageScanner;
+  private database: ArbitrageDatabase;
   
   constructor() {
     // Initialize QuickNode first
@@ -35,6 +39,8 @@ class GXQStudio {
     this.addressBook = new AddressBook('./address-book');
     this.walletScoring = new WalletScoring(this.connection);
     this.routeTemplates = new RouteTemplateManager('./route-templates');
+    this.enhancedScanner = new EnhancedArbitrageScanner(this.connection);
+    this.database = new ArbitrageDatabase('./data');
     
     // Initialize user keypair if available
     if (config.solana.walletPrivateKey) {
@@ -61,6 +67,7 @@ class GXQStudio {
     await this.presetManager.initialize();
     await this.addressBook.initialize();
     await this.routeTemplates.initialize();
+    await this.database.initialize();
     
     console.log('✅ Initialization complete\n');
     this.printSystemInfo();
@@ -87,6 +94,8 @@ class GXQStudio {
     console.log(`⚡ Auto-Execution: ${this.autoExecutionEngine ? '✓' : '✗'}`);
     console.log(`🛡️  MEV Protection: ✓`);
     console.log(`💎 GXQ Ecosystem: ${config.gxq.tokenMint.toBase58().slice(0, 8)}...`);
+    console.log(`🔍 Enhanced Scanner: ✓ (1s polling, 20+ aggregators)`);
+    console.log(`💾 Database: ✓ (Historical analysis enabled)`);
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
   }
   
@@ -309,6 +318,97 @@ class GXQStudio {
       console.log('❌ Failed to sync presets');
     }
   }
+  
+  async startEnhancedScanner(pollingMs?: number): Promise<void> {
+    console.log('🚀 Starting Enhanced Arbitrage Scanner...\n');
+    
+    // Set up scanner with custom polling if provided
+    if (pollingMs) {
+      console.log(`Custom polling interval: ${pollingMs}ms\n`);
+    }
+    
+    // Set up database integration
+    const scanner = this.enhancedScanner;
+    
+    // Start scanner in background and log opportunities to database
+    const scannerPromise = scanner.startScanning();
+    
+    // Periodically save opportunities to database
+    const saveInterval = setInterval(async () => {
+      const opportunities = scanner.getOpportunities();
+      for (const opp of opportunities) {
+        await this.database.addOpportunity(opp);
+      }
+      scanner.clearHistory(); // Clear after saving to avoid duplicates
+    }, 10000); // Save every 10 seconds
+    
+    // Handle graceful shutdown
+    process.on('SIGINT', () => {
+      console.log('\n\n🛑 Shutting down scanner...');
+      scanner.stopScanning();
+      clearInterval(saveInterval);
+      process.exit(0);
+    });
+    
+    await scannerPromise;
+  }
+  
+  async showScannerStats(): Promise<void> {
+    console.log('📊 Scanner Statistics\n');
+    
+    const stats = this.enhancedScanner.getStatistics();
+    console.log(`Total Scans: ${stats.totalScans}`);
+    console.log(`Opportunities Found: ${stats.opportunitiesFound}\n`);
+    
+    if (stats.recentOpportunities.length > 0) {
+      console.log('Recent Opportunities:');
+      for (const opp of stats.recentOpportunities) {
+        console.log(`  ${opp.type} - ${opp.tokens.join(' -> ')} - ${(opp.estimatedProfit * 100).toFixed(3)}%`);
+      }
+    }
+  }
+  
+  async showDatabaseStats(): Promise<void> {
+    console.log('💾 Database Statistics\n');
+    
+    const stats = this.database.getStatistics();
+    console.log(`Total Opportunities: ${stats.totalOpportunities}`);
+    console.log(`Total Executed: ${stats.totalExecuted}`);
+    console.log(`Success Rate: ${(stats.successRate * 100).toFixed(1)}%`);
+    console.log(`Total Profit: $${stats.totalProfit.toFixed(2)}`);
+    console.log(`Average Profit: $${stats.averageProfit.toFixed(2)}\n`);
+    
+    console.log('By Type:');
+    for (const [type, count] of Object.entries(stats.byType)) {
+      console.log(`  ${type}: ${count}`);
+    }
+    
+    console.log('\nBy Provider:');
+    for (const [provider, count] of Object.entries(stats.byProvider)) {
+      console.log(`  ${provider}: ${count}`);
+    }
+  }
+  
+  async showHistoricalAnalysis(days?: number): Promise<void> {
+    const period = days || 7;
+    console.log(`📈 Historical Analysis (Last ${period} days)\n`);
+    
+    const analysis = await this.database.getHistoricalAnalysis(period);
+    console.log(`Period: ${analysis.period}`);
+    console.log(`Opportunities: ${analysis.opportunities}`);
+    console.log(`Executed: ${analysis.executed}`);
+    console.log(`Total Profit: $${analysis.totalProfit.toFixed(2)}\n`);
+    
+    console.log('Top Tokens:');
+    for (const { token, count } of analysis.topTokens.slice(0, 5)) {
+      console.log(`  ${token}: ${count}`);
+    }
+    
+    console.log('\nTop Providers:');
+    for (const { provider, count } of analysis.topProviders) {
+      console.log(`  ${provider}: ${count}`);
+    }
+  }
 }
 
 // CLI Interface
@@ -356,6 +456,18 @@ async function main() {
     case 'sync':
       await studio.syncToCloud();
       break;
+    case 'enhanced-scan':
+      await studio.startEnhancedScanner(args[1] ? parseInt(args[1]) : undefined);
+      break;
+    case 'scanner-stats':
+      await studio.showScannerStats();
+      break;
+    case 'db-stats':
+      await studio.showDatabaseStats();
+      break;
+    case 'history':
+      await studio.showHistoricalAnalysis(args[1] ? parseInt(args[1]) : undefined);
+      break;
     default:
       console.log('Usage:');
       console.log('  npm start airdrops    - Check for claimable airdrops');
@@ -365,6 +477,12 @@ async function main() {
       console.log('  npm start start       - Start auto-execution engine');
       console.log('  npm start manual      - Manual execution mode (review opportunities)');
       console.log('  npm start providers   - Show flash loan providers');
+      console.log('');
+      console.log('Enhanced Scanner (NEW):');
+      console.log('  npm start enhanced-scan [interval]  - Start enhanced scanner (1s default)');
+      console.log('  npm start scanner-stats             - Show scanner statistics');
+      console.log('  npm start db-stats                  - Show database statistics');
+      console.log('  npm start history [days]            - Historical analysis (7 days default)');
       console.log('');
       console.log('Phase 2 Features:');
       console.log('  npm start analyze [address]  - Analyze wallet score and tier');

@@ -53,6 +53,12 @@ export const config: Config = {
     maxSlippage: parseFloat(process.env.MAX_SLIPPAGE || '0.01'),
     gasBuffer: parseFloat(process.env.GAS_BUFFER || '1.5'),
   },
+  scanner: {
+    pollingIntervalMs: parseInt(process.env.SCANNER_POLLING_INTERVAL_MS || '1000'),
+    enableLiveUpdates: process.env.SCANNER_ENABLE_LIVE_UPDATES !== 'false',
+    enableNotifications: process.env.SCANNER_ENABLE_NOTIFICATIONS !== 'false',
+    minConfidence: parseFloat(process.env.SCANNER_MIN_CONFIDENCE || '0.70'),
+  },
   devFee: {
     enabled: process.env.DEV_FEE_ENABLED !== 'false',
     percentage: parseFloat(process.env.DEV_FEE_PERCENTAGE || '0.10'), // 10% default

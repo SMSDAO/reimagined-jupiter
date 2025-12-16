@@ -8,6 +8,7 @@ coverage/
 .vscode/
 .idea/
 presets/
+data/
 
 # Next.js
 webapp/.next/
