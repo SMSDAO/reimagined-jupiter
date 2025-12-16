@@ -48,7 +48,11 @@ export default function AdminPage() {
   const [walletToScore, setWalletToScore] = useState('');
   const [walletScore, setWalletScore] = useState<WalletScore | null>(null);
   const [scoringWallet, setScoringWallet] = useState(false);
-  const [portfolioAnalysis, setPortfolioAnalysis] = useState<any>(null);
+  const [portfolioAnalysis, setPortfolioAnalysis] = useState<{
+    holdings: Array<{ symbol: string; mint: string; balance: number; price: number; value: number }>;
+    totalValue: number;
+    timestamp: string;
+  } | null>(null);
 
   // Simulate bot uptime counter
   useEffect(() => {
@@ -169,7 +173,7 @@ export default function AdminPage() {
           if (tx?.meta) {
             // Check if transaction involves Jupiter or Raydium
             const programIds = tx.transaction.message.instructions
-              .map((ix: any) => ix.programId?.toString() || '')
+              .map((ix: { programId?: { toString: () => string } }) => ix.programId?.toString() || '')
               .filter(Boolean);
 
             if (programIds.includes(jupiterProgram) || programIds.includes(raydiumProgram)) {
@@ -182,7 +186,7 @@ export default function AdminPage() {
               totalVolume += volume;
             }
           }
-        } catch (err) {
+        } catch {
           // Skip failed transactions
           continue;
         }
@@ -523,7 +527,7 @@ export default function AdminPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {portfolioAnalysis.holdings.map((holding: any, idx: number) => (
+                    {portfolioAnalysis.holdings.map((holding, idx) => (
                       <tr key={idx} className="border-b border-white/5">
                         <td className="py-2 text-white">
                           {holding.symbol}

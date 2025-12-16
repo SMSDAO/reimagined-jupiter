@@ -13,6 +13,10 @@ The most advanced Solana DeFi platform with flash loan arbitrage, sniper bot, to
 - 🎁 **Airdrop Checker** - Wallet scoring and auto-claim with Jupiter integration
 - 💎 **Staking** - Marinade, Lido, Jito, Kamino integration
 - ⚡ **Flash Loan Arbitrage** - Real-time opportunity scanning and execution
+- ⚙️ **Settings Panel** - Configure multiple API providers with rotation and on-chain storage
+- 🔧 **Admin Panel** - Live bot runner, opportunity finder, wallet scoring, and portfolio analysis
+- 🔍 **Enhanced Wallet Analysis** - Risk scoring with Jupiter/Raydium transaction analysis
+- 📊 **Pyth Price Integration** - Real-time price feeds from Pyth Network
 - 📱 **Responsive Design** - Mobile, tablet, and desktop optimized
 - 🎨 **Modern UI** - Solana-themed with purple, blue, green gradients and 3D effects
 
