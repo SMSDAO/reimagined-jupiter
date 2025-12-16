@@ -1,0 +1,204 @@
+name: Failed Job Handler
+
+on:
+  workflow_run:
+    workflows: ["CI - Continuous Integration"]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: 'Workflow run ID to analyze'
+        required: true
+        type: string
+
+permissions:
+  actions: write
+  issues: write
+  contents: read
+
+jobs:
+  analyze-failure:
+    name: Analyze Failed Jobs
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'failure' || github.event_name == 'workflow_dispatch' }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Get workflow run details
+        id: workflow
+        uses: actions/github-script@v7
+        with:
+          script: |
+            let runId;
+            if (context.eventName === 'workflow_dispatch') {
+              runId = parseInt('${{ inputs.run_id }}');
+            } else {
+              runId = context.payload.workflow_run.id;
+            }
+            
+            console.log(`Analyzing workflow run: ${runId}`);
+            
+            // Get workflow run details
+            const { data: workflowRun } = await github.rest.actions.getWorkflowRun({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: runId
+            });
+            
+            console.log(`Workflow: ${workflowRun.name}`);
+            console.log(`Conclusion: ${workflowRun.conclusion}`);
+            console.log(`Attempt: ${workflowRun.run_attempt}`);
+            
+            // Get failed jobs
+            const { data: jobs } = await github.rest.actions.listJobsForWorkflowRun({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: runId
+            });
+            
+            const failedJobs = jobs.jobs.filter(job => job.conclusion === 'failure');
+            
+            if (failedJobs.length === 0) {
+              console.log('No failed jobs found');
+              return { shouldRetry: false, failedJobs: [] };
+            }
+            
+            console.log(`Found ${failedJobs.length} failed jobs`);
+            
+            // Analyze failure reasons
+            const failureReasons = [];
+            for (const job of failedJobs) {
+              console.log(`\nFailed job: ${job.name}`);
+              console.log(`Status: ${job.status}, Conclusion: ${job.conclusion}`);
+              
+              // Get job logs
+              try {
+                const { data: logs } = await github.rest.actions.downloadJobLogsForWorkflowRun({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  job_id: job.id
+                });
+                
+                // Analyze common transient failures
+                const logsStr = typeof logs === 'string' ? logs : '';
+                const isTransient = 
+                  logsStr.includes('ECONNRESET') ||
+                  logsStr.includes('ETIMEDOUT') ||
+                  logsStr.includes('network') ||
+                  logsStr.includes('timeout') ||
+                  logsStr.includes('429') || // Rate limit
+                  logsStr.includes('503') || // Service unavailable
+                  logsStr.includes('502');   // Bad gateway
+                
+                failureReasons.push({
+                  jobName: job.name,
+                  jobId: job.id,
+                  isTransient,
+                  logSnippet: logsStr.slice(0, 500)
+                });
+              } catch (error) {
+                console.log(`Could not fetch logs for job ${job.id}: ${error.message}`);
+              }
+            }
+            
+            // Decide if should retry
+            const shouldRetry = 
+              workflowRun.run_attempt < 3 && // Max 3 attempts
+              failureReasons.some(f => f.isTransient);
+            
+            core.setOutput('run_id', runId);
+            core.setOutput('should_retry', shouldRetry);
+            core.setOutput('attempt', workflowRun.run_attempt);
+            core.setOutput('failed_jobs_count', failedJobs.length);
+            core.setOutput('failure_details', JSON.stringify(failureReasons));
+            
+            return { shouldRetry, failedJobs: failureReasons };
+            
+      - name: Retry workflow
+        if: steps.workflow.outputs.should_retry == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const runId = parseInt('${{ steps.workflow.outputs.run_id }}');
+            
+            console.log(`Retrying workflow run ${runId}...`);
+            
+            try {
+              await github.rest.actions.reRunWorkflowFailedJobs({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                run_id: runId
+              });
+              
+              console.log('✅ Successfully triggered retry for failed jobs');
+            } catch (error) {
+              console.error('Failed to retry workflow:', error);
+            }
+            
+      - name: Create issue for persistent failure
+        if: |
+          steps.workflow.outputs.should_retry == 'false' &&
+          steps.workflow.outputs.attempt >= 3
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const runId = '${{ steps.workflow.outputs.run_id }}';
+            const failureDetails = JSON.parse('${{ steps.workflow.outputs.failure_details }}');
+            
+            // Check if issue already exists
+            const { data: existingIssues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              labels: 'ci-failure',
+              state: 'open'
+            });
+            
+            const issueTitle = `CI Failure: Workflow Run ${runId}`;
+            const existingIssue = existingIssues.find(issue => issue.title === issueTitle);
+            
+            if (existingIssue) {
+              console.log(`Issue already exists: #${existingIssue.number}`);
+              return;
+            }
+            
+            // Create detailed issue body
+            let issueBody = `## 🚨 Persistent CI Failure\n\n`;
+            issueBody += `**Workflow Run:** [#${runId}](${context.payload.workflow_run?.html_url || 'N/A'})\n`;
+            issueBody += `**Attempt:** ${{ steps.workflow.outputs.attempt }}\n`;
+            issueBody += `**Failed Jobs:** ${{ steps.workflow.outputs.failed_jobs_count }}\n\n`;
+            issueBody += `### Failed Jobs Details\n\n`;
+            
+            for (const failure of failureDetails) {
+              issueBody += `#### ${failure.jobName}\n`;
+              issueBody += `- **Job ID:** ${failure.jobId}\n`;
+              issueBody += `- **Transient:** ${failure.isTransient ? '✅' : '❌'}\n`;
+              issueBody += `\n<details><summary>Log Snippet</summary>\n\n\`\`\`\n${failure.logSnippet}\n\`\`\`\n\n</details>\n\n`;
+            }
+            
+            issueBody += `### Action Required\n\n`;
+            issueBody += `This workflow has failed after multiple retry attempts. Manual intervention is required.\n\n`;
+            issueBody += `**Recommended Actions:**\n`;
+            issueBody += `1. Review the failed job logs\n`;
+            issueBody += `2. Check for dependency or configuration issues\n`;
+            issueBody += `3. Verify that all required secrets and environment variables are set\n`;
+            issueBody += `4. Fix the underlying issue and close this issue\n`;
+            
+            // Create issue
+            const { data: issue } = await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: issueTitle,
+              body: issueBody,
+              labels: ['ci-failure', 'bug', 'automated']
+            });
+            
+            console.log(`✅ Created issue: #${issue.number}`);
+            
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "::warning::Failed job handler encountered an error"
+          echo "Run ID: ${{ steps.workflow.outputs.run_id }}"
+          echo "Failed Jobs: ${{ steps.workflow.outputs.failed_jobs_count }}"
