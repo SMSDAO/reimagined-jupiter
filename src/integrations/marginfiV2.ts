@@ -94,17 +94,33 @@ export class MarginfiV2Integration {
       // 4. Wait for confirmation
       // 5. Calculate and return profit
       
-      console.log('[MarginfiV2] Flash loan transaction ready for execution');
-      console.log('[MarginfiV2] Note: This requires actual Marginfi SDK implementation for production');
+      console.log('[MarginfiV2] Flash loan transaction framework ready');
+      console.log('');
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.log('⚠️  MARGINFI V2 FLASH LOAN - SDK INTEGRATION REQUIRED');
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.log('This is a FRAMEWORK implementation. For production use:');
+      console.log('');
+      console.log('1. Install Marginfi SDK:');
+      console.log('   npm install @mrgnlabs/marginfi-client-v2');
+      console.log('');
+      console.log('2. Import required components:');
+      console.log('   import { MarginfiClient, getConfig } from "@mrgnlabs/marginfi-client-v2";');
+      console.log('');
+      console.log('3. Initialize client and create real flash loan instructions');
+      console.log('');
+      console.log('4. Execute transaction with TransactionExecutor');
+      console.log('');
+      console.log('See IMPLEMENTATION_GUIDE.md for detailed instructions');
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.log('');
       
-      // In production, this would:
-      // 1. Use TransactionExecutor to execute with proper priority fees
-      // 2. Return actual transaction signature
-      // 3. Calculate real profit from on-chain state changes
-      
+      // Return framework response
       return {
         success: false,
-        error: 'Flash loan execution requires Marginfi SDK integration. This is a framework implementation.',
+        error: 'Flash loan execution requires Marginfi SDK integration. ' +
+               'This is a framework implementation. ' +
+               'Install @mrgnlabs/marginfi-client-v2 and implement real flash loan logic.',
       };
     } catch (error) {
       console.error('[MarginfiV2] Flash loan execution error:', error);

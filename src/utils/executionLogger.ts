@@ -106,7 +106,7 @@ export class ExecutionLogger {
       console.log(`  DAO (10%): $${log.profitDistribution.dao.toFixed(6)}`);
     }
     
-    if (log.computeUnits) {
+    if (log.computeUnits !== undefined && log.computeUnits !== null) {
       console.log(`\n⚙️  Compute Units: ${log.computeUnits.toLocaleString()}`);
     }
     

@@ -177,6 +177,12 @@ export class JupiterV6Integration {
       
       // Confirm the transaction
       const latestBlockhash = await this.connection.getLatestBlockhash('confirmed');
+      
+      if (!latestBlockhash.blockhash) {
+        console.error('[Jupiter] Failed to get blockhash for confirmation');
+        return null;
+      }
+      
       const confirmation = await this.connection.confirmTransaction({
         signature,
         blockhash: latestBlockhash.blockhash,

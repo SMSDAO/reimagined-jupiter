@@ -257,10 +257,16 @@ export class TransactionExecutor {
           });
           
           // Confirm transaction
+          const recentBlockhash = transaction.message.recentBlockhash;
+          if (!recentBlockhash) {
+            throw new Error('Transaction missing recentBlockhash');
+          }
+          
+          const latestBlockhash = await this.connection.getLatestBlockhash();
           const confirmation = await this.connection.confirmTransaction({
             signature,
-            blockhash: transaction.message.recentBlockhash!,
-            lastValidBlockHeight: (await this.connection.getLatestBlockhash()).lastValidBlockHeight
+            blockhash: recentBlockhash,
+            lastValidBlockHeight: latestBlockhash.lastValidBlockHeight
           }, commitment);
           
           if (confirmation.value.err) {

@@ -58,19 +58,46 @@ export class ProfitDistributionManager {
   
   /**
    * Resolve SNS name to a PublicKey
-   * For now, this is a placeholder. In production, integrate with Solana Name Service
+   * 
+   * ⚠️ SNS RESOLUTION NOT YET IMPLEMENTED
+   * Current behavior:
+   * - If input is a valid PublicKey, returns it
+   * - If input is an SNS name (like "monads.skr"), throws error
+   * 
+   * To enable SNS resolution:
+   * 1. Install: npm install @bonfida/spl-name-service
+   * 2. Import: import { getHashedName, getNameAccountKey, NameRegistryState } from '@bonfida/spl-name-service'
+   * 3. Implement resolution logic in the catch block below
+   * 
+   * Workaround: Use a direct PublicKey address in RESERVE_WALLET_ADDRESS env var
    */
   async resolveWalletAddress(addressOrSNS: string): Promise<PublicKey> {
     // Check if it's already a valid public key
     try {
-      return new PublicKey(addressOrSNS);
-    } catch {
+      const publicKey = new PublicKey(addressOrSNS);
+      // Additional validation: ensure it's not a default/system address
+      if (publicKey.equals(PublicKey.default)) {
+        throw new Error('Invalid wallet address: default PublicKey not allowed');
+      }
+      return publicKey;
+    } catch (publicKeyError) {
       // It's likely an SNS name like "monads.skr"
-      console.log(`🔍 Resolving SNS name: ${addressOrSNS}`);
+      console.log(`🔍 Attempting to resolve SNS name: ${addressOrSNS}`);
       
-      // TODO: Integrate with Solana Name Service to resolve
-      // For now, throw an error to indicate SNS resolution is needed
-      throw new Error(`SNS resolution not yet implemented for: ${addressOrSNS}. Please provide a valid PublicKey address.`);
+      // ⚠️ TODO: Integrate with Solana Name Service to resolve
+      // Example implementation (requires @bonfida/spl-name-service):
+      // const hashedName = await getHashedName(addressOrSNS.replace('.sol', ''));
+      // const nameAccountKey = await getNameAccountKey(hashedName);
+      // const owner = await NameRegistryState.retrieve(this.connection, nameAccountKey);
+      // return owner.registry.owner;
+      
+      throw new Error(
+        `❌ SNS resolution not yet implemented for: ${addressOrSNS}\n` +
+        `Please either:\n` +
+        `  1. Set RESERVE_WALLET_ADDRESS to a valid PublicKey address, OR\n` +
+        `  2. Implement SNS resolution (see code comments in profitDistribution.ts)\n` +
+        `Original error: ${publicKeyError instanceof Error ? publicKeyError.message : 'Unknown error'}`
+      );
     }
   }
   

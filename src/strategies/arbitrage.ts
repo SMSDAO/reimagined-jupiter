@@ -144,9 +144,12 @@ export class FlashLoanArbitrage {
       console.log(`   Total Repayment: ${loanAmount + feeAmount} units`);
       
       // Build flash loan transaction
-      // Note: This is a simplified implementation
-      // In production, this would use the actual flash loan provider's SDK
-      console.log('\n🔨 Building flash loan transaction...');
+      // ⚠️ IMPORTANT: This is a FRAMEWORK IMPLEMENTATION
+      // Production use requires actual flash loan provider SDK integration
+      // See IMPLEMENTATION_GUIDE.md for SDK integration instructions
+      console.log('\n🔨 Building flash loan transaction framework...');
+      console.log('⚠️  NOTE: Flash loan execution requires SDK integration');
+      console.log('   See IMPLEMENTATION_GUIDE.md for details');
       
       const transaction = new Transaction();
       
@@ -155,16 +158,23 @@ export class FlashLoanArbitrage {
       console.log(`   Priority Fee: ${priorityFee.microLamports} microLamports`);
       console.log(`   Compute Limit: ${priorityFee.computeUnitLimit.toLocaleString()} units`);
       
-      // Create flash loan instructions (placeholder - needs actual implementation)
+      // Create flash loan instructions
+      // ⚠️ TODO: Replace with actual SDK implementation
+      // Current implementation creates empty arbitrage instructions array
+      // Real implementation should:
+      // 1. Use provider's SDK to create borrow instruction
+      // 2. Add actual arbitrage swap instructions
+      // 3. Add provider's SDK repay instruction with fee
       const flashLoanInstructions = await provider.createFlashLoanInstruction(
         loanAmount,
         opportunity.path[0].mint,
         userKeypair.publicKey,
-        [] // Arbitrage instructions would go here
+        [] // ⚠️ TODO: Add actual arbitrage swap instructions here
       );
       
       if (flashLoanInstructions.length === 0) {
         console.error('❌ Failed to create flash loan instructions');
+        console.error('⚠️  Flash loan provider SDK integration required');
         return null;
       }
       
@@ -176,6 +186,7 @@ export class FlashLoanArbitrage {
       
       if (!simulationSuccess) {
         console.error('❌ Transaction simulation failed');
+        console.error('⚠️  This is expected without actual SDK integration');
         return null;
       }
       
@@ -198,8 +209,12 @@ export class FlashLoanArbitrage {
       console.log(`   Compute Units: ${result.computeUnits?.toLocaleString()}`);
       console.log(`   Transaction Fee: ${((result.fee || 0) / LAMPORTS_PER_SOL).toFixed(6)} SOL`);
       
-      // Calculate actual profit (after fees)
+      // Calculate actual profit
+      // ⚠️ TODO: Calculate from real balance changes, not estimates
+      // This should query wallet balance before/after transaction
+      // and subtract flash loan fee and transaction fees
       const actualProfit = opportunity.estimatedProfit * LAMPORTS_PER_SOL; // Convert to lamports
+      console.log('\n⚠️  NOTE: Using estimated profit. In production, calculate from actual balance changes.');
       
       // Distribute profits
       console.log('\n💰 Distributing profits...');
