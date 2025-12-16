@@ -58,6 +58,14 @@ export const config: Config = {
     percentage: parseFloat(process.env.DEV_FEE_PERCENTAGE || '0.10'), // 10% default
     wallet: new PublicKey(process.env.DEV_FEE_WALLET || '11111111111111111111111111111111'), // Placeholder, use real wallet in production
   },
+  profitDistribution: {
+    enabled: process.env.PROFIT_DISTRIBUTION_ENABLED !== 'false',
+    reserveWalletDomain: process.env.RESERVE_WALLET_DOMAIN || 'monads.skr',
+    reserveWalletPercentage: parseFloat(process.env.RESERVE_WALLET_PERCENTAGE || '0.70'), // 70% to reserve
+    userWalletPercentage: parseFloat(process.env.USER_WALLET_PERCENTAGE || '0.20'), // 20% to user for gas fees
+    daoWalletPercentage: parseFloat(process.env.DAO_WALLET_PERCENTAGE || '0.10'), // 10% to DAO
+    daoWalletAddress: new PublicKey(process.env.DAO_WALLET_ADDRESS || 'DmtAdUSzFvcBymUmRFgPVawvoXbqdS2o18eZNpe5XcWW'),
+  },
 };
 
 // 30+ Token configurations

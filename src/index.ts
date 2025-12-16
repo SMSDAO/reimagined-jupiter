@@ -100,6 +100,12 @@ class GXQStudio {
     console.log(`⚡ Auto-Execution: ${this.autoExecutionEngine ? '✓' : '✗'}`);
     console.log(`🛡️  MEV Protection: ✓`);
     console.log(`💎 GXQ Ecosystem: ${config.gxq.tokenMint.toBase58().slice(0, 8)}...`);
+    console.log(`💰 Profit Distribution: ${config.profitDistribution.enabled ? '✓' : '✗'}`);
+    if (config.profitDistribution.enabled) {
+      console.log(`   - Reserve (${config.profitDistribution.reserveWalletDomain}): ${(config.profitDistribution.reserveWalletPercentage * 100).toFixed(0)}%`);
+      console.log(`   - User (gas fees): ${(config.profitDistribution.userWalletPercentage * 100).toFixed(0)}%`);
+      console.log(`   - DAO Community: ${(config.profitDistribution.daoWalletPercentage * 100).toFixed(0)}%`);
+    }
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
   }
   
@@ -438,6 +444,30 @@ class GXQStudio {
         console.log('Unknown setting. Use: minProfit, maxSlippage, maxGas, scanInterval');
     }
   }
+
+  async showAnalytics(): Promise<void> {
+    if (!this.autoExecutionEngine) {
+      console.error('Analytics not available (auto-execution engine not initialized)');
+      return;
+    }
+
+    const analytics = this.autoExecutionEngine.getAnalytics();
+    analytics.logStats();
+
+    // Show recent performance
+    const recentPerf = analytics.getRecentPerformance();
+    console.log('📈 Recent Performance:');
+    console.log(`  Last Hour: ${recentPerf.lastHour.trades} trades, ${(recentPerf.lastHour.profit / 1e9).toFixed(4)} SOL profit`);
+    console.log(`  Last Day: ${recentPerf.lastDay.trades} trades, ${(recentPerf.lastDay.profit / 1e9).toFixed(4)} SOL profit`);
+    console.log(`  Last Week: ${recentPerf.lastWeek.trades} trades, ${(recentPerf.lastWeek.profit / 1e9).toFixed(4)} SOL profit`);
+    
+    // Show top pairs
+    console.log('\n🏆 Top Profitable Pairs:');
+    const topPairs = analytics.getMostProfitablePairs(5);
+    topPairs.forEach((pair, idx) => {
+      console.log(`  ${idx + 1}. ${pair.pair}: ${(pair.profit / 1e9).toFixed(4)} SOL (${pair.count} trades)`);
+    });
+  }
 }
 
 // CLI Interface
@@ -497,6 +527,9 @@ async function main() {
     case 'config':
       await studio.configureScannerSettings(args.slice(1));
       break;
+    case 'analytics':
+      await studio.showAnalytics();
+      break;
     default:
       console.log('Usage:');
       console.log('  npm start airdrops    - Check for claimable airdrops');
@@ -514,11 +547,12 @@ async function main() {
       console.log('  npm start export [type]      - Export config (presets/templates/addresses)');
       console.log('  npm start sync               - Sync presets to QuickNode KV');
       console.log('');
-      console.log('Enhanced Features (NEW):');
+      console.log('Enhanced Features:');
       console.log('  npm start prices [tokens]    - Start Pyth live price streaming');
       console.log('  npm start enhanced-scan      - Enhanced arbitrage scanner (1s intervals)');
       console.log('  npm start marginfi-v2        - Show Marginfi v2 provider info');
       console.log('  npm start config [setting] [value] - Configure scanner settings');
+      console.log('  npm start analytics          - Show profit analytics and statistics');
       break;
   }
 }

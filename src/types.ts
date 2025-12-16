@@ -53,6 +53,14 @@ export interface Config {
     percentage: number;
     wallet: PublicKey;
   };
+  profitDistribution: {
+    enabled: boolean;
+    reserveWalletDomain: string;
+    reserveWalletPercentage: number;
+    userWalletPercentage: number;
+    daoWalletPercentage: number;
+    daoWalletAddress: PublicKey;
+  };
 }
 
 export interface TokenConfig {
