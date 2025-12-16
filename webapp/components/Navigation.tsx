@@ -18,6 +18,8 @@ export default function Navigation() {
     { href: '/airdrop', label: 'Airdrop' },
     { href: '/staking', label: 'Staking' },
     { href: '/wallet-analysis', label: 'Wallet Analysis' },
+    { href: '/settings', label: 'Settings' },
+    { href: '/admin', label: 'Admin' },
   ];
 
   return (

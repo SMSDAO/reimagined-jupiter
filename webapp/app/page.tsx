@@ -48,6 +48,18 @@ export default function Home() {
       href: '/wallet-analysis',
       color: 'from-cyan-500 to-blue-500',
     },
+    {
+      title: '⚙️ Settings',
+      description: 'Multi-API rotation & on-chain storage',
+      href: '/settings',
+      color: 'from-slate-500 to-gray-500',
+    },
+    {
+      title: '🔧 Admin Panel',
+      description: 'Bot runner, opportunity finder & analytics',
+      href: '/admin',
+      color: 'from-red-500 to-orange-500',
+    },
   ];
 
   return (
