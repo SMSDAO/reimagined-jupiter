@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { motion } from 'framer-motion';
+import PortfolioAnalytics from '@/components/PortfolioAnalytics';
 
 export default function Home() {
   const features = [
@@ -117,11 +118,20 @@ export default function Home() {
         </div>
       </motion.div>
 
-      {/* Expected Profitability */}
+      {/* Portfolio Analytics */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.8 }}
+      >
+        <PortfolioAnalytics />
+      </motion.div>
+
+      {/* Expected Profitability */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 1.0 }}
         className="bg-gradient-to-r from-purple-900/50 to-blue-900/50 backdrop-blur-md rounded-xl p-8"
       >
         <h2 className="text-3xl font-bold text-white mb-6">📊 Expected Profitability</h2>
