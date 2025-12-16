@@ -1,0 +1,157 @@
+name: Performance Monitoring
+
+on:
+  schedule:
+    # Run every 6 hours
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  monitor-dependencies:
+    name: Monitor Dependencies
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          
+      - name: Check for outdated dependencies
+        run: |
+          echo "## Backend Dependencies" >> $GITHUB_STEP_SUMMARY
+          echo "### Outdated packages:" >> $GITHUB_STEP_SUMMARY
+          npm outdated --json || echo "All packages up to date" >> $GITHUB_STEP_SUMMARY
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Webapp Dependencies" >> $GITHUB_STEP_SUMMARY
+          echo "### Outdated packages:" >> $GITHUB_STEP_SUMMARY
+          cd webapp
+          npm outdated --json || echo "All packages up to date" >> $GITHUB_STEP_SUMMARY
+          
+      - name: Check security vulnerabilities
+        run: |
+          echo "## Security Audit" >> $GITHUB_STEP_SUMMARY
+          echo "### Backend:" >> $GITHUB_STEP_SUMMARY
+          npm audit --json || true
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Webapp:" >> $GITHUB_STEP_SUMMARY
+          cd webapp
+          npm audit --json || true
+
+  build-size-analysis:
+    name: Build Size Analysis
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          
+      - name: Install backend dependencies
+        run: npm ci
+        
+      - name: Build backend
+        run: npm run build
+        
+      - name: Analyze backend build size
+        run: |
+          echo "## Backend Build Analysis" >> $GITHUB_STEP_SUMMARY
+          echo "### Dist size:" >> $GITHUB_STEP_SUMMARY
+          du -sh dist >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Largest files:" >> $GITHUB_STEP_SUMMARY
+          find dist -type f -exec du -h {} + | sort -rh | head -n 10 >> $GITHUB_STEP_SUMMARY
+          
+      - name: Install webapp dependencies
+        working-directory: ./webapp
+        run: npm ci
+        
+      - name: Build webapp
+        working-directory: ./webapp
+        run: npm run build
+        env:
+          NEXT_PUBLIC_RPC_URL: https://api.mainnet-beta.solana.com
+          
+      - name: Analyze webapp build size
+        working-directory: ./webapp
+        run: |
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Webapp Build Analysis" >> $GITHUB_STEP_SUMMARY
+          echo "### .next size:" >> $GITHUB_STEP_SUMMARY
+          du -sh .next >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Largest files:" >> $GITHUB_STEP_SUMMARY
+          find .next -type f -exec du -h {} + | sort -rh | head -n 10 >> $GITHUB_STEP_SUMMARY
+
+  code-quality-metrics:
+    name: Code Quality Metrics
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for better analysis
+          
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          
+      - name: Count lines of code
+        run: |
+          echo "## Code Metrics" >> $GITHUB_STEP_SUMMARY
+          echo "### Lines of Code:" >> $GITHUB_STEP_SUMMARY
+          echo "Backend TypeScript:" >> $GITHUB_STEP_SUMMARY
+          find src -name "*.ts" | xargs wc -l | tail -n 1 >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Webapp TypeScript/TSX:" >> $GITHUB_STEP_SUMMARY
+          find webapp -name "*.ts" -o -name "*.tsx" | xargs wc -l | tail -n 1 >> $GITHUB_STEP_SUMMARY
+          
+      - name: Count test files
+        run: |
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Test Coverage:" >> $GITHUB_STEP_SUMMARY
+          TEST_FILES=$(find . -name "*.test.ts" -o -name "*.test.tsx" -o -name "*.spec.ts" | wc -l)
+          echo "Test files: $TEST_FILES" >> $GITHUB_STEP_SUMMARY
+          
+      - name: Analyze git activity
+        run: |
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Recent Activity (Last 30 days):" >> $GITHUB_STEP_SUMMARY
+          echo "Commits: $(git log --since='30 days ago' --oneline | wc -l)" >> $GITHUB_STEP_SUMMARY
+          echo "Contributors: $(git log --since='30 days ago' --format='%an' | sort -u | wc -l)" >> $GITHUB_STEP_SUMMARY
+
+  performance-report:
+    name: Create Performance Report
+    runs-on: ubuntu-latest
+    needs: [monitor-dependencies, build-size-analysis, code-quality-metrics]
+    if: always()
+    
+    steps:
+      - name: Create summary
+        run: |
+          echo "# 📊 Performance Monitoring Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Date:** $(date)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Status" >> $GITHUB_STEP_SUMMARY
+          echo "- Dependencies: ${{ needs.monitor-dependencies.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Build Analysis: ${{ needs.build-size-analysis.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Code Quality: ${{ needs.code-quality-metrics.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "View individual job outputs for detailed metrics." >> $GITHUB_STEP_SUMMARY

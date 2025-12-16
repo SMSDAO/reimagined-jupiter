@@ -3,6 +3,7 @@ import { ArbitrageOpportunity } from '../types.js';
 import { FlashLoanArbitrage, TriangularArbitrage } from '../strategies/arbitrage.js';
 import { PresetManager } from '../services/presetManager.js';
 import { QuickNodeIntegration } from '../integrations/quicknode.js';
+import { websocketService } from '../services/websocketService.js';
 
 export class MEVProtection {
   private connection: Connection;
@@ -188,6 +189,28 @@ export class AutoExecutionEngine {
       if (opportunities.length > 0) {
         console.log(`Found ${opportunities.length} opportunities for ${preset.name}`);
         
+        // Broadcast opportunities to WebSocket clients
+        for (const opp of opportunities) {
+          // Map opportunity type to WebSocket format
+          let oppType: 'flash_loan' | 'triangular' | 'hybrid';
+          if (opp.type === 'flash-loan') {
+            oppType = 'flash_loan';
+          } else if (opp.type === 'triangular') {
+            oppType = 'triangular';
+          } else {
+            oppType = 'hybrid';
+          }
+
+          websocketService.broadcastArbitrageOpportunity({
+            id: `${Date.now()}-${opp.path.map(t => t.symbol).join('-')}`,
+            type: oppType,
+            tokens: opp.path.map(t => t.symbol),
+            estimatedProfit: opp.estimatedProfit,
+            confidence: opp.confidence,
+            timestamp: Date.now(),
+          });
+        }
+        
         // Execute the most profitable opportunity
         const bestOpportunity = opportunities[0];
         await this.executeOpportunity(bestOpportunity, preset);
@@ -238,6 +261,15 @@ export class AutoExecutionEngine {
       
       if (signature) {
         console.log(`✅ Successfully executed arbitrage! Signature: ${signature}`);
+        
+        // Broadcast trade execution to WebSocket clients
+        websocketService.broadcastTradeExecution({
+          signature,
+          type: opportunity.type,
+          tokens: opportunity.path.map(t => t.symbol),
+          profit: opportunity.estimatedProfit,
+          timestamp: Date.now(),
+        });
         
         // Handle dev fee if enabled
         await this.handleDevFee(opportunity.estimatedProfit);

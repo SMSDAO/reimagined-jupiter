@@ -1,0 +1,171 @@
+name: Auto-Merge PR
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  pull_request_review:
+    types: [submitted]
+  check_suite:
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'PR number to auto-merge'
+        required: true
+        type: number
+
+permissions:
+  contents: write
+  pull-requests: write
+  checks: read
+
+jobs:
+  auto-merge:
+    name: Auto-Merge PR
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.pull_request.draft == false &&
+       (contains(github.event.pull_request.labels.*.name, 'auto-merge') ||
+        github.event.pull_request.user.login == 'dependabot[bot]'))
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Get PR number
+        id: pr
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "number=${{ inputs.pr_number }}" >> $GITHUB_OUTPUT
+          else
+            echo "number=${{ github.event.pull_request.number }}" >> $GITHUB_OUTPUT
+          fi
+          
+      - name: Check PR status
+        id: check
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = ${{ steps.pr.outputs.number }};
+            
+            // Get PR details
+            const { data: pr } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber
+            });
+            
+            console.log(`PR #${prNumber}: ${pr.title}`);
+            console.log(`State: ${pr.state}`);
+            console.log(`Mergeable: ${pr.mergeable}`);
+            console.log(`Draft: ${pr.draft}`);
+            
+            // Check if PR is mergeable
+            if (pr.state !== 'open') {
+              core.setFailed('PR is not open');
+              return false;
+            }
+            
+            if (pr.draft) {
+              core.setFailed('PR is in draft state');
+              return false;
+            }
+            
+            // Get required checks
+            const { data: checks } = await github.rest.checks.listForRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: pr.head.sha
+            });
+            
+            // Check if all required checks passed
+            const requiredChecks = ['Backend - Lint & Test', 'Webapp - Lint & Build'];
+            const checkStatuses = {};
+            
+            for (const check of checks.check_runs) {
+              checkStatuses[check.name] = check.conclusion;
+            }
+            
+            console.log('Check statuses:', checkStatuses);
+            
+            let allChecksPassed = true;
+            for (const requiredCheck of requiredChecks) {
+              if (!checkStatuses[requiredCheck] || checkStatuses[requiredCheck] !== 'success') {
+                console.log(`Required check "${requiredCheck}" has not passed`);
+                allChecksPassed = false;
+              }
+            }
+            
+            // Get reviews
+            const { data: reviews } = await github.rest.pulls.listReviews({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber
+            });
+            
+            // Check for approvals (at least 1 required for non-dependabot PRs)
+            const approvals = reviews.filter(r => r.state === 'APPROVED').length;
+            const changesRequested = reviews.filter(r => r.state === 'CHANGES_REQUESTED').length;
+            
+            console.log(`Approvals: ${approvals}, Changes requested: ${changesRequested}`);
+            
+            const isDependabot = pr.user.login === 'dependabot[bot]';
+            
+            if (!isDependabot && approvals < 1) {
+              core.setFailed('At least 1 approval required for non-dependabot PRs');
+              return false;
+            }
+            
+            if (changesRequested > 0) {
+              core.setFailed('Changes requested on this PR');
+              return false;
+            }
+            
+            if (!allChecksPassed) {
+              core.setFailed('Not all required checks have passed');
+              return false;
+            }
+            
+            core.setOutput('can_merge', 'true');
+            return true;
+            
+      - name: Enable auto-merge
+        if: steps.check.outputs.can_merge == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = ${{ steps.pr.outputs.number }};
+            
+            try {
+              await github.rest.pulls.merge({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: prNumber,
+                merge_method: 'squash'
+              });
+              
+              console.log(`✅ Successfully merged PR #${prNumber}`);
+            } catch (error) {
+              console.error('Failed to merge PR:', error);
+              core.setFailed(`Failed to merge PR: ${error.message}`);
+            }
+            
+      - name: Comment on PR
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = ${{ steps.pr.outputs.number }};
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              body: '⚠️ Auto-merge failed. Please check the requirements:\n\n' +
+                    '- All required CI checks must pass\n' +
+                    '- At least 1 approval required (except for Dependabot PRs)\n' +
+                    '- No changes requested\n' +
+                    '- PR must not be in draft state\n\n' +
+                    'You can add the `auto-merge` label to retry auto-merge once conditions are met.'
+            });
