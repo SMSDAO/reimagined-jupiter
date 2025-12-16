@@ -75,8 +75,7 @@ export class PythPriceFeed {
         return null;
       }
 
-      // Version
-      const version = accountData.readUInt32LE(4);
+      // Skip version field (offset 4)
       
       // Account type (should be 3 for price account)
       const accountType = accountData.readUInt32LE(8);
