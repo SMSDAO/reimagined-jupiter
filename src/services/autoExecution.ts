@@ -191,9 +191,19 @@ export class AutoExecutionEngine {
         
         // Broadcast opportunities to WebSocket clients
         for (const opp of opportunities) {
+          // Map opportunity type to WebSocket format
+          let oppType: 'flash_loan' | 'triangular' | 'hybrid';
+          if (opp.type === 'flash-loan') {
+            oppType = 'flash_loan';
+          } else if (opp.type === 'triangular') {
+            oppType = 'triangular';
+          } else {
+            oppType = 'hybrid';
+          }
+
           websocketService.broadcastArbitrageOpportunity({
-            id: `${Date.now()}-${Math.random()}`,
-            type: opp.type === 'flash-loan' ? 'flash_loan' : opp.type === 'triangular' ? 'triangular' : 'hybrid',
+            id: `${Date.now()}-${opp.path.map(t => t.symbol).join('-')}`,
+            type: oppType,
             tokens: opp.path.map(t => t.symbol),
             estimatedProfit: opp.estimatedProfit,
             confidence: opp.confidence,

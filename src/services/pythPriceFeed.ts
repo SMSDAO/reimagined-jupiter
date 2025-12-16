@@ -37,7 +37,7 @@ const PYTH_PRICE_FEEDS: Record<string, string> = {
 export class PythPriceFeed {
   private connection: Connection;
   private priceCache: Map<string, PythPriceData>;
-  private subscriptions: Map<string, number>;
+  private subscriptions: Map<string, NodeJS.Timeout>;
   private callbacks: Map<string, Set<PriceUpdateCallback>>;
   private updateInterval: number = 2000; // 2 seconds
 
@@ -205,7 +205,7 @@ export class PythPriceFeed {
       }
     }, this.updateInterval);
 
-    this.subscriptions.set(symbol, interval as unknown as number);
+    this.subscriptions.set(symbol, interval);
     console.log(`[PythPriceFeed] Started subscription for ${symbol}`);
   }
 

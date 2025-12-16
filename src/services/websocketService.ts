@@ -26,6 +26,7 @@ export class WebSocketService extends EventEmitter {
   private wss: WebSocket.Server | null = null;
   private clients: Set<WebSocket> = new Set();
   private subscriptions: Map<string, Set<WebSocket>> = new Map();
+  private clientSymbols: Map<WebSocket, string[]> = new Map();
   private heartbeatInterval: NodeJS.Timeout | null = null;
   private priceUpdateInterval: NodeJS.Timeout | null = null;
   private isRunning: boolean = false;
@@ -217,8 +218,8 @@ export class WebSocketService extends EventEmitter {
     
     this.subscriptions.get(channel)!.add(ws);
 
-    // Store symbols in WebSocket instance
-    (ws as any).priceSymbols = symbols;
+    // Store symbols for this client
+    this.clientSymbols.set(ws, symbols);
   }
 
   /**
@@ -254,6 +255,7 @@ export class WebSocketService extends EventEmitter {
     this.subscriptions.forEach((subscribers) => {
       subscribers.delete(ws);
     });
+    this.clientSymbols.delete(ws);
   }
 
   /**
@@ -282,9 +284,9 @@ export class WebSocketService extends EventEmitter {
       // Collect all unique symbols from subscribers
       const allSymbols = new Set<string>();
       priceSubscribers.forEach(ws => {
-        const symbols = (ws as any).priceSymbols;
+        const symbols = this.clientSymbols.get(ws);
         if (symbols && Array.isArray(symbols)) {
-          symbols.forEach((s: string) => allSymbols.add(s));
+          symbols.forEach(s => allSymbols.add(s));
         }
       });
 
@@ -297,10 +299,10 @@ export class WebSocketService extends EventEmitter {
 
       // Send updates to subscribed clients
       priceSubscribers.forEach(ws => {
-        const symbols = (ws as any).priceSymbols || [];
+        const symbols = this.clientSymbols.get(ws) || [];
         const relevantPrices: Record<string, PythPriceData> = {};
 
-        symbols.forEach((symbol: string) => {
+        symbols.forEach(symbol => {
           const price = prices.get(symbol);
           if (price) {
             relevantPrices[symbol] = price;
