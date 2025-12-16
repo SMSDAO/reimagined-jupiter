@@ -54,6 +54,8 @@ export const config: Config = {
     gasBuffer: parseFloat(process.env.GAS_BUFFER || '1.5'),
   },
   devFee: {
+    // Note: Dev fee is deprecated in favor of profitDistribution
+    // Kept for backwards compatibility, but defaults to disabled
     enabled: process.env.DEV_FEE_ENABLED === 'true',
     percentage: parseFloat(process.env.DEV_FEE_PERCENTAGE || '0.10'), // 10% default
     wallet: new PublicKey(process.env.DEV_FEE_WALLET || '11111111111111111111111111111111'), // Placeholder, use real wallet in production

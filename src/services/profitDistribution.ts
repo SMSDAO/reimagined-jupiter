@@ -76,6 +76,13 @@ export class ProfitDistributionService {
       result.breakdown.gas.amount = gasAmount;
       result.breakdown.dao.amount = daoAmount;
 
+      // Validate wallets before proceeding
+      const walletsValid = await this.validateWallets();
+      if (!walletsValid) {
+        result.error = 'Wallet validation failed';
+        return result;
+      }
+
       console.log('💰 Profit Distribution Started');
       console.log(`   Total Profit: ${totalProfit.toFixed(6)}`);
       console.log(`   Reserve (70%): ${reserveAmount.toFixed(6)} → ${this.config.reserveWallet.toBase58().slice(0, 8)}...`);
@@ -231,15 +238,23 @@ export class ProfitDistributionService {
    * Resolve Solana Name Service (SNS) address
    * @param snsName SNS name like "monads.skr"
    * @returns PublicKey or null if not found
+   * 
+   * Note: This is a placeholder. For production use:
+   * 1. Use @bonfida/spl-name-service package for .sol domains
+   * 2. Configure RESERVE_WALLET as a PublicKey address directly in .env
+   * 3. Or implement custom SNS resolution based on your needs
    */
   async resolveSNS(snsName: string): Promise<PublicKey | null> {
     try {
-      // SNS resolution logic would go here
-      // For now, this is a placeholder that would integrate with SNS
-      console.log(`Resolving SNS: ${snsName}...`);
+      console.log(`⚠️ SNS resolution not yet implemented for: ${snsName}`);
+      console.log('   Please configure wallets using PublicKey addresses in .env');
+      console.log('   Example: RESERVE_WALLET=YourBase58PublicKeyAddress');
       
-      // TODO: Implement actual SNS resolution
-      // This would use the Solana Name Service program
+      // TODO: Implement actual SNS resolution using @bonfida/spl-name-service
+      // Example implementation:
+      // const { NameRegistryState } = require('@bonfida/spl-name-service');
+      // const nameAccount = await NameRegistryState.retrieve(connection, snsName);
+      // return nameAccount.owner;
       
       return null;
     } catch (error) {
@@ -259,7 +274,7 @@ export class ProfitDistributionService {
   /**
    * Validate wallet addresses before distribution
    */
-  private async validateWallets(): Promise<boolean> {
+  async validateWallets(): Promise<boolean> {
     try {
       // Check if wallets exist on-chain
       const [reserveInfo, gasInfo, daoInfo] = await Promise.all([

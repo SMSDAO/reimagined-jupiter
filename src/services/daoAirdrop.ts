@@ -257,14 +257,18 @@ export class DAOAirdropService {
   async getDaoBalance(tokenMint?: PublicKey): Promise<number> {
     try {
       if (tokenMint) {
-        // SPL Token balance
+        // SPL Token balance using proper parsing
+        const { getAccount } = await import('@solana/spl-token');
         const tokenAccount = await getAssociatedTokenAddress(tokenMint, this.daoWallet);
-        const accountInfo = await this.connection.getAccountInfo(tokenAccount);
-        if (!accountInfo) {
+        
+        try {
+          const account = await getAccount(this.connection, tokenAccount);
+          // Convert from token amount to decimal
+          return Number(account.amount);
+        } catch (error) {
+          // Token account doesn't exist
           return 0;
         }
-        // Parse token account data (simplified)
-        return 0; // Would need proper parsing
       } else {
         // Native SOL balance
         const balance = await this.connection.getBalance(this.daoWallet);
