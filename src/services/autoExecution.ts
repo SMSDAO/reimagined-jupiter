@@ -342,8 +342,12 @@ export class AutoExecutionEngine {
           timestamp: Date.now(),
         });
         
-        // Estimate gas fee (simplified - in production would fetch from transaction)
-        const estimatedGasFee = 5000; // 5000 lamports = 0.000005 SOL
+        // Calculate actual gas fee from transaction
+        // In production, this would fetch the actual fee from the confirmed transaction
+        // For now, use estimated priority fee
+        const priorityFee = await this.mevProtection.calculatePriorityFee('medium');
+        const baseFee = 5000; // Base transaction fee in lamports
+        const estimatedGasFee = baseFee + priorityFee;
         
         // Distribute profits using the new system
         await this.handleProfitDistribution(

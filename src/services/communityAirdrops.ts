@@ -48,7 +48,7 @@ export class CommunityAirdropService {
    * @param recipients List of eligible recipients with their allocation
    * @param sourceWallet Wallet containing the DAO funds (must be signer)
    */
-  async distributeToommunity(
+  async distributeToCommunity(
     daoBalance: number,
     recipients: AirdropRecipient[],
     sourceWallet: Keypair
@@ -205,7 +205,7 @@ export class CommunityAirdropService {
   /**
    * Distribute tokens (SPL tokens) to community
    */
-  async distributeTokensToommunity(
+  async distributeTokensToCommunity(
     tokenMint: PublicKey,
     daoTokenBalance: number,
     recipients: AirdropRecipient[],

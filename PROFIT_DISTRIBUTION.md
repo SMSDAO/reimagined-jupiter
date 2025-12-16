@@ -198,7 +198,7 @@ const airdropService = new CommunityAirdropService(connection, {
 const recipients = await airdropService.getEligibleRecipients(walletAddresses, 50);
 
 // Distribute
-const result = await airdropService.distributeToommunity(
+const result = await airdropService.distributeToCommunity(
   daoBalance,
   recipients,
   daoWallet

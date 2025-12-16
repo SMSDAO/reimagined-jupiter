@@ -14,9 +14,11 @@ export class SNSDomainResolver {
   private readonly NAME_PROGRAM_ID = new PublicKey('nameXpT2PwZ2iA6DTNYTotTmiMYusBCYqwBLN2QgF4w');
   
   // TLD (Top Level Domain) registry
+  // To verify or update these addresses, check the SNS protocol documentation:
+  // https://docs.bonfida.org/collection/an-introduction-to-the-solana-name-service
   private readonly TLD_REGISTRY: { [key: string]: PublicKey } = {
     'sol': new PublicKey('58PwtjSDuFHuUkYjH9BYnnQKHfwo9reZhC2zMJv9JPkx'),
-    'skr': new PublicKey('A6bWvZbKHQPy3Uj4BgKKo5MKdKpsjCNVaLU8SExq2Znu'), // .skr TLD - may need to be updated
+    'skr': new PublicKey('A6bWvZbKHQPy3Uj4BgKKo5MKdKpsjCNVaLU8SExq2Znu'), // .skr TLD - verify with SNS registry
   };
 
   constructor(connection: Connection) {
