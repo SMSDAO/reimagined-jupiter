@@ -2,6 +2,7 @@ import { Connection, PublicKey } from '@solana/web3.js';
 import { JupiterV6Integration } from '../integrations/jupiter.js';
 import { SUPPORTED_TOKENS, config } from '../config/index.js';
 import { ArbitrageOpportunity } from '../types.js';
+import { SecurityValidator } from '../utils/security.js';
 import { 
   MarginfiProvider, 
   SolendProvider, 
@@ -123,6 +124,23 @@ export class EnhancedArbitrageScanner {
       return;
     }
     
+    // Validate configuration and security
+    const rpcUrl = config.solana.rpcUrl;
+    const securityCheck = SecurityValidator.validateMainnetConfig(rpcUrl);
+    
+    if (securityCheck.warnings.length > 0) {
+      console.log('[Scanner] ⚠️  Security warnings:');
+      for (const warning of securityCheck.warnings) {
+        console.log(`  - ${warning}`);
+      }
+      console.log('');
+    }
+    
+    if (!SecurityValidator.validateSlippage(this.config.maxSlippage)) {
+      console.error('[Scanner] Invalid slippage configuration');
+      return;
+    }
+    
     this.isScanning = true;
     console.log('[Scanner] 🚀 Starting enhanced arbitrage scanner...');
     console.log(`[Scanner] Polling interval: ${this.config.pollingIntervalMs}ms`);
@@ -130,7 +148,13 @@ export class EnhancedArbitrageScanner {
     console.log(`[Scanner] Max slippage: ${(this.config.maxSlippage * 100).toFixed(2)}%`);
     console.log(`[Scanner] Flash loan providers: ${this.flashLoanProviders.size}`);
     console.log(`[Scanner] DEX integrations: ${this.dexes.size}`);
-    console.log(`[Scanner] Jupiter aggregator: enabled (20+ routes)\n`);
+    console.log(`[Scanner] Jupiter aggregator: enabled (20+ routes)`);
+    console.log(`[Scanner] Security validations: enabled\n`);
+    
+    SecurityValidator.logSecurityEvent('info', 'Scanner started', {
+      pollingMs: this.config.pollingIntervalMs,
+      minProfit: this.config.minProfitThreshold,
+    });
     
     while (this.isScanning) {
       const startTime = Date.now();
@@ -169,10 +193,26 @@ export class EnhancedArbitrageScanner {
       this.scanCrossDexOpportunities(),
     ]);
     
-    // Process and notify about opportunities
+    // Process and notify about opportunities with security validation
     const allOpportunities = [...flashLoanOpps, ...triangularOpps, ...crossDexOpps];
     for (const opp of allOpportunities) {
       if (opp.estimatedProfit >= this.config.minProfitThreshold) {
+        // Security validation
+        const validation = SecurityValidator.validateOpportunity(
+          opp.estimatedProfit,
+          opp.gasEstimate,
+          opp.confidence,
+          config.scanner.minConfidence
+        );
+        
+        if (!validation.valid) {
+          SecurityValidator.logSecurityEvent('warn', 'Opportunity rejected', {
+            reason: validation.reason,
+            profit: opp.estimatedProfit,
+          });
+          continue;
+        }
+        
         this.opportunitiesFound.push(opp);
         if (this.config.enableNotifications) {
           this.notifyOpportunity(opp);
@@ -315,7 +355,18 @@ export class EnhancedArbitrageScanner {
       
       if (!tokenA || !tokenB) continue;
       
+      // Validate token mints
+      if (!SecurityValidator.validateTokenMint(tokenA.mint) || 
+          !SecurityValidator.validateTokenMint(tokenB.mint)) {
+        continue;
+      }
+      
       const amount = 1000 * Math.pow(10, tokenA.decimals);
+      
+      // Validate amount
+      if (!SecurityValidator.validateAmount(amount, tokenA.decimals)) {
+        continue;
+      }
       
       // Get Jupiter quote (aggregates multiple DEXes)
       const jupiterQuote = await this.jupiter.getQuote(
