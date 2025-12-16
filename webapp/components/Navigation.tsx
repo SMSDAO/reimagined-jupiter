@@ -10,6 +10,7 @@ export default function Navigation() {
   const navItems = [
     { href: '/', label: 'Home' },
     { href: '/swap', label: 'Swap' },
+    { href: '/ticker', label: 'Prices' },
     { href: '/arbitrage', label: 'Arbitrage' },
     { href: '/sniper', label: 'Sniper' },
     { href: '/launchpad', label: 'Launchpad' },
