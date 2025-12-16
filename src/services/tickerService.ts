@@ -1,5 +1,5 @@
 import { HermesClient } from '@pythnetwork/hermes-client';
-import { Connection, PublicKey } from '@solana/web3.js';
+import { Connection } from '@solana/web3.js';
 import EventEmitter from 'events';
 
 export interface TokenPrice {
@@ -21,21 +21,7 @@ export interface PriceUpdate {
   timestamp: number;
 }
 
-interface PythPriceData {
-  id: string;
-  price: {
-    price: string;
-    conf: string;
-    expo: number;
-    publish_time: number;
-  };
-  ema_price: {
-    price: string;
-    conf: string;
-    expo: number;
-    publish_time: number;
-  };
-}
+
 
 // Pyth Network price feed IDs for Solana tokens
 export const PYTH_PRICE_FEEDS: Record<string, string> = {
@@ -182,7 +168,7 @@ export class TickerService extends EventEmitter {
     }
   }
 
-  private parsePythPrice(feed: any): TokenPrice | null {
+  private parsePythPrice(feed: { id: string; price?: { price: string; conf: string; expo: number; publish_time: number } }): TokenPrice | null {
     try {
       const price = feed.price;
       if (!price) return null;

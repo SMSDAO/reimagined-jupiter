@@ -20,22 +20,30 @@ export default function Ticker({
   });
 
   const [priceChanges, setPriceChanges] = useState<Record<string, number>>({});
+  const [prevPrices, setPrevPrices] = useState<Record<string, number>>({});
 
   useEffect(() => {
     if (data?.prices) {
       const newChanges: Record<string, number> = {};
+      const newPrevPrices: Record<string, number> = {};
+      
       data.prices.forEach(price => {
-        // Calculate price change indicator (simplified)
-        const prevPrice = priceChanges[price.symbol];
+        // Store current price for next comparison
+        newPrevPrices[price.symbol] = price.price;
+        
+        // Calculate price change indicator
+        const prevPrice = prevPrices[price.symbol];
         if (prevPrice !== undefined) {
           newChanges[price.symbol] = price.price - prevPrice;
         } else {
-          newChanges[price.symbol] = price.price;
+          newChanges[price.symbol] = 0;
         }
       });
+      
       setPriceChanges(newChanges);
+      setPrevPrices(newPrevPrices);
     }
-  }, [data]);
+  }, [data, prevPrices]);
 
   const formatPrice = (price: number): string => {
     if (price >= 1) {
@@ -47,20 +55,20 @@ export default function Ticker({
     }
   };
 
-  const getPriceChangeColor = (symbol: string, currentPrice: number): string => {
-    const prevPrice = priceChanges[symbol];
-    if (prevPrice === undefined || prevPrice === currentPrice) {
+  const getPriceChangeColor = (symbol: string): string => {
+    const change = priceChanges[symbol];
+    if (change === undefined || change === 0) {
       return 'text-gray-400';
     }
-    return currentPrice > prevPrice ? 'text-green-500' : 'text-red-500';
+    return change > 0 ? 'text-green-500' : 'text-red-500';
   };
 
-  const getPriceChangeIndicator = (symbol: string, currentPrice: number): string => {
-    const prevPrice = priceChanges[symbol];
-    if (prevPrice === undefined || prevPrice === currentPrice) {
+  const getPriceChangeIndicator = (symbol: string): string => {
+    const change = priceChanges[symbol];
+    if (change === undefined || change === 0) {
       return '●';
     }
-    return currentPrice > prevPrice ? '▲' : '▼';
+    return change > 0 ? '▲' : '▼';
   };
 
   if (loading && !data) {
@@ -129,8 +137,8 @@ export default function Ticker({
               <span className={`font-semibold ${compact ? 'text-sm' : 'text-base'} text-white`}>
                 {price.symbol}
               </span>
-              <span className={`${getPriceChangeColor(price.symbol, price.price)} ${compact ? 'text-xs' : 'text-sm'}`}>
-                {getPriceChangeIndicator(price.symbol, price.price)}
+              <span className={`${getPriceChangeColor(price.symbol)} ${compact ? 'text-xs' : 'text-sm'}`}>
+                {getPriceChangeIndicator(price.symbol)}
               </span>
             </div>
             <div className={`${compact ? 'text-sm' : 'text-lg'} font-mono font-bold text-blue-400`}>

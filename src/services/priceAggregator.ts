@@ -91,7 +91,7 @@ export class OrcaPriceProvider implements PriceProvider {
       });
       
       if (response.data && response.data.tokens) {
-        const token = response.data.tokens.find((t: any) => t.mint === mint);
+        const token = response.data.tokens.find((t: { mint: string; price?: number }) => t.mint === mint);
         return token?.price || null;
       }
       return null;
@@ -123,15 +123,22 @@ export class MeteoraPriceProvider implements PriceProvider {
         timeout: 5000,
       });
       
+      interface MeteoraPair {
+        mint_x: string;
+        mint_y: string;
+        liquidity: string;
+        price: string;
+      }
+      
       if (response.data && response.data.data) {
         // Find pairs containing this mint and calculate price
-        const pairs = response.data.data.filter((p: any) => 
+        const pairs = (response.data.data as MeteoraPair[]).filter((p) => 
           p.mint_x === mint || p.mint_y === mint
         );
         
         if (pairs.length > 0) {
           // Use the most liquid pair
-          const mainPair = pairs.sort((a: any, b: any) => 
+          const mainPair = pairs.sort((a, b) => 
             parseFloat(b.liquidity) - parseFloat(a.liquidity)
           )[0];
           
