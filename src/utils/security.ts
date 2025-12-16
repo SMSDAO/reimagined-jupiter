@@ -138,9 +138,11 @@ export class SecurityValidator {
       const mintPubkey = typeof mint === 'string' ? new PublicKey(mint) : mint;
       
       // Check it's not the system program or other invalid addresses
+      const SYSTEM_PROGRAM_ID = '11111111111111111111111111111111';
+      const NULL_ADDRESS = '00000000000000000000000000000000';
       const invalidAddresses = [
-        '11111111111111111111111111111111', // System Program
-        '00000000000000000000000000000000', // Invalid
+        SYSTEM_PROGRAM_ID,
+        NULL_ADDRESS,
       ];
       
       const mintStr = mintPubkey.toString();

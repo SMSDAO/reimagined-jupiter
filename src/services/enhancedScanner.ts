@@ -255,7 +255,8 @@ export class EnhancedArbitrageScanner {
         
         // Calculate arbitrage opportunity with flash loan
         for (const [providerName, provider] of this.flashLoanProviders.entries()) {
-          const fee = provider.getFee() / 100;
+          const PERCENTAGE_DIVISOR = 100;
+          const fee = provider.getFee() / PERCENTAGE_DIVISOR;
           const outAmountB = parseInt(quoteAB.outAmount);
           const backToA = parseInt(quoteBA.outAmount);
           
@@ -298,10 +299,10 @@ export class EnhancedArbitrageScanner {
     ];
     
     for (const path of commonPaths) {
-      const tokens = path.map(sym => SUPPORTED_TOKENS.find(t => t.symbol === sym)).filter(Boolean);
+      const tokens = path.map(sym => SUPPORTED_TOKENS.find(t => t.symbol === sym)).filter((t): t is typeof SUPPORTED_TOKENS[0] => t !== undefined);
       if (tokens.length !== 3) continue;
       
-      const [tokenA, tokenB, tokenC] = tokens as any[];
+      const [tokenA, tokenB, tokenC] = tokens;
       const amount = 1000 * Math.pow(10, tokenA.decimals);
       
       try {
