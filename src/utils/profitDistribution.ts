@@ -126,7 +126,7 @@ export class ProfitDistributionManager {
       );
       
       // Get recent blockhash and fee
-      const { blockhash, lastValidBlockHeight } = await this.connection.getLatestBlockhash('confirmed');
+      const { blockhash } = await this.connection.getLatestBlockhash('confirmed');
       transaction.recentBlockhash = blockhash;
       transaction.feePayer = fromKeypair.publicKey;
       

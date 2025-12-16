@@ -1,5 +1,4 @@
 import { Connection, Keypair, PublicKey } from '@solana/web3.js';
-import bs58 from 'bs58';
 import { config } from './config/index.js';
 import { QuickNodeIntegration } from './integrations/quicknode.js';
 import { PresetManager } from './services/presetManager.js';
@@ -12,6 +11,8 @@ import { RouteTemplateManager } from './services/routeTemplates.js';
 import { PythPriceStreamService } from './services/pythPriceStream.js';
 import { EnhancedArbitrageScanner } from './services/enhancedArbitrage.js';
 import { MarginfiV2Integration } from './integrations/marginfiV2.js';
+import { SecurityManager, EnvironmentSecurityChecker } from './utils/security.js';
+import { ExecutionLogger } from './utils/executionLogger.js';
 
 class GXQStudio {
   private connection: Connection;
@@ -28,8 +29,13 @@ class GXQStudio {
   private pythStream: PythPriceStreamService;
   private enhancedScanner: EnhancedArbitrageScanner;
   private marginfiV2: MarginfiV2Integration;
+  private securityManager: SecurityManager;
+  private executionLogger: ExecutionLogger;
   
   constructor() {
+    // Run security checks first
+    EnvironmentSecurityChecker.printSecurityCheck();
+    
     // Initialize QuickNode first
     this.quicknode = new QuickNodeIntegration();
     this.connection = this.quicknode.getRpcConnection();
@@ -46,21 +52,29 @@ class GXQStudio {
     this.pythStream = new PythPriceStreamService('https://hermes.pyth.network');
     this.enhancedScanner = new EnhancedArbitrageScanner(this.connection, this.pythStream);
     this.marginfiV2 = new MarginfiV2Integration(this.connection);
+    this.securityManager = new SecurityManager(this.connection);
+    this.executionLogger = new ExecutionLogger('./logs');
     
     // Initialize user keypair if available
     if (config.solana.walletPrivateKey) {
       try {
-        const privateKeyBytes = bs58.decode(config.solana.walletPrivateKey);
-        this.userKeypair = Keypair.fromSecretKey(privateKeyBytes);
-        this.airdropChecker = new AirdropChecker(this.connection, this.userKeypair.publicKey);
-        this.autoExecutionEngine = new AutoExecutionEngine(
-          this.connection,
-          this.userKeypair,
-          this.presetManager,
-          this.quicknode
-        );
+        const keypair = this.securityManager.loadKeypairFromEnv(config.solana.walletPrivateKey);
+        
+        if (keypair) {
+          this.userKeypair = keypair;
+          this.airdropChecker = new AirdropChecker(this.connection, this.userKeypair.publicKey);
+          this.autoExecutionEngine = new AutoExecutionEngine(
+            this.connection,
+            this.userKeypair,
+            this.presetManager,
+            this.quicknode
+          );
+        } else {
+          console.warn('⚠️  Failed to load wallet keypair, running in read-only mode');
+        }
       } catch (error) {
-        console.warn('Invalid wallet private key, running in read-only mode');
+        console.warn('⚠️  Invalid wallet private key, running in read-only mode');
+        console.error(error);
       }
     }
   }
@@ -72,6 +86,16 @@ class GXQStudio {
     await this.presetManager.initialize();
     await this.addressBook.initialize();
     await this.routeTemplates.initialize();
+    await this.executionLogger.initialize();
+    
+    // Validate wallet if configured
+    if (this.userKeypair) {
+      const validation = await this.securityManager.validateKeypair(this.userKeypair, 0.01);
+      if (!validation.valid) {
+        console.error(`❌ Wallet validation failed: ${validation.error}`);
+        console.error('⚠️  Some features will be disabled');
+      }
+    }
     
     console.log('✅ Initialization complete\n');
     this.printSystemInfo();
@@ -438,6 +462,33 @@ class GXQStudio {
         console.log('Unknown setting. Use: minProfit, maxSlippage, maxGas, scanInterval');
     }
   }
+  
+  async showExecutionStats(args: string[]): Promise<void> {
+    console.log('📊 Execution Statistics\n');
+    
+    let since: Date | undefined;
+    if (args.length > 0) {
+      const period = args[0];
+      const now = new Date();
+      
+      switch (period) {
+        case 'today':
+          since = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+          break;
+        case 'week':
+          since = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          break;
+        case 'month':
+          since = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
+          break;
+        default:
+          console.log('Invalid period. Use: today, week, month');
+          return;
+      }
+    }
+    
+    await this.executionLogger.printStatistics(since);
+  }
 }
 
 // CLI Interface
@@ -497,6 +548,9 @@ async function main() {
     case 'config':
       await studio.configureScannerSettings(args.slice(1));
       break;
+    case 'stats':
+      await studio.showExecutionStats(args.slice(1));
+      break;
     default:
       console.log('Usage:');
       console.log('  npm start airdrops    - Check for claimable airdrops');
@@ -519,6 +573,7 @@ async function main() {
       console.log('  npm start enhanced-scan      - Enhanced arbitrage scanner (1s intervals)');
       console.log('  npm start marginfi-v2        - Show Marginfi v2 provider info');
       console.log('  npm start config [setting] [value] - Configure scanner settings');
+      console.log('  npm start stats [period]     - View execution statistics (today/week/month/all)');
       break;
   }
 }

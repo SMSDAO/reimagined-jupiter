@@ -1,4 +1,4 @@
-import { Connection, Keypair, Transaction, SystemProgram, LAMPORTS_PER_SOL } from '@solana/web3.js';
+import { Connection, Keypair, Transaction, LAMPORTS_PER_SOL } from '@solana/web3.js';
 import { ArbitrageOpportunity, TokenConfig } from '../types.js';
 import { JupiterV6Integration } from '../integrations/jupiter.js';
 import { 

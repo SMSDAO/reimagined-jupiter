@@ -1,4 +1,4 @@
-import { Connection, PublicKey, VersionedTransaction, Keypair } from '@solana/web3.js';
+import { Connection, VersionedTransaction, Keypair } from '@solana/web3.js';
 import axios from 'axios';
 import { config } from '../config/index.js';
 
