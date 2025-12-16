@@ -197,7 +197,7 @@ export class AutoExecutionEngine {
   
   private async executeOpportunity(
     opportunity: ArbitrageOpportunity,
-    preset: any
+    preset: { name: string; minProfit: number; maxSlippage: number }
   ): Promise<void> {
     try {
       // Check MEV safety
@@ -270,7 +270,7 @@ export class AutoExecutionEngine {
       // Execute specific opportunity by ID
       const opportunity = await this.quicknode.getCachedArbitrageOpportunity(opportunityId);
       if (opportunity) {
-        await this.executeOpportunity(opportunity, { name: 'Manual' });
+        await this.executeOpportunity(opportunity as ArbitrageOpportunity, { name: 'Manual', minProfit: 0, maxSlippage: 0 });
         return 'executed';
       }
     }

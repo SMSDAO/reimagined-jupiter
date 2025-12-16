@@ -2,6 +2,14 @@ import { Connection } from '@solana/web3.js';
 import axios from 'axios';
 import { config } from '../config/index.js';
 
+interface RpcParams {
+  [key: string]: unknown;
+}
+
+interface FunctionParams {
+  [key: string]: unknown;
+}
+
 export class QuickNodeIntegration {
   private rpcConnection: Connection;
   private apiKey: string;
@@ -22,7 +30,7 @@ export class QuickNodeIntegration {
     return this.rpcConnection;
   }
   
-  async callRpcMethod(method: string, params: any[]): Promise<any> {
+  async callRpcMethod(method: string, params: RpcParams[] = []): Promise<unknown> {
     // Null safety checks
     if (!method) {
       console.error('[QuickNode] Invalid method: method name is required');
@@ -71,7 +79,7 @@ export class QuickNodeIntegration {
   }
   
   // QuickNode Functions
-  async invokeFunction(functionName: string, params: any): Promise<any> {
+  async invokeFunction(functionName: string, params: FunctionParams): Promise<unknown> {
     if (!this.functionsUrl) {
       console.warn('[QuickNode] Functions URL not configured');
       return null;
@@ -113,7 +121,7 @@ export class QuickNodeIntegration {
   }
   
   // QuickNode Key-Value Store
-  async kvGet(key: string): Promise<any> {
+  async kvGet(key: string): Promise<unknown> {
     if (!this.kvUrl) {
       console.warn('[QuickNode] KV URL not configured');
       return null;
@@ -153,7 +161,7 @@ export class QuickNodeIntegration {
     }
   }
   
-  async kvSet(key: string, value: any, ttl?: number): Promise<boolean> {
+  async kvSet(key: string, value: unknown, ttl?: number): Promise<boolean> {
     if (!this.kvUrl) {
       console.warn('QuickNode KV URL not configured');
       return false;
@@ -197,7 +205,7 @@ export class QuickNodeIntegration {
   }
   
   // QuickNode Streams
-  async createStream(config: any): Promise<string | null> {
+  async createStream(config: Record<string, unknown>): Promise<string | null> {
     if (!this.streamsUrl) {
       console.warn('QuickNode Streams URL not configured');
       return null;
@@ -227,7 +235,7 @@ export class QuickNodeIntegration {
   async getTokenPrice(tokenMint: string): Promise<number | null> {
     try {
       // Could use QuickNode Functions to get price data
-      const result = await this.invokeFunction('getTokenPrice', { tokenMint });
+      const result = await this.invokeFunction('getTokenPrice', { tokenMint }) as { price?: number };
       return result?.price || null;
     } catch (error) {
       console.error('Error getting token price:', error);
@@ -235,12 +243,12 @@ export class QuickNodeIntegration {
     }
   }
   
-  async cacheArbitrageOpportunity(opportunity: any): Promise<boolean> {
+  async cacheArbitrageOpportunity(opportunity: Record<string, unknown> & { id: string }): Promise<boolean> {
     const key = `arb:${opportunity.id}`;
     return await this.kvSet(key, opportunity, 300); // 5 minute TTL
   }
   
-  async getCachedArbitrageOpportunity(id: string): Promise<any> {
+  async getCachedArbitrageOpportunity(id: string): Promise<unknown> {
     const key = `arb:${id}`;
     return await this.kvGet(key);
   }

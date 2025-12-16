@@ -1,7 +1,8 @@
-import { Connection, Keypair } from '@solana/web3.js';
+import { Connection, Keypair, PublicKey } from '@solana/web3.js';
 import { ArbitrageOpportunity, TokenConfig } from '../types.js';
 import { JupiterV6Integration } from '../integrations/jupiter.js';
 import { 
+  BaseFlashLoanProvider,
   MarginfiProvider, 
   SolendProvider, 
   MangoProvider, 
@@ -12,7 +13,7 @@ import { config, FLASH_LOAN_FEES, SUPPORTED_TOKENS } from '../config/index.js';
 
 export class FlashLoanArbitrage {
   private connection: Connection;
-  private providers: Map<string, any>;
+  private providers: Map<string, BaseFlashLoanProvider>;
   
   constructor(connection: Connection) {
     this.connection = connection;
@@ -60,6 +61,8 @@ export class FlashLoanArbitrage {
           
           if (!tokenA || !tokenB) continue;
           
+          if (!provider) continue;
+          
           const opportunity = await this.checkArbitrage(
             tokenA,
             tokenB,
@@ -81,7 +84,7 @@ export class FlashLoanArbitrage {
     tokenA: TokenConfig,
     tokenB: TokenConfig,
     providerName: string,
-    provider: any
+    provider: BaseFlashLoanProvider
   ): Promise<ArbitrageOpportunity | null> {
     try {
       const loanAmount = 100000; // Test amount
@@ -136,13 +139,14 @@ export class FlashLoanArbitrage {
     }
   }
   
-  getProviderInfo(): any[] {
-    const info: any[] = [];
-    for (const [name, provider] of this.providers.entries()) {
+  getProviderInfo(): Array<{ name: string; fee: number; programId: PublicKey }> {
+    const info: Array<{ name: string; fee: number; programId: PublicKey }> = [];
+    for (const [_name, provider] of this.providers.entries()) {
+      const providerInfo = provider.getInfo();
       info.push({
-        name,
-        fee: provider.getFee(),
-        ...provider.getInfo(),
+        name: providerInfo.name,
+        fee: providerInfo.fee,
+        programId: providerInfo.programId,
       });
     }
     return info;
