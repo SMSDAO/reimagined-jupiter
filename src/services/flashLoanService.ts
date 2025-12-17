@@ -312,7 +312,8 @@ export class FlashLoanService {
       const outputBN = new BN(outputAmount);
       
       // Calculate fee amount (safe multiplication and division)
-      const feePercent = new BN(Math.floor(providerFee * 100)); // Convert to basis points
+      // providerFee is a percentage (e.g., 0.09 = 0.09%), multiply by 100 to get 9, then divide by 10000
+      const feePercent = new BN(Math.floor(providerFee * 100)); // Convert percentage to integer for BN calculation
       const feeAmount = loanBN.mul(feePercent).div(new BN(10000));
       
       // Calculate repayment amount
@@ -403,7 +404,7 @@ export class FlashLoanService {
       // For now, we extract the message from versioned transaction and add to legacy transaction
       // This is a simplified approach - production would need proper instruction handling
       console.log('[FlashLoan] Atomic transaction structure prepared');
-      console.warn('[FlashLoan] Note: Flash loan borrow/repay instructions need provider-specific implementation');
+      console.warn('[FlashLoan] Note: Flash loan borrow/repay instructions require provider-specific SDK integration (see BaseFlashLoanProvider implementations)');
       
       // Get recent blockhash
       const { blockhash } = await this.connection.getLatestBlockhash();

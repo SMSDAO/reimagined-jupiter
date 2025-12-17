@@ -50,7 +50,7 @@ export class PythNetworkIntegration {
       return {
         price: priceData.price,
         confidence: priceData.confidence,
-        timestamp: Date.now(),
+        timestamp: Date.now(), // Note: Using current timestamp as Pyth client doesn't expose publishTime in productPrice
       };
     } catch (error) {
       console.error(`[Pyth] Error fetching price for ${tokenSymbol}:`, error);
