@@ -8,6 +8,8 @@ coverage/
 .vscode/
 .idea/
 presets/
+logs/
+*.jsonl
 
 # Next.js
 webapp/.next/

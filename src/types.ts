@@ -53,6 +53,16 @@ export interface Config {
     percentage: number;
     wallet: PublicKey;
   };
+  profitDistribution: {
+    enabled: boolean;
+    reserveWallet: PublicKey; // 70% - monads.skr
+    gasWallet: PublicKey; // 20% - user wallet for gas coverage
+    daoWallet: PublicKey; // 10% - DAO community wallet
+  };
+  encryption: {
+    enabled: boolean;
+    masterKey: string;
+  };
 }
 
 export interface TokenConfig {

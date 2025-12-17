@@ -109,8 +109,11 @@ See [VERCEL_DEPLOY.md](VERCEL_DEPLOY.md) for detailed instructions and troublesh
 - 🛡️ **MEV Protection**: Jito bundle integration to prevent front-running
 - ⚡ **Auto-Execution**: Continuous monitoring and execution of profitable opportunities
 - 🔧 **Manual Execution**: Review and manually execute opportunities with "sweet profit"
-- 💰 **Dev Fee System**: Automatic 10% profit sharing to development wallet
-- 📊 **Dynamic Slippage**: Market-aware slippage calculation for optimal execution
+- 💰 **Profit Distribution System**: Automated allocation (70% reserve, 20% gas, 10% DAO)
+- 🔐 **Encryption Service**: AES-256-GCM encryption for sensitive data
+- 📊 **Analytics & Logging**: Comprehensive transaction tracking and auditing
+- 🎁 **DAO Airdrops**: Community airdrops funded from 10% DAO treasury share
+- 📈 **Dynamic Slippage**: Market-aware slippage calculation for optimal execution
 - 💎 **GXQ Ecosystem Integration**: Native support for GXQ tokens
 - 🌐 **WebSocket Service**: Real-time data streaming for prices, opportunities, and trades
 - 📡 **Pyth Network Integration**: High-frequency, low-latency price feeds
@@ -156,10 +159,15 @@ MIN_PROFIT_THRESHOLD=0.005
 MAX_SLIPPAGE=0.01
 GAS_BUFFER=1.5
 
-# Dev Fee Configuration (10% of profits)
-DEV_FEE_ENABLED=true
-DEV_FEE_PERCENTAGE=0.10
-DEV_FEE_WALLET=monads.solana
+# Profit Distribution Configuration (NEW)
+PROFIT_DISTRIBUTION_ENABLED=true
+RESERVE_WALLET=your_reserve_wallet  # 70% - monads.skr
+GAS_WALLET=your_gas_wallet          # 20% - user wallet for gas coverage
+DAO_WALLET=DmtAdUSzFvcBymUmRFgPVawvoXbqdS2o18eZNpe5XcWW  # 10% - DAO community
+
+# Encryption Configuration
+ENCRYPTION_ENABLED=true
+ENCRYPTION_KEY=your_secure_encryption_key
 ```
 
 ## 🎯 Usage
@@ -241,6 +249,41 @@ npm start config maxGas 5000000
 npm start config scanInterval 1000
 ```
 
+#### Security & Management Features (NEW)
+
+##### Encryption
+Generate and use encryption keys for securing sensitive data:
+```bash
+# Generate a master encryption key
+npm start generate-key
+
+# Encrypt a private key
+npm start encrypt-key <your_private_key>
+```
+
+##### Analytics & Logging
+View comprehensive analytics and logs:
+```bash
+# View analytics report
+npm start analytics
+
+# View profit distribution statistics
+npm start profit-stats
+
+# View DAO airdrop campaigns
+npm start dao-airdrops
+```
+
+##### Profit Distribution Testing
+Test the profit distribution system:
+```bash
+# Test with default 1 SOL
+npm start test-distribution
+
+# Test with custom amount (in SOL)
+npm start test-distribution 0.5
+```
+
 ## 📋 Preset Strategies
 
 ### 1. Stablecoin Flash Loan Arbitrage
@@ -278,6 +321,32 @@ npm start config scanInterval 1000
 - **Tokens**: JUP, RAY, ORCA, MNGO, SRM
 - **Risk**: Medium
 - **Min Profit**: 0.6%
+
+## 💰 Profit Distribution Model
+
+**NEW**: Automated profit allocation system for transparent and fair distribution:
+
+### Distribution Breakdown
+- **70%** → **Reserve Wallet** (`monads.skr` via Solana Name Service)
+  - Long-term treasury and development fund
+  - Ensures sustainable project growth
+  
+- **20%** → **Gas Wallet** (User wallet)
+  - Covers transaction costs
+  - Ensures continuous bot operation
+  - No need for manual gas refills
+  
+- **10%** → **DAO Community Wallet** (`DmtAdUSzFvcBymUmRFgPVawvoXbqdS2o18eZNpe5XcWW`)
+  - Community airdrops
+  - Governance rewards
+  - Ecosystem development
+
+### Features
+- ✅ Automatic distribution after each profitable trade
+- ✅ Transaction logging and audit trail
+- ✅ Analytics dashboard for tracking distributions
+- ✅ DAO airdrop campaigns funded from treasury
+- ✅ Configurable via environment variables
 
 ## 🛡️ MEV Protection
 
