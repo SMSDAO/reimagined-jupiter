@@ -1,5 +1,5 @@
 import { Connection, PublicKey } from '@solana/web3.js';
-import { JupiterV6Integration } from '../integrations/jupiter.js';
+import { JupiterV6Integration, JupiterQuote } from '../integrations/jupiter.js';
 import { PythPriceStreamService } from './pythPriceStream.js';
 import { ArbitrageOpportunity, TokenConfig } from '../types.js';
 
@@ -126,8 +126,6 @@ export class EnhancedArbitrageScanner {
    */
   private async scanOpportunities(tokens: string[]): Promise<void> {
     try {
-      const opportunities: EnhancedOpportunity[] = [];
-      
       // Get Pyth prices if available
       const pythPrices: Record<string, number> = {};
       if (this.pythStream) {
@@ -137,23 +135,32 @@ export class EnhancedArbitrageScanner {
         }
       }
       
+      // Build all check tasks for parallel execution
+      const checkTasks: Promise<EnhancedOpportunity | null>[] = [];
+      
       // Scan token pairs
       for (let i = 0; i < tokens.length; i++) {
         for (let j = i + 1; j < tokens.length; j++) {
-          const tokenA = tokens[i];
-          const tokenB = tokens[j];
-          
-          const opportunity = await this.checkPairOpportunity(
-            tokenA,
-            tokenB,
-            pythPrices
+          checkTasks.push(
+            this.checkPairOpportunity(tokens[i], tokens[j], pythPrices)
           );
-          
-          if (opportunity) {
-            opportunities.push(opportunity);
-          }
         }
       }
+      
+      // Execute checks in parallel with batching to avoid RPC overload
+      const BATCH_SIZE = 5;
+      const allResults: (EnhancedOpportunity | null)[] = [];
+      
+      for (let i = 0; i < checkTasks.length; i += BATCH_SIZE) {
+        const batch = checkTasks.slice(i, i + BATCH_SIZE);
+        const batchResults = await Promise.all(batch);
+        allResults.push(...batchResults);
+      }
+      
+      // Filter valid opportunities
+      const opportunities = allResults.filter(
+        (opp): opp is EnhancedOpportunity => opp !== null
+      );
       
       // Update cache with new opportunities
       for (const opp of opportunities) {
@@ -257,12 +264,8 @@ export class EnhancedArbitrageScanner {
   
   /**
    * Extract aggregator names from Jupiter route plan
-   * Note: Using 'any' type because Jupiter quote response structure is complex
-   * and may change between versions. For production, consider defining proper
-   * interfaces based on @jup-ag/api types.
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private extractAggregators(forwardQuote: any, reverseQuote: any): string[] {
+  private extractAggregators(forwardQuote: JupiterQuote, reverseQuote: JupiterQuote): string[] {
     const aggregators = new Set<string>();
     
     // Extract from forward route

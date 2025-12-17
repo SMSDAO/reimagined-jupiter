@@ -1,5 +1,5 @@
 import { Connection, Keypair, Transaction, LAMPORTS_PER_SOL } from '@solana/web3.js';
-import { ArbitrageOpportunity, TokenConfig } from '../types.js';
+import { ArbitrageOpportunity, TokenConfig, FlashLoanProvider } from '../types.js';
 import { JupiterV6Integration } from '../integrations/jupiter.js';
 import { 
   MarginfiProvider, 
@@ -14,7 +14,7 @@ import { ProfitDistributionManager } from '../utils/profitDistribution.js';
 
 export class FlashLoanArbitrage {
   private connection: Connection;
-  private providers: Map<string, any>;
+  private providers: Map<string, MarginfiProvider | SolendProvider | MangoProvider | KaminoProvider | PortFinanceProvider>;
   private transactionExecutor: TransactionExecutor;
   private profitDistributor: ProfitDistributionManager;
   
@@ -53,32 +53,45 @@ export class FlashLoanArbitrage {
   }
   
   async findOpportunities(tokens: string[]): Promise<ArbitrageOpportunity[]> {
-    const opportunities: ArbitrageOpportunity[] = [];
+    // Pre-resolve all tokens to avoid repeated lookups
+    const resolvedTokens = tokens
+      .map(symbol => SUPPORTED_TOKENS.find(t => t.symbol === symbol))
+      .filter((t): t is TokenConfig => t !== undefined);
+    
+    if (resolvedTokens.length === 0) {
+      return [];
+    }
+    
+    // Build all check tasks for parallel execution
+    const checkTasks: Promise<ArbitrageOpportunity | null>[] = [];
     
     for (const providerName of this.providers.keys()) {
       const provider = this.providers.get(providerName);
+      if (!provider) continue;
       
       // Check each token pair for arbitrage
-      for (let i = 0; i < tokens.length; i++) {
-        for (let j = i + 1; j < tokens.length; j++) {
-          const tokenA = SUPPORTED_TOKENS.find(t => t.symbol === tokens[i]);
-          const tokenB = SUPPORTED_TOKENS.find(t => t.symbol === tokens[j]);
-          
-          if (!tokenA || !tokenB) continue;
-          
-          const opportunity = await this.checkArbitrage(
-            tokenA,
-            tokenB,
-            providerName,
-            provider
+      for (let i = 0; i < resolvedTokens.length; i++) {
+        for (let j = i + 1; j < resolvedTokens.length; j++) {
+          checkTasks.push(
+            this.checkArbitrage(
+              resolvedTokens[i],
+              resolvedTokens[j],
+              providerName,
+              provider
+            )
           );
-          
-          if (opportunity && opportunity.estimatedProfit > config.arbitrage.minProfitThreshold) {
-            opportunities.push(opportunity);
-          }
         }
       }
     }
+    
+    // Execute all checks in parallel
+    const results = await Promise.all(checkTasks);
+    
+    // Filter profitable opportunities
+    const opportunities = results.filter(
+      (opp): opp is ArbitrageOpportunity => 
+        opp !== null && opp.estimatedProfit > config.arbitrage.minProfitThreshold
+    );
     
     return opportunities.sort((a, b) => b.estimatedProfit - a.estimatedProfit);
   }
@@ -87,7 +100,7 @@ export class FlashLoanArbitrage {
     tokenA: TokenConfig,
     tokenB: TokenConfig,
     providerName: string,
-    provider: any
+    provider: MarginfiProvider | SolendProvider | MangoProvider | KaminoProvider | PortFinanceProvider
   ): Promise<ArbitrageOpportunity | null> {
     try {
       const loanAmount = 100000; // Test amount
@@ -241,14 +254,12 @@ export class FlashLoanArbitrage {
     }
   }
   
-  getProviderInfo(): any[] {
-    const info: any[] = [];
-    for (const [name, provider] of this.providers.entries()) {
-      info.push({
-        name,
-        fee: provider.getFee(),
-        ...provider.getInfo(),
-      });
+  getProviderInfo(): FlashLoanProvider[] {
+    const info: FlashLoanProvider[] = [];
+    for (const provider of this.providers.values()) {
+      const providerInfo = provider.getInfo();
+      providerInfo.fee = provider.getFee();
+      info.push(providerInfo);
     }
     return info;
   }
@@ -268,28 +279,50 @@ export class TriangularArbitrage {
   }
   
   async findOpportunities(tokens: string[]): Promise<ArbitrageOpportunity[]> {
-    const opportunities: ArbitrageOpportunity[] = [];
+    // Pre-resolve all tokens to avoid repeated lookups
+    const resolvedTokens = tokens
+      .map(symbol => SUPPORTED_TOKENS.find(t => t.symbol === symbol))
+      .filter((t): t is TokenConfig => t !== undefined);
+    
+    if (resolvedTokens.length < 3) {
+      return [];
+    }
+    
+    // Build all check tasks for parallel execution
+    const checkTasks: Promise<ArbitrageOpportunity | null>[] = [];
     
     // Check all possible triangular paths
-    for (let i = 0; i < tokens.length; i++) {
-      for (let j = 0; j < tokens.length; j++) {
-        for (let k = 0; k < tokens.length; k++) {
+    for (let i = 0; i < resolvedTokens.length; i++) {
+      for (let j = 0; j < resolvedTokens.length; j++) {
+        for (let k = 0; k < resolvedTokens.length; k++) {
           if (i !== j && j !== k && i !== k) {
-            const tokenA = SUPPORTED_TOKENS.find(t => t.symbol === tokens[i]);
-            const tokenB = SUPPORTED_TOKENS.find(t => t.symbol === tokens[j]);
-            const tokenC = SUPPORTED_TOKENS.find(t => t.symbol === tokens[k]);
-            
-            if (!tokenA || !tokenB || !tokenC) continue;
-            
-            const opportunity = await this.checkTriangularPath(tokenA, tokenB, tokenC);
-            
-            if (opportunity && opportunity.estimatedProfit > config.arbitrage.minProfitThreshold) {
-              opportunities.push(opportunity);
-            }
+            checkTasks.push(
+              this.checkTriangularPath(
+                resolvedTokens[i],
+                resolvedTokens[j],
+                resolvedTokens[k]
+              )
+            );
           }
         }
       }
     }
+    
+    // Execute all checks in parallel (batch to avoid overwhelming RPC)
+    const BATCH_SIZE = 10;
+    const results: (ArbitrageOpportunity | null)[] = [];
+    
+    for (let i = 0; i < checkTasks.length; i += BATCH_SIZE) {
+      const batch = checkTasks.slice(i, i + BATCH_SIZE);
+      const batchResults = await Promise.all(batch);
+      results.push(...batchResults);
+    }
+    
+    // Filter profitable opportunities
+    const opportunities = results.filter(
+      (opp): opp is ArbitrageOpportunity => 
+        opp !== null && opp.estimatedProfit > config.arbitrage.minProfitThreshold
+    );
     
     return opportunities.sort((a, b) => b.estimatedProfit - a.estimatedProfit);
   }
