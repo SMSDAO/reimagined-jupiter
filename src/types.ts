@@ -48,6 +48,12 @@ export interface Config {
     maxSlippage: number;
     gasBuffer: number;
   };
+  scanner: {
+    pollingIntervalMs: number;
+    enableLiveUpdates: boolean;
+    enableNotifications: boolean;
+    minConfidence: number;
+  };
   devFee: {
     enabled: boolean;
     percentage: number;

@@ -1,390 +1,269 @@
-import { Keypair, Connection, PublicKey, Transaction } from '@solana/web3.js';
-import bs58 from 'bs58';
+import { PublicKey, Transaction, VersionedTransaction } from '@solana/web3.js';
 
 /**
- * Security utilities for transaction signing and validation
+ * Security validation utilities for mainnet operations
  */
-export class SecurityManager {
-  private connection: Connection;
+export class SecurityValidator {
+  // Known malicious addresses to blacklist
+  private static readonly BLACKLISTED_ADDRESSES = new Set<string>([
+    // Add known malicious addresses here
+  ]);
   
-  constructor(connection: Connection) {
-    this.connection = connection;
-  }
+  // Minimum SOL balance required for operations (in lamports)
+  private static readonly MIN_SOL_BALANCE = 10000; // 0.00001 SOL
+  
+  // Maximum slippage allowed (as percentage)
+  private static readonly MAX_SLIPPAGE_PERCENT = 0.50; // 50%
   
   /**
-   * Validate that a keypair is properly formatted and has funds
+   * Validate a Solana address is not blacklisted
    */
-  async validateKeypair(keypair: Keypair, minBalance: number = 0.01): Promise<{
-    valid: boolean;
-    balance?: number;
-    error?: string;
-  }> {
+  static validateAddress(address: string | PublicKey): boolean {
     try {
-      // Check keypair is valid
-      if (!keypair.publicKey) {
-        return { valid: false, error: 'Invalid keypair: missing public key' };
+      const pubkey = typeof address === 'string' ? new PublicKey(address) : address;
+      const addressStr = pubkey.toString();
+      
+      if (this.BLACKLISTED_ADDRESSES.has(addressStr)) {
+        console.error('[Security] Address is blacklisted:', addressStr);
+        return false;
       }
       
-      // Check balance
-      const balance = await this.connection.getBalance(keypair.publicKey);
-      const balanceSol = balance / 1e9;
-      
-      if (balanceSol < minBalance) {
-        return {
-          valid: false,
-          balance: balanceSol,
-          error: `Insufficient balance: ${balanceSol.toFixed(6)} SOL (minimum: ${minBalance} SOL)`
-        };
-      }
-      
-      console.log(`✅ Wallet validated: ${keypair.publicKey.toBase58().slice(0, 8)}...`);
-      console.log(`   Balance: ${balanceSol.toFixed(6)} SOL`);
-      
-      return { valid: true, balance: balanceSol };
+      return true;
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      return {
-        valid: false,
-        error: `Keypair validation error: ${errorMessage}`
-      };
+      console.error('[Security] Invalid address format:', error);
+      return false;
     }
   }
   
   /**
-   * Securely load keypair from base58 encoded private key
+   * Validate transaction parameters
    */
-  loadKeypairFromEnv(privateKeyBase58: string): Keypair | null {
+  static validateTransaction(
+    transaction: Transaction | VersionedTransaction,
+    expectedSigners: PublicKey[]
+  ): boolean {
     try {
-      if (!privateKeyBase58 || privateKeyBase58.trim() === '') {
-        console.error('❌ Private key is empty or not set');
-        return null;
+      // Check transaction has instructions
+      let instructions;
+      if (transaction instanceof Transaction) {
+        instructions = transaction.instructions;
+      } else {
+        // VersionedTransaction
+        instructions = transaction.message.compiledInstructions;
       }
       
-      // Decode base58 private key
-      const privateKeyBytes = bs58.decode(privateKeyBase58);
-      
-      // Validate length (should be 64 bytes for Solana keypair)
-      if (privateKeyBytes.length !== 64) {
-        console.error(`❌ Invalid private key length: ${privateKeyBytes.length} (expected 64)`);
-        return null;
+      if (!instructions || instructions.length === 0) {
+        console.error('[Security] Transaction has no instructions');
+        return false;
       }
       
-      const keypair = Keypair.fromSecretKey(privateKeyBytes);
-      console.log(`✅ Keypair loaded successfully: ${keypair.publicKey.toBase58().slice(0, 8)}...`);
+      // Validate signers
+      if (expectedSigners.length === 0) {
+        console.error('[Security] No expected signers provided');
+        return false;
+      }
       
-      return keypair;
+      return true;
     } catch (error) {
-      console.error('❌ Error loading keypair:', error);
-      return null;
+      console.error('[Security] Transaction validation error:', error);
+      return false;
     }
   }
   
   /**
-   * Validate a public key address
+   * Validate slippage is within acceptable range
    */
-  validatePublicKey(address: string): { valid: boolean; publicKey?: PublicKey; error?: string } {
+  static validateSlippage(slippage: number): boolean {
+    if (slippage < 0) {
+      console.error('[Security] Slippage cannot be negative:', slippage);
+      return false;
+    }
+    
+    if (slippage > this.MAX_SLIPPAGE_PERCENT) {
+      console.error('[Security] Slippage exceeds maximum allowed:', slippage, 'max:', this.MAX_SLIPPAGE_PERCENT);
+      return false;
+    }
+    
+    return true;
+  }
+  
+  /**
+   * Validate amount is positive and reasonable
+   */
+  static validateAmount(amount: number, decimals: number = 9): boolean {
+    if (amount <= 0) {
+      console.error('[Security] Amount must be positive:', amount);
+      return false;
+    }
+    
+    if (!Number.isFinite(amount)) {
+      console.error('[Security] Amount must be finite:', amount);
+      return false;
+    }
+    
+    // Check for unreasonably large amounts (> 1 trillion tokens)
+    const maxAmount = 1_000_000_000_000 * Math.pow(10, decimals);
+    if (amount > maxAmount) {
+      console.error('[Security] Amount exceeds reasonable limit:', amount);
+      return false;
+    }
+    
+    return true;
+  }
+  
+  /**
+   * Validate profit percentage is realistic
+   */
+  static validateProfitEstimate(profitPercent: number): boolean {
+    // Profit cannot be negative (would be a loss)
+    if (profitPercent < 0) {
+      console.warn('[Security] Negative profit detected:', profitPercent);
+      return false;
+    }
+    
+    // Extremely high profit (>100%) is suspicious
+    if (profitPercent > 1.0) {
+      console.warn('[Security] Suspiciously high profit estimate:', profitPercent);
+      return false;
+    }
+    
+    return true;
+  }
+  
+  /**
+   * Validate token mint address is legitimate
+   */
+  static validateTokenMint(mint: string | PublicKey): boolean {
     try {
-      const publicKey = new PublicKey(address);
+      const mintPubkey = typeof mint === 'string' ? new PublicKey(mint) : mint;
       
-      // Check if it's a valid base58 string
-      if (publicKey.toBase58() !== address) {
-        return { valid: false, error: 'Invalid public key format' };
+      // Check it's not the system program or other invalid addresses
+      const SYSTEM_PROGRAM_ID = '11111111111111111111111111111111';
+      const NULL_ADDRESS = '00000000000000000000000000000000';
+      const invalidAddresses = [
+        SYSTEM_PROGRAM_ID,
+        NULL_ADDRESS,
+      ];
+      
+      const mintStr = mintPubkey.toString();
+      if (invalidAddresses.includes(mintStr)) {
+        console.error('[Security] Invalid token mint:', mintStr);
+        return false;
       }
       
-      return { valid: true, publicKey };
+      return this.validateAddress(mintPubkey);
     } catch (error) {
-      return {
-        valid: false,
-        error: error instanceof Error ? error.message : 'Invalid public key'
-      };
+      console.error('[Security] Token mint validation error:', error);
+      return false;
     }
   }
   
   /**
-   * Validate transaction before signing
-   * Checks for common issues that could cause failures
+   * Sanitize user input to prevent injection attacks
    */
-  async validateTransaction(transaction: Transaction): Promise<{
-    valid: boolean;
-    issues: string[];
-  }> {
-    const issues: string[] = [];
-    
-    try {
-      // Check if transaction has instructions
-      if (transaction.instructions.length === 0) {
-        issues.push('Transaction has no instructions');
-      }
-      
-      // Check if fee payer is set
-      if (!transaction.feePayer) {
-        issues.push('Transaction fee payer is not set');
-      }
-      
-      // Check if recent blockhash is set
-      if (!transaction.recentBlockhash) {
-        issues.push('Transaction recent blockhash is not set');
-      }
-      
-      // Check for duplicate instructions (potential bug)
-      const instructionHashes = transaction.instructions.map(ix => 
-        `${ix.programId.toBase58()}-${ix.keys.length}`
-      );
-      const uniqueHashes = new Set(instructionHashes);
-      if (uniqueHashes.size !== instructionHashes.length) {
-        issues.push('Transaction may contain duplicate instructions');
-      }
-      
-      // Validate all account keys are valid
-      for (const instruction of transaction.instructions) {
-        for (const key of instruction.keys) {
-          if (!key.pubkey) {
-            issues.push('Transaction contains invalid account key');
-            break;
-          }
-        }
-      }
-      
-      return {
-        valid: issues.length === 0,
-        issues
-      };
-    } catch (error) {
-      issues.push(error instanceof Error ? error.message : 'Unknown validation error');
-      return { valid: false, issues };
-    }
-  }
-  
-  /**
-   * Sanitize transaction data for logging (remove sensitive info)
-   */
-  sanitizeForLogging(transaction: Transaction): object {
-    return {
-      instructionCount: transaction.instructions.length,
-      feePayer: transaction.feePayer?.toBase58().slice(0, 8) + '...',
-      hasRecentBlockhash: !!transaction.recentBlockhash,
-      signatures: transaction.signatures.length,
-      programs: transaction.instructions.map(ix => ix.programId.toBase58().slice(0, 8) + '...')
-    };
-  }
-  
-  /**
-   * Verify transaction signature on-chain
-   */
-  async verifyTransactionSignature(signature: string): Promise<{
-    confirmed: boolean;
-    slot?: number;
-    blockTime?: number;
-    error?: string;
-  }> {
-    try {
-      const status = await this.connection.getSignatureStatus(signature, {
-        searchTransactionHistory: true
-      });
-      
-      if (!status || !status.value) {
-        return {
-          confirmed: false,
-          error: 'Transaction not found'
-        };
-      }
-      
-      if (status.value.err) {
-        return {
-          confirmed: false,
-          error: `Transaction failed: ${JSON.stringify(status.value.err)}`
-        };
-      }
-      
-      // Get additional transaction details
-      const tx = await this.connection.getTransaction(signature, {
-        commitment: 'confirmed',
-        maxSupportedTransactionVersion: 0
-      });
-      
-      return {
-        confirmed: true,
-        slot: tx?.slot,
-        blockTime: tx?.blockTime || undefined
-      };
-    } catch (error) {
-      return {
-        confirmed: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
-      };
-    }
-  }
-  
-  /**
-   * Rate limiter for RPC calls to prevent abuse
-   */
-  private lastCallTime: Map<string, number> = new Map();
-  private readonly RATE_LIMIT_MS = 100; // 10 calls per second per method
-  
-  async rateLimitedCall<T>(
-    method: string,
-    fn: () => Promise<T>
-  ): Promise<T> {
-    const now = Date.now();
-    const lastCall = this.lastCallTime.get(method) || 0;
-    const timeSinceLastCall = now - lastCall;
-    
-    if (timeSinceLastCall < this.RATE_LIMIT_MS) {
-      const waitTime = this.RATE_LIMIT_MS - timeSinceLastCall;
-      await new Promise(resolve => setTimeout(resolve, waitTime));
+  static sanitizeInput(input: string): string {
+    if (typeof input !== 'string') {
+      return String(input);
     }
     
-    this.lastCallTime.set(method, Date.now());
-    return fn();
+    // Remove potentially dangerous characters
+    return input
+      .replace(/[<>]/g, '') // Remove HTML tags
+      .replace(/[;]/g, '')  // Remove command separators
+      .replace(/[\x00-\x1F\x7F]/g, '') // Remove control characters
+      .trim()
+      .slice(0, 1000); // Limit length
   }
   
   /**
-   * Estimate transaction size and fee
+   * Validate opportunity is safe to execute
    */
-  estimateTransactionFee(transaction: Transaction): {
-    estimatedSize: number;
-    estimatedFee: number;
-  } {
-    // Rough estimation based on instruction count and signatures
-    const baseSize = 64; // Base transaction size
-    const signatureSize = 64 * (transaction.signatures.length || 1);
-    const instructionSize = transaction.instructions.reduce((sum, ix) => {
-      return sum + 32 + ix.keys.length * 34 + ix.data.length;
-    }, 0);
-    
-    const estimatedSize = baseSize + signatureSize + instructionSize;
-    
-    // Base fee is 5000 lamports per signature
-    const estimatedFee = 5000 * (transaction.signatures.length || 1);
-    
-    return { estimatedSize, estimatedFee };
-  }
-  
-  /**
-   * Check if an address is a known malicious address (placeholder)
-   */
-  checkAddressBlacklist(address: PublicKey): { blacklisted: boolean; reason?: string } {
-    // In production, maintain a list of known malicious addresses
-    // or integrate with a service like Blowfish or GoPlus Security
-    
-    const blacklistedAddresses: string[] = [
-      // Add known malicious addresses here
-    ];
-    
-    const addressStr = address.toBase58();
-    if (blacklistedAddresses.includes(addressStr)) {
-      return {
-        blacklisted: true,
-        reason: 'Address is on security blacklist'
-      };
+  static validateOpportunity(
+    profitPercent: number,
+    gasEstimate: number,
+    confidence: number,
+    minConfidence: number = 0.7
+  ): { valid: boolean; reason?: string } {
+    // Check profit is realistic
+    if (!this.validateProfitEstimate(profitPercent)) {
+      return { valid: false, reason: 'Invalid profit estimate' };
     }
     
-    return { blacklisted: false };
+    // Check confidence is acceptable
+    if (confidence < minConfidence) {
+      return { valid: false, reason: `Confidence too low: ${confidence} < ${minConfidence}` };
+    }
+    
+    // Check gas estimate is reasonable (< 0.1 SOL)
+    const maxGasLamports = 0.1 * 1e9; // 0.1 SOL in lamports
+    if (gasEstimate > maxGasLamports) {
+      return { valid: false, reason: `Gas estimate too high: ${gasEstimate} lamports` };
+    }
+    
+    // Check profit exceeds gas cost
+    // This is a simplified check; actual validation would need token amounts
+    if (gasEstimate <= 0) {
+      return { valid: false, reason: 'Invalid gas estimate' };
+    }
+    
+    return { valid: true };
   }
   
   /**
-   * Generate a transaction fingerprint for deduplication
+   * Check if environment is properly configured for mainnet
    */
-  generateTransactionFingerprint(transaction: Transaction): string {
-    const data = {
-      instructions: transaction.instructions.map(ix => ({
-        program: ix.programId.toBase58(),
-        accounts: ix.keys.map(k => k.pubkey.toBase58()),
-        dataHash: Buffer.from(ix.data).toString('hex').slice(0, 16)
-      })),
-      feePayer: transaction.feePayer?.toBase58()
-    };
-    
-    return JSON.stringify(data);
-  }
-}
-
-/**
- * Environment variable security checker
- */
-export class EnvironmentSecurityChecker {
-  /**
-   * Check for common security issues in environment configuration
-   */
-  static checkEnvironmentSecurity(): {
-    secure: boolean;
-    warnings: string[];
-    criticalIssues: string[];
-  } {
+  static validateMainnetConfig(
+    rpcUrl: string,
+    privateKey?: string
+  ): { valid: boolean; warnings: string[] } {
     const warnings: string[] = [];
-    const criticalIssues: string[] = [];
     
-    // Check if running in production mode
-    const nodeEnv = process.env.NODE_ENV || 'development';
-    if (nodeEnv === 'production') {
-      // In production, ensure all sensitive data comes from env vars
-      if (!process.env.WALLET_PRIVATE_KEY) {
-        criticalIssues.push('WALLET_PRIVATE_KEY not set in production');
+    // Check RPC URL
+    if (!rpcUrl || rpcUrl.trim() === '') {
+      warnings.push('RPC URL is not configured');
+    }
+    
+    if (rpcUrl.includes('devnet')) {
+      warnings.push('Using devnet RPC - switch to mainnet for production');
+    }
+    
+    if (rpcUrl === 'https://api.mainnet-beta.solana.com') {
+      warnings.push('Using public RPC - consider using a private/premium RPC for better performance');
+    }
+    
+    // Check private key
+    if (privateKey) {
+      if (privateKey === 'your_private_key_here') {
+        warnings.push('Private key not configured - execution features disabled');
       }
-      
-      if (!process.env.SOLANA_RPC_URL || process.env.SOLANA_RPC_URL.includes('api.mainnet-beta.solana.com')) {
-        warnings.push('Using public RPC endpoint in production (use QuickNode or private RPC)');
-      }
-    }
-    
-    // Check for default/placeholder values
-    if (process.env.DEV_FEE_WALLET === '11111111111111111111111111111111') {
-      warnings.push('DEV_FEE_WALLET is set to placeholder value');
-    }
-    
-    if (process.env.DAO_WALLET_ADDRESS === 'DmtAdUSzFvcBymUmRFgPVawvoXbqdS2o18eZNpe5XcWW') {
-      // This is actually the correct value per spec, so no warning
-    }
-    
-    // Check for weak private keys (for testing only)
-    const privateKey = process.env.WALLET_PRIVATE_KEY;
-    if (privateKey && privateKey.length < 32) {
-      criticalIssues.push('WALLET_PRIVATE_KEY appears to be too short');
-    }
-    
-    // Check profit distribution percentages sum to 100%
-    const reservePct = parseFloat(process.env.RESERVE_PERCENTAGE || '0.70');
-    const gasPct = parseFloat(process.env.GAS_SLIPPAGE_PERCENTAGE || '0.20');
-    const daoPct = parseFloat(process.env.DAO_PERCENTAGE || '0.10');
-    const total = reservePct + gasPct + daoPct;
-    
-    if (Math.abs(total - 1.0) > 0.001) {
-      criticalIssues.push(`Profit distribution percentages sum to ${(total * 100).toFixed(1)}%, not 100%`);
     }
     
     return {
-      secure: criticalIssues.length === 0,
+      valid: warnings.length === 0,
       warnings,
-      criticalIssues
     };
   }
   
   /**
-   * Print security check results
+   * Log security event for audit trail
    */
-  static printSecurityCheck(): void {
-    const check = this.checkEnvironmentSecurity();
+  static logSecurityEvent(
+    level: 'info' | 'warn' | 'error',
+    event: string,
+    details?: any
+  ): void {
+    const timestamp = new Date().toISOString();
+    const logMessage = `[Security][${level.toUpperCase()}][${timestamp}] ${event}`;
     
-    console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log('🔒 SECURITY CHECK');
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    
-    if (check.secure) {
-      console.log('✅ No critical security issues detected');
-    } else {
-      console.log('❌ Critical security issues found:');
-      check.criticalIssues.forEach(issue => {
-        console.log(`   • ${issue}`);
-      });
+    switch (level) {
+      case 'error':
+        console.error(logMessage, details || '');
+        break;
+      case 'warn':
+        console.warn(logMessage, details || '');
+        break;
+      default:
+        console.log(logMessage, details || '');
     }
-    
-    if (check.warnings.length > 0) {
-      console.log('\n⚠️  Warnings:');
-      check.warnings.forEach(warning => {
-        console.log(`   • ${warning}`);
-      });
-    }
-    
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
   }
 }
