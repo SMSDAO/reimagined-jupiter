@@ -2,6 +2,14 @@ import { Connection, VersionedTransaction, Keypair } from '@solana/web3.js';
 import axios from 'axios';
 import { config } from '../config/index.js';
 
+export interface JupiterRoutePlanStep {
+  swapInfo?: {
+    label?: string;
+    [key: string]: unknown;
+  };
+  [key: string]: unknown;
+}
+
 export interface JupiterQuote {
   inputMint: string;
   inAmount: string;
@@ -11,7 +19,7 @@ export interface JupiterQuote {
   swapMode: string;
   slippageBps: number;
   priceImpactPct: string;
-  routePlan: any[];
+  routePlan: JupiterRoutePlanStep[];
 }
 
 export class JupiterV6Integration {
@@ -240,7 +248,7 @@ export class JupiterV6Integration {
     }
   }
   
-  async getTokenList(): Promise<any[]> {
+  async getTokenList(): Promise<Array<Record<string, unknown>>> {
     try {
       const response = await axios.get('https://token.jup.ag/all');
       return response.data;
