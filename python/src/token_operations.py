@@ -159,20 +159,25 @@ class TokenOperations:
 
     def get_mint_info(self, mint: Pubkey) -> Dict[str, Any]:
         """
-        Get information about a token mint.
+        Get basic information about a token mint account.
+        
+        NOTE: This method returns basic account information. For detailed mint data
+        (supply, decimals, mint authority, etc.), use proper mint layout parsing with
+        the construct library or spl-token's Mint layout.
         
         Args:
             mint: Token mint public key
             
         Returns:
-            Dictionary with mint information
+            Dictionary with basic mint account information (not parsed mint data)
         """
         response = self.client.get_account_info(mint)
         if response.value is None:
             raise ValueError(f"Mint account not found: {mint}")
         
         account = response.value
-        # Parse mint data (simplified - in production, use proper mint layout parsing)
+        # Return basic account info - not parsed mint data
+        # For production, use proper mint layout parsing
         return {
             "address": str(mint),
             "owner": str(account.owner),

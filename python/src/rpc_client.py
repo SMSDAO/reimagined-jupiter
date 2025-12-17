@@ -165,6 +165,9 @@ class SolanaRPCClient:
             True if transaction is confirmed, False otherwise
         """
         response = self.client.confirm_transaction(signature, commitment=commitment)
+        # Check if response has values before accessing
+        if not response.value or len(response.value) == 0:
+            return False
         return response.value[0].status is None  # None status means success
 
     async def confirm_transaction_async(
@@ -181,6 +184,9 @@ class SolanaRPCClient:
             True if transaction is confirmed, False otherwise
         """
         response = await self.client.confirm_transaction(signature, commitment=commitment)
+        # Check if response has values before accessing
+        if not response.value or len(response.value) == 0:
+            return False
         return response.value[0].status is None
 
     def get_recent_blockhash(self) -> str:

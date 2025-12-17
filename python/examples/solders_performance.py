@@ -126,8 +126,7 @@ def main():
     except ValueError as e:
         print(f"Error: {e}")
         print("Using a temporary keypair for benchmarks...")
-        keypair_manager = KeypairManager.__new__(KeypairManager)
-        keypair_manager.keypair = Keypair()
+        keypair_manager = KeypairManager(keypair=Keypair())
     print()
 
     # Initialize RPC client

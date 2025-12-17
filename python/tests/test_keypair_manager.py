@@ -42,8 +42,7 @@ class TestKeypairManager:
     def test_get_public_key(self):
         """Test getting public key from keypair."""
         keypair = KeypairManager.generate_keypair()
-        manager = KeypairManager.__new__(KeypairManager)
-        manager.keypair = keypair
+        manager = KeypairManager(keypair=keypair)
         
         pubkey = manager.get_public_key()
         assert isinstance(pubkey, Pubkey)
@@ -52,8 +51,7 @@ class TestKeypairManager:
     def test_get_public_key_string(self):
         """Test getting public key as string."""
         keypair = KeypairManager.generate_keypair()
-        manager = KeypairManager.__new__(KeypairManager)
-        manager.keypair = keypair
+        manager = KeypairManager(keypair=keypair)
         
         pubkey_str = manager.get_public_key_string()
         assert isinstance(pubkey_str, str)
@@ -63,8 +61,7 @@ class TestKeypairManager:
     def test_get_private_key_bytes(self):
         """Test getting private key as bytes."""
         keypair = KeypairManager.generate_keypair()
-        manager = KeypairManager.__new__(KeypairManager)
-        manager.keypair = keypair
+        manager = KeypairManager(keypair=keypair)
         
         private_bytes = manager.get_private_key_bytes()
         assert isinstance(private_bytes, bytes)
@@ -73,8 +70,7 @@ class TestKeypairManager:
     def test_get_private_key_base58(self):
         """Test getting private key as base58 string."""
         keypair = KeypairManager.generate_keypair()
-        manager = KeypairManager.__new__(KeypairManager)
-        manager.keypair = keypair
+        manager = KeypairManager(keypair=keypair)
         
         private_b58 = manager.get_private_key_base58()
         assert isinstance(private_b58, str)
@@ -83,8 +79,7 @@ class TestKeypairManager:
     def test_sign_message(self):
         """Test message signing."""
         keypair = KeypairManager.generate_keypair()
-        manager = KeypairManager.__new__(KeypairManager)
-        manager.keypair = keypair
+        manager = KeypairManager(keypair=keypair)
         
         message = b"Hello, Solana!"
         signature = manager.sign_message(message)

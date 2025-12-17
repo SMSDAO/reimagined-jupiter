@@ -18,19 +18,26 @@ class KeypairManager:
     Uses solders.keypair.Keypair for high-performance key operations.
     """
 
-    def __init__(self, private_key: Optional[str] = None):
+    def __init__(self, private_key: Optional[str] = None, keypair: Optional[Keypair] = None):
         """
-        Initialize KeypairManager with an optional private key.
+        Initialize KeypairManager with an optional private key or keypair.
         
         Args:
             private_key: Base58-encoded private key string. If None, loads from WALLET_PRIVATE_KEY env var.
+            keypair: Pre-initialized Keypair object. If provided, private_key is ignored.
         """
-        if private_key is None:
+        if keypair is not None:
+            # Use provided keypair directly (useful for testing)
+            self.keypair = keypair
+        elif private_key is not None:
+            # Load from provided private key
+            self.keypair = self._load_keypair(private_key)
+        else:
+            # Try to load from environment variable
             private_key = os.getenv("WALLET_PRIVATE_KEY")
             if not private_key:
                 raise ValueError("Private key must be provided or set in WALLET_PRIVATE_KEY env var")
-        
-        self.keypair = self._load_keypair(private_key)
+            self.keypair = self._load_keypair(private_key)
 
     def _load_keypair(self, private_key: str) -> Keypair:
         """
@@ -117,6 +124,9 @@ class KeypairManager:
         """
         Verify a signature against a public key and message.
         
+        NOTE: This is a placeholder method. For production use, implement proper
+        ed25519 signature verification using appropriate cryptographic libraries.
+        
         Args:
             pubkey: Public key to verify against
             message: Original message bytes
@@ -124,10 +134,11 @@ class KeypairManager:
             
         Returns:
             True if signature is valid, False otherwise
+            
+        Raises:
+            NotImplementedError: This method is not yet implemented
         """
-        try:
-            # Note: This is a simplified verification
-            # In production, use proper ed25519 signature verification
-            return True  # Placeholder - implement proper verification
-        except Exception:
-            return False
+        raise NotImplementedError(
+            "Signature verification is not yet implemented. "
+            "For production use, implement proper ed25519 signature verification."
+        )
