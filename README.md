@@ -372,6 +372,45 @@ src/
 └── index.ts        # Main entry point and CLI
 ```
 
+## 🐍 Python Integration (NEW!)
+
+**Powerful Python tools for advanced Solana operations!**
+
+The platform now includes Python integration using `solana-py` and `solders` for high-performance blockchain operations.
+
+### Features
+- 🔑 **Keypair Management** - Secure key handling with solders
+- 🔗 **RPC Client** - Full Solana RPC API support (sync/async)
+- 🏗️ **Transaction Builder** - Build complex transactions with ease
+- 🪙 **Token Operations** - SPL token transfers and account management
+- ⚡ **High Performance** - Rust-based solders for maximum speed
+
+### Quick Start
+
+```bash
+# Install Python dependencies
+pip install -r requirements.txt
+
+# Run basic transaction example
+cd python
+python examples/basic_transaction.py
+
+# Run token transfer example
+python examples/token_transfer.py
+
+# Run performance benchmarks
+python examples/solders_performance.py
+```
+
+### Run Python Tests
+
+```bash
+cd python
+pytest
+```
+
+See [PYTHON_INTEGRATION.md](PYTHON_INTEGRATION.md) for comprehensive documentation, examples, and integration patterns.
+
 ## 🔧 Development
 
 ```bash

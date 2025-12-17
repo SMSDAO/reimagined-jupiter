@@ -1,0 +1,72 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "gxq-studio-python"
+version = "1.0.0"
+description = "Python integration for GXQ STUDIO - Advanced Solana DeFi Platform"
+readme = "README.md"
+requires-python = ">=3.8"
+license = {text = "MIT"}
+keywords = ["solana", "blockchain", "defi", "arbitrage", "web3"]
+authors = [
+  {name = "GXQ STUDIO"}
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+dependencies = [
+  "solana>=0.34.0",
+  "solders>=0.21.0",
+  "python-dotenv>=1.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=7.4.0",
+  "pytest-asyncio>=0.21.0",
+  "black>=23.0.0",
+  "mypy>=1.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/SMSDAO/reimagined-jupiter"
+Repository = "https://github.com/SMSDAO/reimagined-jupiter"
+Issues = "https://github.com/SMSDAO/reimagined-jupiter/issues"
+
+[tool.pytest.ini_options]
+testpaths = ["python/tests"]
+asyncio_mode = "auto"
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+
+[tool.black]
+line-length = 100
+target-version = ['py38', 'py39', 'py310', 'py311']
+include = '\.pyi?$'
+exclude = '''
+/(
+    \.git
+  | \.venv
+  | build
+  | dist
+)/
+'''
+
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
