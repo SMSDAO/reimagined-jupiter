@@ -2,7 +2,6 @@ import {
   Connection,
   PublicKey,
   Transaction,
-  TransactionInstruction,
   ComputeBudgetProgram,
   Keypair,
   sendAndConfirmTransaction,
