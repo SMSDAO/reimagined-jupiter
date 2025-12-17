@@ -156,7 +156,7 @@ export default function ArbitragePage() {
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-300">Today's Profit:</span>
+                <span className="text-gray-300">Today&apos;s Profit:</span>
                 <span className="text-green-400 font-bold">$234.56</span>
               </div>
             </div>
