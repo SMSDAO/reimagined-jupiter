@@ -1,4 +1,5 @@
 import { Connection, Keypair, PublicKey } from '@solana/web3.js';
+import bs58 from 'bs58';
 import { config } from './config/index.js';
 import { QuickNodeIntegration } from './integrations/quicknode.js';
 import { PresetManager } from './services/presetManager.js';
@@ -11,12 +12,6 @@ import { RouteTemplateManager } from './services/routeTemplates.js';
 import { PythPriceStreamService } from './services/pythPriceStream.js';
 import { EnhancedArbitrageScanner } from './services/enhancedArbitrage.js';
 import { MarginfiV2Integration } from './integrations/marginfiV2.js';
-import { SecurityManager, EnvironmentSecurityChecker } from './utils/security.js';
-import { ExecutionLogger } from './utils/executionLogger.js';
-import { EncryptionService } from './utils/encryption.js';
-import { AnalyticsLogger } from './services/analyticsLogger.js';
-import { ProfitDistributionService } from './services/profitDistribution.js';
-import { DAOAirdropService } from './services/daoAirdrop.js';
 
 class GXQStudio {
   private connection: Connection;
@@ -33,17 +28,8 @@ class GXQStudio {
   private pythStream: PythPriceStreamService;
   private enhancedScanner: EnhancedArbitrageScanner;
   private marginfiV2: MarginfiV2Integration;
-  private securityManager: SecurityManager;
-  private executionLogger: ExecutionLogger;
-  private encryptionService: EncryptionService;
-  private analyticsLogger: AnalyticsLogger;
-  private profitDistributionService: ProfitDistributionService;
-  private daoAirdropService: DAOAirdropService;
   
   constructor() {
-    // Run security checks first
-    EnvironmentSecurityChecker.printSecurityCheck();
-    
     // Initialize QuickNode first
     this.quicknode = new QuickNodeIntegration();
     this.connection = this.quicknode.getRpcConnection();
@@ -60,57 +46,21 @@ class GXQStudio {
     this.pythStream = new PythPriceStreamService('https://hermes.pyth.network');
     this.enhancedScanner = new EnhancedArbitrageScanner(this.connection, this.pythStream);
     this.marginfiV2 = new MarginfiV2Integration(this.connection);
-    this.securityManager = new SecurityManager(this.connection);
-    this.executionLogger = new ExecutionLogger('./logs');
-    
-    // Initialize encryption, analytics, and profit distribution services
-    this.encryptionService = new EncryptionService();
-    this.analyticsLogger = new AnalyticsLogger('./analytics');
-    
-    // Parse wallet addresses for profit distribution
-    let reserveWalletKey: PublicKey;
-    try {
-      reserveWalletKey = new PublicKey(config.profitDistribution.reserveWallet);
-    } catch {
-      console.warn('⚠️  Reserve wallet address is invalid or SNS (not yet supported), using placeholder');
-      reserveWalletKey = new PublicKey('11111111111111111111111111111111');
-    }
-    
-    let gasWalletKey: PublicKey;
-    try {
-      gasWalletKey = new PublicKey(config.profitDistribution.gasWallet);
-    } catch {
-      console.warn('⚠️  Gas wallet address is invalid, using placeholder');
-      gasWalletKey = new PublicKey('11111111111111111111111111111111');
-    }
-    
-    this.profitDistributionService = new ProfitDistributionService(this.connection, {
-      reserveWallet: reserveWalletKey,
-      gasWallet: gasWalletKey,
-      daoWallet: config.profitDistribution.daoWallet
-    });
-    this.daoAirdropService = new DAOAirdropService(this.connection, config.profitDistribution.daoWallet);
     
     // Initialize user keypair if available
     if (config.solana.walletPrivateKey) {
       try {
-        const keypair = this.securityManager.loadKeypairFromEnv(config.solana.walletPrivateKey);
-        
-        if (keypair) {
-          this.userKeypair = keypair;
-          this.airdropChecker = new AirdropChecker(this.connection, this.userKeypair.publicKey);
-          this.autoExecutionEngine = new AutoExecutionEngine(
-            this.connection,
-            this.userKeypair,
-            this.presetManager,
-            this.quicknode
-          );
-        } else {
-          console.warn('⚠️  Failed to load wallet keypair, running in read-only mode');
-        }
+        const privateKeyBytes = bs58.decode(config.solana.walletPrivateKey);
+        this.userKeypair = Keypair.fromSecretKey(privateKeyBytes);
+        this.airdropChecker = new AirdropChecker(this.connection, this.userKeypair.publicKey);
+        this.autoExecutionEngine = new AutoExecutionEngine(
+          this.connection,
+          this.userKeypair,
+          this.presetManager,
+          this.quicknode
+        );
       } catch (error) {
-        console.warn('⚠️  Invalid wallet private key, running in read-only mode');
-        console.error(error);
+        console.warn('Invalid wallet private key, running in read-only mode');
       }
     }
   }
@@ -122,16 +72,6 @@ class GXQStudio {
     await this.presetManager.initialize();
     await this.addressBook.initialize();
     await this.routeTemplates.initialize();
-    await this.executionLogger.initialize();
-    
-    // Validate wallet if configured
-    if (this.userKeypair) {
-      const validation = await this.securityManager.validateKeypair(this.userKeypair, 0.01);
-      if (!validation.valid) {
-        console.error(`❌ Wallet validation failed: ${validation.error}`);
-        console.error('⚠️  Some features will be disabled');
-      }
-    }
     
     console.log('✅ Initialization complete\n');
     this.printSystemInfo();
@@ -160,6 +100,12 @@ class GXQStudio {
     console.log(`⚡ Auto-Execution: ${this.autoExecutionEngine ? '✓' : '✗'}`);
     console.log(`🛡️  MEV Protection: ✓`);
     console.log(`💎 GXQ Ecosystem: ${config.gxq.tokenMint.toBase58().slice(0, 8)}...`);
+    console.log(`💰 Profit Distribution: ${config.profitDistribution.enabled ? '✓' : '✗'}`);
+    if (config.profitDistribution.enabled) {
+      console.log(`   - Reserve (${config.profitDistribution.reserveWalletDomain}): ${(config.profitDistribution.reserveWalletPercentage * 100).toFixed(0)}%`);
+      console.log(`   - User (gas fees): ${(config.profitDistribution.userWalletPercentage * 100).toFixed(0)}%`);
+      console.log(`   - DAO Community: ${(config.profitDistribution.daoWalletPercentage * 100).toFixed(0)}%`);
+    }
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
   }
   
@@ -498,32 +444,29 @@ class GXQStudio {
         console.log('Unknown setting. Use: minProfit, maxSlippage, maxGas, scanInterval');
     }
   }
-  
-  async showExecutionStats(args: string[]): Promise<void> {
-    console.log('📊 Execution Statistics\n');
-    
-    let since: Date | undefined;
-    if (args.length > 0) {
-      const period = args[0];
-      const now = new Date();
-      
-      switch (period) {
-        case 'today':
-          since = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-          break;
-        case 'week':
-          since = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-          break;
-        case 'month':
-          since = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
-          break;
-        default:
-          console.log('Invalid period. Use: today, week, month');
-          return;
-      }
+
+  async showAnalytics(): Promise<void> {
+    if (!this.autoExecutionEngine) {
+      console.error('Analytics not available (auto-execution engine not initialized)');
+      return;
     }
+
+    const analytics = this.autoExecutionEngine.getAnalytics();
+    analytics.logStats();
+
+    // Show recent performance
+    const recentPerf = analytics.getRecentPerformance();
+    console.log('📈 Recent Performance:');
+    console.log(`  Last Hour: ${recentPerf.lastHour.trades} trades, ${(recentPerf.lastHour.profit / 1e9).toFixed(4)} SOL profit`);
+    console.log(`  Last Day: ${recentPerf.lastDay.trades} trades, ${(recentPerf.lastDay.profit / 1e9).toFixed(4)} SOL profit`);
+    console.log(`  Last Week: ${recentPerf.lastWeek.trades} trades, ${(recentPerf.lastWeek.profit / 1e9).toFixed(4)} SOL profit`);
     
-    await this.executionLogger.printStatistics(since);
+    // Show top pairs
+    console.log('\n🏆 Top Profitable Pairs:');
+    const topPairs = analytics.getMostProfitablePairs(5);
+    topPairs.forEach((pair, idx) => {
+      console.log(`  ${idx + 1}. ${pair.pair}: ${(pair.profit / 1e9).toFixed(4)} SOL (${pair.count} trades)`);
+    });
   }
 }
 
@@ -584,8 +527,8 @@ async function main() {
     case 'config':
       await studio.configureScannerSettings(args.slice(1));
       break;
-    case 'stats':
-      await studio.showExecutionStats(args.slice(1));
+    case 'analytics':
+      await studio.showAnalytics();
       break;
     default:
       console.log('Usage:');
@@ -604,12 +547,12 @@ async function main() {
       console.log('  npm start export [type]      - Export config (presets/templates/addresses)');
       console.log('  npm start sync               - Sync presets to QuickNode KV');
       console.log('');
-      console.log('Enhanced Features (NEW):');
+      console.log('Enhanced Features:');
       console.log('  npm start prices [tokens]    - Start Pyth live price streaming');
       console.log('  npm start enhanced-scan      - Enhanced arbitrage scanner (1s intervals)');
       console.log('  npm start marginfi-v2        - Show Marginfi v2 provider info');
       console.log('  npm start config [setting] [value] - Configure scanner settings');
-      console.log('  npm start stats [period]     - View execution statistics (today/week/month/all)');
+      console.log('  npm start analytics          - Show profit analytics and statistics');
       break;
   }
 }

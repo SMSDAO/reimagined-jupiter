@@ -4,6 +4,9 @@ import { FlashLoanArbitrage, TriangularArbitrage } from '../strategies/arbitrage
 import { PresetManager } from '../services/presetManager.js';
 import { QuickNodeIntegration } from '../integrations/quicknode.js';
 import { websocketService } from '../services/websocketService.js';
+import { ProfitDistributionService } from './profitDistribution.js';
+import { AnalyticsService } from './analytics.js';
+import { config } from '../config/index.js';
 
 export class MEVProtection {
   private connection: Connection;
@@ -42,16 +45,65 @@ export class MEVProtection {
   }
   
   async calculatePriorityFee(urgency: 'low' | 'medium' | 'high'): Promise<number> {
-    // Calculate optimal priority fee based on network conditions
-    const baseFee = 1000; // microlamports
-    
-    const multipliers = {
-      low: 1,
-      medium: 2,
-      high: 5,
-    };
-    
-    return baseFee * multipliers[urgency];
+    try {
+      // Fetch recent prioritization fees from the network
+      const recentFees = await this.getRecentPrioritizationFees();
+      
+      // Base fee from network conditions
+      const baseFee = recentFees.median || 1000; // microlamports
+      
+      const multipliers = {
+        low: 1,
+        medium: 1.5,
+        high: 3,
+      };
+      
+      const calculatedFee = Math.floor(baseFee * multipliers[urgency]);
+      
+      // Cap at reasonable maximum (10M lamports = 0.01 SOL)
+      const maxFee = 10000000; // 10M microlamports
+      return Math.min(calculatedFee, maxFee);
+    } catch (error) {
+      console.warn('Failed to fetch recent fees, using default:', error);
+      // Fallback to default values
+      const defaultFees = { low: 1000, medium: 2000, high: 5000 };
+      return defaultFees[urgency];
+    }
+  }
+
+  /**
+   * Get recent prioritization fees from the network
+   */
+  private async getRecentPrioritizationFees(): Promise<{ median: number; percentile75: number; percentile95: number }> {
+    try {
+      // Query recent prioritization fees from Solana
+      // This uses the getRecentPrioritizationFees RPC method
+      const fees = await this.connection.getRecentPrioritizationFees();
+      
+      if (!fees || fees.length === 0) {
+        return { median: 1000, percentile75: 2000, percentile95: 5000 };
+      }
+
+      // Extract prioritization fees and sort
+      const feeValues = fees
+        .map(f => f.prioritizationFee)
+        .filter(f => f > 0)
+        .sort((a, b) => a - b);
+
+      if (feeValues.length === 0) {
+        return { median: 1000, percentile75: 2000, percentile95: 5000 };
+      }
+
+      // Calculate percentiles
+      const median = feeValues[Math.floor(feeValues.length * 0.5)] || 1000;
+      const percentile75 = feeValues[Math.floor(feeValues.length * 0.75)] || 2000;
+      const percentile95 = feeValues[Math.floor(feeValues.length * 0.95)] || 5000;
+
+      return { median, percentile75, percentile95 };
+    } catch (error) {
+      console.warn('Error fetching recent prioritization fees:', error);
+      return { median: 1000, percentile75: 2000, percentile95: 5000 };
+    }
   }
   
   async calculateDynamicSlippage(
@@ -111,6 +163,8 @@ export class AutoExecutionEngine {
   private presetManager: PresetManager;
   private mevProtection: MEVProtection;
   private quicknode: QuickNodeIntegration;
+  private profitDistribution: ProfitDistributionService | null = null;
+  private analytics: AnalyticsService;
   private isRunning: boolean = false;
   
   constructor(
@@ -126,6 +180,23 @@ export class AutoExecutionEngine {
     this.presetManager = presetManager;
     this.mevProtection = new MEVProtection(connection);
     this.quicknode = quicknode;
+    this.analytics = new AnalyticsService(connection);
+    
+    // Initialize profit distribution if enabled
+    if (config.profitDistribution.enabled) {
+      try {
+        this.profitDistribution = new ProfitDistributionService(connection, {
+          reserveWalletDomain: config.profitDistribution.reserveWalletDomain,
+          userWalletPercentage: config.profitDistribution.userWalletPercentage,
+          reserveWalletPercentage: config.profitDistribution.reserveWalletPercentage,
+          daoWalletPercentage: config.profitDistribution.daoWalletPercentage,
+          daoWalletAddress: config.profitDistribution.daoWalletAddress,
+        });
+        console.log('✅ Profit distribution service initialized');
+      } catch (error) {
+        console.error('Failed to initialize profit distribution:', error);
+      }
+    }
   }
   
   async start(): Promise<void> {
@@ -271,8 +342,20 @@ export class AutoExecutionEngine {
           timestamp: Date.now(),
         });
         
-        // Handle dev fee if enabled
-        await this.handleDevFee(opportunity.estimatedProfit);
+        // Calculate actual gas fee from transaction
+        // In production, this would fetch the actual fee from the confirmed transaction
+        // For now, use estimated priority fee
+        const priorityFee = await this.mevProtection.calculatePriorityFee('medium');
+        const baseFee = 5000; // Base transaction fee in lamports
+        const estimatedGasFee = baseFee + priorityFee;
+        
+        // Distribute profits using the new system
+        await this.handleProfitDistribution(
+          opportunity.estimatedProfit,
+          opportunity,
+          signature,
+          estimatedGasFee
+        );
       } else {
         console.log('❌ Failed to execute arbitrage');
       }
@@ -281,15 +364,88 @@ export class AutoExecutionEngine {
     }
   }
   
-  private async handleDevFee(profit: number): Promise<void> {
-    const { config } = await import('../config/index.js');
-    
-    // Note: Profit distribution is now handled directly in the arbitrage execution
-    // This includes: 70% to reserve, 20% for gas/slippage, 10% to DAO
-    console.log(`💰 Profit of $${profit.toFixed(4)} will be distributed according to configured splits`);
-    console.log(`   70% -> Reserve wallet (monads.skr)`);
-    console.log(`   20% -> Calling wallet (gas/slippage coverage)`);
-    console.log(`   10% -> DAO wallet (${config.profitDistribution.daoWallet.toBase58().slice(0, 8)}...)`);
+  /**
+   * Handle profit distribution after successful trade
+   * Uses new three-way split: 70% reserve, 20% user, 10% DAO
+   */
+  private async handleProfitDistribution(
+    profit: number,
+    opportunity: ArbitrageOpportunity,
+    signature: string,
+    gasFee: number = 0
+  ): Promise<void> {
+    // If new profit distribution is enabled, use it
+    if (this.profitDistribution && config.profitDistribution.enabled) {
+      try {
+        console.log('\n💰 Initiating profit distribution...');
+        
+        // Convert profit to lamports (assuming profit is in SOL or equivalent)
+        const profitLamports = Math.floor(profit * 1e9); // Convert to lamports
+        
+        // Distribute profits
+        const result = await this.profitDistribution.distributeProfits(
+          profitLamports,
+          this.userKeypair.publicKey,
+          this.userKeypair
+        );
+        
+        if (result.success) {
+          console.log('✅ Profit distribution completed');
+          console.log(`   Reserve: ${(result.reserveAmount / 1e9).toFixed(4)} SOL`);
+          console.log(`   User: ${(result.userAmount / 1e9).toFixed(4)} SOL`);
+          console.log(`   DAO: ${(result.daoAmount / 1e9).toFixed(4)} SOL`);
+          
+          // Record trade in analytics
+          this.analytics.recordTrade({
+            timestamp: Date.now(),
+            type: opportunity.type === 'flash-loan' ? 'flash-loan' : opportunity.type === 'triangular' ? 'triangular' : 'hybrid',
+            profitAmount: profitLamports,
+            profitToken: 'SOL',
+            gasFee: gasFee,
+            netProfit: profitLamports - gasFee,
+            tokens: opportunity.path.map(t => t.symbol),
+            signature: signature,
+            distributionBreakdown: {
+              reserve: result.reserveAmount,
+              user: result.userAmount,
+              dao: result.daoAmount,
+            },
+          });
+          
+          // Show statistics
+          const stats = this.profitDistribution.getStats();
+          console.log(`   Total distributed: ${(stats.totalDistributed / 1e9).toFixed(4)} SOL (${stats.distributionCount} trades)`);
+        } else {
+          console.error('❌ Profit distribution failed:', result.error);
+        }
+      } catch (error) {
+        console.error('Error in profit distribution:', error);
+      }
+    } 
+    // Fallback to old dev fee system if profit distribution is disabled
+    else if (config.devFee.enabled) {
+      const devFeeAmount = profit * config.devFee.percentage;
+      console.log(`💰 Dev fee: $${devFeeAmount.toFixed(4)} (${(config.devFee.percentage * 100).toFixed(1)}%) to ${config.devFee.wallet.toBase58().slice(0, 8)}...`);
+      
+      // Still record analytics even in legacy mode
+      this.analytics.recordTrade({
+        timestamp: Date.now(),
+        type: opportunity.type === 'flash-loan' ? 'flash-loan' : opportunity.type === 'triangular' ? 'triangular' : 'hybrid',
+        profitAmount: Math.floor(profit * 1e9),
+        profitToken: 'SOL',
+        gasFee: gasFee,
+        netProfit: Math.floor(profit * 1e9) - gasFee,
+        tokens: opportunity.path.map(t => t.symbol),
+        signature: signature,
+      });
+    }
+  }
+
+  /**
+   * Get analytics service for external access
+   */
+  getAnalytics(): AnalyticsService {
+    return this.analytics;
   }
   
   async manualExecute(opportunityId?: string): Promise<string | null> {

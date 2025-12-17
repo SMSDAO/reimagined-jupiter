@@ -55,16 +55,11 @@ export interface Config {
   };
   profitDistribution: {
     enabled: boolean;
-    reserveWallet: string; // SNS address or PublicKey - 70%
-    reservePercentage: number;
-    gasWallet: string; // User wallet for gas coverage - 20%
-    gasSlippagePercentage: number;
-    daoWallet: PublicKey; // DAO community wallet - 10%
-    daoPercentage: number;
-  };
-  encryption: {
-    enabled: boolean;
-    masterKey: string;
+    reserveWalletDomain: string;
+    reserveWalletPercentage: number;
+    userWalletPercentage: number;
+    daoWalletPercentage: number;
+    daoWalletAddress: PublicKey;
   };
 }
 

@@ -54,24 +54,17 @@ export const config: Config = {
     gasBuffer: parseFloat(process.env.GAS_BUFFER || '1.5'),
   },
   devFee: {
-    // Note: Dev fee is deprecated in favor of profitDistribution
-    // Kept for backwards compatibility, but defaults to disabled
-    enabled: process.env.DEV_FEE_ENABLED === 'true',
+    enabled: process.env.DEV_FEE_ENABLED !== 'false',
     percentage: parseFloat(process.env.DEV_FEE_PERCENTAGE || '0.10'), // 10% default
     wallet: new PublicKey(process.env.DEV_FEE_WALLET || '11111111111111111111111111111111'), // Placeholder, use real wallet in production
   },
   profitDistribution: {
     enabled: process.env.PROFIT_DISTRIBUTION_ENABLED !== 'false',
-    reserveWallet: process.env.RESERVE_WALLET_ADDRESS || process.env.RESERVE_WALLET || 'monads.skr', // SNS name - 70%
-    reservePercentage: parseFloat(process.env.RESERVE_PERCENTAGE || '0.70'),
-    gasWallet: process.env.GAS_WALLET || '', // 20% - user wallet for gas coverage
-    gasSlippagePercentage: parseFloat(process.env.GAS_SLIPPAGE_PERCENTAGE || '0.20'),
-    daoWallet: new PublicKey(process.env.DAO_WALLET_ADDRESS || process.env.DAO_WALLET || 'DmtAdUSzFvcBymUmRFgPVawvoXbqdS2o18eZNpe5XcWW'), // 10%
-    daoPercentage: parseFloat(process.env.DAO_PERCENTAGE || '0.10'),
-  },
-  encryption: {
-    enabled: process.env.ENCRYPTION_ENABLED !== 'false',
-    masterKey: process.env.ENCRYPTION_KEY || '',
+    reserveWalletDomain: process.env.RESERVE_WALLET_DOMAIN || 'monads.skr',
+    reserveWalletPercentage: parseFloat(process.env.RESERVE_WALLET_PERCENTAGE || '0.70'), // 70% to reserve
+    userWalletPercentage: parseFloat(process.env.USER_WALLET_PERCENTAGE || '0.20'), // 20% to user for gas fees
+    daoWalletPercentage: parseFloat(process.env.DAO_WALLET_PERCENTAGE || '0.10'), // 10% to DAO
+    daoWalletAddress: new PublicKey(process.env.DAO_WALLET_ADDRESS || 'DmtAdUSzFvcBymUmRFgPVawvoXbqdS2o18eZNpe5XcWW'),
   },
 };
 
