@@ -38,6 +38,9 @@ export class WalletScoring {
   }
   
   async analyzeWallet(address: PublicKey, includeSocial: boolean = true): Promise<WalletScore> {
+    if (!address) {
+      throw new Error('Invalid address: PublicKey is required');
+    }
     console.log(`Analyzing wallet: ${address.toString().slice(0, 8)}...`);
     
     const factors = {
