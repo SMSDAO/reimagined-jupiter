@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Connection, PublicKey } from '@solana/web3.js';
 import { motion } from 'framer-motion';
+import { KNOWN_TOKENS } from '@/lib/api-client';
 
 // Types
 interface WalletAnalysis {
@@ -262,21 +263,12 @@ export default function WalletAnalysis() {
             const priceInfo = pricesData.data?.[mint];
             const price = priceInfo?.price || 0;
             
-            // Try to get symbol from common token list
-            const knownTokens: { [key: string]: string } = {
-              'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v': 'USDC',
-              'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB': 'USDT',
-              'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263': 'BONK',
-              'JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN': 'JUP',
-              'jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL': 'JTO',
-              '4k3Dyjzvzp8eMZWUXbBCjEvwSkkk59S5iCNLY3QrkX6R': 'RAY',
-              'orcaEKTdK7LKz57vaAYr9QeNsVEPfiu6QeMU1kektZE': 'ORCA',
-              'EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm': 'WIF',
-            };
+            // Import token symbols from centralized list
+            const symbol = mint in KNOWN_TOKENS ? KNOWN_TOKENS[mint] : mint.slice(0, 4).toUpperCase();
             
             tokens.push({
               mint,
-              symbol: knownTokens[mint] || mint.slice(0, 4).toUpperCase(),
+              symbol,
               balance,
               usdValue: balance * price,
             });

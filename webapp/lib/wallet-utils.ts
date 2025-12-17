@@ -71,45 +71,50 @@ export async function fetchWalletMetrics(
   connection: Connection,
   publicKey: PublicKey
 ): Promise<WalletMetrics> {
-  // Get balance
-  const balance = await connection.getBalance(publicKey);
-  const solBalance = balance / 1e9;
-  
-  // Get transaction count
-  const signatures = await connection.getSignaturesForAddress(publicKey, { limit: 1000 });
-  const txCount = signatures.length;
-  
-  // Get token accounts
-  const tokenAccounts = await connection.getParsedTokenAccountsByOwner(publicKey, {
-    programId: new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'),
-  });
-  
-  // Count NFTs (tokens with amount=1 and decimals=0)
-  let nftCount = 0;
-  for (const account of tokenAccounts.value) {
-    const amount = account.account.data.parsed.info.tokenAmount.uiAmount;
-    const decimals = account.account.data.parsed.info.tokenAmount.decimals;
-    if (amount === 1 && decimals === 0) {
-      nftCount++;
+  try {
+    // Get balance
+    const balance = await connection.getBalance(publicKey);
+    const solBalance = balance / 1e9;
+    
+    // Get transaction count
+    const signatures = await connection.getSignaturesForAddress(publicKey, { limit: 1000 });
+    const txCount = signatures.length;
+    
+    // Get token accounts
+    const tokenAccounts = await connection.getParsedTokenAccountsByOwner(publicKey, {
+      programId: new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'),
+    });
+    
+    // Count NFTs (tokens with amount=1 and decimals=0)
+    let nftCount = 0;
+    for (const account of tokenAccounts.value) {
+      const amount = account.account.data.parsed.info.tokenAmount.uiAmount;
+      const decimals = account.account.data.parsed.info.tokenAmount.decimals;
+      if (amount === 1 && decimals === 0) {
+        nftCount++;
+      }
     }
-  }
-  
-  // Calculate wallet age
-  let age = 0;
-  if (signatures.length > 0) {
-    const oldestSignature = signatures[signatures.length - 1];
-    if (oldestSignature.blockTime) {
-      age = Math.floor((Date.now() / 1000 - oldestSignature.blockTime) / 86400);
+    
+    // Calculate wallet age
+    let age = 0;
+    if (signatures.length > 0) {
+      const oldestSignature = signatures[signatures.length - 1];
+      if (oldestSignature.blockTime) {
+        age = Math.floor((Date.now() / 1000 - oldestSignature.blockTime) / 86400);
+      }
     }
+    
+    return {
+      balance: solBalance,
+      txCount,
+      nftCount,
+      tokenCount: tokenAccounts.value.length,
+      age,
+    };
+  } catch (error) {
+    console.error('Error fetching wallet metrics:', error);
+    throw new Error('Failed to fetch wallet metrics. Please check your RPC connection and try again.');
   }
-  
-  return {
-    balance: solBalance,
-    txCount,
-    nftCount,
-    tokenCount: tokenAccounts.value.length,
-    age,
-  };
 }
 
 /**

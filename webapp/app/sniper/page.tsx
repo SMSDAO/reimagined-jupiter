@@ -105,13 +105,20 @@ export default function SniperPage() {
     try {
       console.log('[SniperUI] Attempting to snipe token:', target);
       
+      // Validate buy amount
+      const amount = parseFloat(buyAmount);
+      if (isNaN(amount) || amount <= 0) {
+        alert('Invalid buy amount. Please enter a valid number greater than 0.');
+        return;
+      }
+      
       // Real implementation would:
       // 1. Get quote from Jupiter for SOL -> target token
       // 2. Set high priority fee for faster execution
       // 3. Create and send transaction
       // 4. Monitor for confirmation
       
-      const amountInLamports = Math.floor(parseFloat(buyAmount) * 1e9);
+      const amountInLamports = Math.floor(amount * 1e9);
       
       // Get Jupiter quote
       const quoteResponse = await fetch(

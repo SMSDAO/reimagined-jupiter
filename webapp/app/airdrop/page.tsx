@@ -16,7 +16,8 @@ import {
   formatUSD 
 } from '@/lib/api-client';
 
-interface WalletScore {
+// Local interface for component-specific wallet score display
+interface WalletScoreDisplay {
   address: string;
   totalScore: number;
   tier: WalletTier;
@@ -35,7 +36,7 @@ interface Airdrop {
 export default function AirdropPage() {
   const { publicKey } = useWallet();
   const { connection } = useConnection();
-  const [walletScore, setWalletScore] = useState<WalletScore | null>(null);
+  const [walletScore, setWalletScore] = useState<WalletScoreDisplay | null>(null);
   const [airdrops, setAirdrops] = useState<Airdrop[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -50,7 +51,7 @@ export default function AirdropPage() {
       // Calculate wallet score
       const scoreResult = calculateWalletScore(metrics);
       
-      const score: WalletScore = {
+      const score: WalletScoreDisplay = {
         address: publicKey.toString(),
         totalScore: scoreResult.totalScore,
         tier: scoreResult.tier,
