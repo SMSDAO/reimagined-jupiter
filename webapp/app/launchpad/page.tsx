@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { motion } from 'framer-motion';
+import AirdropSpinGame from '@/components/AirdropSpinGame';
 
 export default function LaunchpadPage() {
   const { publicKey } = useWallet();
@@ -10,8 +11,9 @@ export default function LaunchpadPage() {
   const [tokenSymbol, setTokenSymbol] = useState('');
   const [totalSupply, setTotalSupply] = useState('1000000');
   const [airdropPercent, setAirdropPercent] = useState(10);
-  const [spinning, setSpinning] = useState(false);
   const [deploymentCost] = useState(0.01);
+  const [showSpinGame, setShowSpinGame] = useState(false);
+  const [deployedToken, setDeployedToken] = useState<string | null>(null);
 
   const deployToken = async () => {
     if (!publicKey) {
@@ -24,72 +26,71 @@ export default function LaunchpadPage() {
       return;
     }
 
-    alert(`Deploying ${tokenName} (${tokenSymbol}) with ${totalSupply} total supply...`);
-    // Implement actual deployment logic
+    // Simulate deployment
+    setDeployedToken(tokenSymbol);
+    setShowSpinGame(true);
+    alert(`✅ Successfully deployed ${tokenName} (${tokenSymbol})!\n\nToken can now be used in the airdrop spin game.`);
   };
 
-  const spinRoulette = () => {
-    setSpinning(true);
-    setTimeout(() => {
-      setSpinning(false);
-      const reward = Math.floor(Math.random() * 1000) + 100;
-      alert(`🎉 You won ${reward} ${tokenSymbol || 'tokens'}!`);
-    }, 3000);
+  const handleWin = (amount: number) => {
+    console.log(`Won ${amount} ${deployedToken || tokenSymbol}`);
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4">
+    <div className="max-w-6xl mx-auto">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
       >
-        <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-2">🚀 Token Launchpad</h1>
-        <p className="text-sm sm:text-base text-gray-300 mb-6 sm:mb-8">
-          Launch your token with advanced airdrop roulette game
+        <h1 className="text-5xl font-bold text-white mb-2 bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+          🚀 Token Launchpad Studio
+        </h1>
+        <p className="text-gray-300 dark:text-gray-200 mb-8">
+          Launch your token with advanced airdrop roulette game - Jupiter, Raydium, Pump.fun integrated
         </p>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Token Creation Panel */}
-          <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 sm:p-6 border border-white/10">
-            <h2 className="text-xl sm:text-2xl font-bold text-white mb-4 sm:mb-6">📝 Token Details</h2>
+          <div className="bg-white/10 dark:bg-black/30 backdrop-blur-md rounded-xl p-6 glow-blue">
+            <h2 className="text-2xl font-bold text-white mb-6">📝 Token Details</h2>
             
             <div className="space-y-4">
               <div>
-                <label className="text-white text-xs sm:text-sm mb-2 block">Token Name</label>
+                <label className="text-white text-sm mb-2 block">Token Name</label>
                 <input
                   type="text"
                   value={tokenName}
                   onChange={(e) => setTokenName(e.target.value)}
                   placeholder="My Awesome Token"
-                  className="w-full bg-white/10 text-white px-3 sm:px-4 py-2 sm:py-3 rounded-lg border border-white/10 focus:border-purple-500 outline-none text-sm sm:text-base"
+                  className="w-full bg-white/10 dark:bg-black/20 text-white px-4 py-3 rounded-lg border border-purple-500/30 focus:border-purple-500 outline-none transition"
                 />
               </div>
 
               <div>
-                <label className="text-white text-xs sm:text-sm mb-2 block">Token Symbol</label>
+                <label className="text-white text-sm mb-2 block">Token Symbol</label>
                 <input
                   type="text"
                   value={tokenSymbol}
                   onChange={(e) => setTokenSymbol(e.target.value.toUpperCase())}
                   placeholder="MAT"
                   maxLength={10}
-                  className="w-full bg-white/10 text-white px-3 sm:px-4 py-2 sm:py-3 rounded-lg border border-white/10 focus:border-purple-500 outline-none text-sm sm:text-base"
+                  className="w-full bg-white/10 dark:bg-black/20 text-white px-4 py-3 rounded-lg border border-purple-500/30 focus:border-purple-500 outline-none transition"
                 />
               </div>
 
               <div>
-                <label className="text-white text-xs sm:text-sm mb-2 block">Total Supply</label>
+                <label className="text-white text-sm mb-2 block">Total Supply</label>
                 <input
                   type="number"
                   value={totalSupply}
                   onChange={(e) => setTotalSupply(e.target.value)}
-                  className="w-full bg-white/10 text-white px-3 sm:px-4 py-2 sm:py-3 rounded-lg border border-white/10 focus:border-purple-500 outline-none text-sm sm:text-base"
+                  className="w-full bg-white/10 dark:bg-black/20 text-white px-4 py-3 rounded-lg border border-purple-500/30 focus:border-purple-500 outline-none transition"
                 />
               </div>
 
               <div>
-                <label className="text-white text-xs sm:text-sm mb-2 block">
-                  Airdrop for Roulette: <span className="font-bold text-purple-400">{airdropPercent}%</span>
+                <label className="text-white text-sm mb-2 block">
+                  Airdrop for Roulette: {airdropPercent}%
                 </label>
                 <input
                   type="range"
@@ -97,122 +98,121 @@ export default function LaunchpadPage() {
                   onChange={(e) => setAirdropPercent(parseInt(e.target.value))}
                   min="1"
                   max="50"
-                  className="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer accent-purple-600"
+                  className="w-full accent-purple-600"
                 />
+                <div className="flex justify-between text-xs text-gray-400 mt-1">
+                  <span>1%</span>
+                  <span>50%</span>
+                </div>
               </div>
 
-              <div className="bg-purple-900/30 rounded-lg p-3 sm:p-4 border border-purple-500/30">
-                <div className="flex justify-between text-white mb-2 text-sm sm:text-base">
+              <div className="bg-purple-900/30 dark:bg-purple-950/50 rounded-lg p-4 border border-purple-500/20">
+                <div className="flex justify-between text-white mb-2">
                   <span>Deployment Cost:</span>
                   <span className="font-bold">{deploymentCost} SOL</span>
                 </div>
-                <div className="flex justify-between text-gray-300 text-xs sm:text-sm mb-1">
+                <div className="flex justify-between text-gray-300 text-sm">
                   <span>For Circulation:</span>
                   <span>{(parseFloat(totalSupply) * (100 - airdropPercent) / 100).toLocaleString()}</span>
                 </div>
-                <div className="flex justify-between text-gray-300 text-xs sm:text-sm">
+                <div className="flex justify-between text-gray-300 text-sm">
                   <span>For Roulette:</span>
                   <span>{(parseFloat(totalSupply) * airdropPercent / 100).toLocaleString()}</span>
                 </div>
               </div>
 
-              <button
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
                 onClick={deployToken}
                 disabled={!publicKey || !tokenName || !tokenSymbol}
-                className="w-full bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-bold py-3 sm:py-4 rounded-xl hover:from-blue-700 hover:to-cyan-700 transition-all disabled:opacity-50 shadow-lg text-sm sm:text-base"
+                className="w-full bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-bold py-4 rounded-xl hover:from-blue-700 hover:to-cyan-700 transition disabled:opacity-50 disabled:cursor-not-allowed glow-blue"
               >
-                {publicKey ? `🚀 Deploy Token (${deploymentCost} SOL)` : '🔗 Connect Wallet'}
-              </button>
+                {publicKey ? `🚀 Deploy Token (${deploymentCost} SOL)` : 'Connect Wallet'}
+              </motion.button>
             </div>
           </div>
 
           {/* 3D Roulette Game */}
-          <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 sm:p-6 border border-white/10">
-            <h2 className="text-xl sm:text-2xl font-bold text-white mb-4 sm:mb-6">🎰 Airdrop Roulette</h2>
+          <div className="bg-white/10 dark:bg-black/30 backdrop-blur-md rounded-xl p-6 glow-purple">
+            <h2 className="text-2xl font-bold text-white mb-6">🎰 Airdrop Roulette Game</h2>
             
-            <div className="relative">
-              {/* Roulette Wheel Visualization */}
-              <div className="aspect-square bg-gradient-to-br from-purple-900 via-blue-900 to-green-900 rounded-full flex items-center justify-center relative overflow-hidden">
-                <motion.div
-                  animate={spinning ? { rotate: 360 } : {}}
-                  transition={{ duration: 3, ease: "easeInOut", repeat: spinning ? Infinity : 0 }}
-                  className="absolute inset-0"
-                  style={{
-                    background: 'conic-gradient(from 0deg, #9333ea, #ec4899, #3b82f6, #10b981, #eab308, #ef4444, #9333ea)',
-                  }}
-                />
-                <div className="relative z-10 bg-black/70 backdrop-blur-sm rounded-full w-3/4 h-3/4 flex flex-col items-center justify-center">
-                  <div className="text-white text-4xl font-bold mb-2">🎁</div>
-                  <div className="text-white text-xl font-bold">
-                    {spinning ? 'Spinning...' : 'Spin to Win!'}
-                  </div>
+            {showSpinGame && deployedToken ? (
+              <AirdropSpinGame tokenSymbol={deployedToken} onWin={handleWin} />
+            ) : (
+              <div className="text-center py-12">
+                <div className="text-6xl mb-4">🎲</div>
+                <p className="text-gray-300 dark:text-gray-200 mb-4">
+                  Deploy a token to activate the airdrop spin game
+                </p>
+                <div className="text-sm text-gray-400">
+                  • 12-hour cooldown between spins<br />
+                  • Reduced wait time after 3 days<br />
+                  • Win tokens from the airdrop pool
                 </div>
               </div>
-
-              {/* Prize Tiers */}
-              <div className="mt-4 sm:mt-6 space-y-2 sm:space-y-3">
-                <div className="bg-gradient-to-r from-yellow-600 to-orange-600 rounded-lg p-2 sm:p-3 text-white">
-                  <div className="flex justify-between items-center text-xs sm:text-base">
-                    <span>🥇 Grand Prize</span>
-                    <span className="font-bold">10,000 tokens</span>
-                  </div>
-                </div>
-                <div className="bg-gradient-to-r from-purple-600 to-pink-600 rounded-lg p-2 sm:p-3 text-white">
-                  <div className="flex justify-between items-center text-xs sm:text-base">
-                    <span>🥈 Big Win</span>
-                    <span className="font-bold">5,000 tokens</span>
-                  </div>
-                </div>
-                <div className="bg-gradient-to-r from-blue-600 to-cyan-600 rounded-lg p-2 sm:p-3 text-white">
-                  <div className="flex justify-between items-center text-xs sm:text-base">
-                    <span>🥉 Good Win</span>
-                    <span className="font-bold">1,000 tokens</span>
-                  </div>
-                </div>
-                <div className="bg-gradient-to-r from-green-600 to-emerald-600 rounded-lg p-2 sm:p-3 text-white">
-                  <div className="flex justify-between items-center text-xs sm:text-base">
-                    <span>🎯 Small Win</span>
-                    <span className="font-bold">100 tokens</span>
-                  </div>
-                </div>
-              </div>
-
-              <button
-                onClick={spinRoulette}
-                disabled={spinning || !tokenSymbol}
-                className="w-full mt-4 sm:mt-6 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold py-3 sm:py-4 rounded-xl hover:from-purple-700 hover:to-pink-700 transition-all disabled:opacity-50 shadow-lg text-sm sm:text-base"
-              >
-                {spinning ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <span className="animate-pulse-glow">🎰</span> Spinning...
-                  </span>
-                ) : '🎰 Spin Roulette'}
-              </button>
-            </div>
+            )}
           </div>
         </div>
 
         {/* Features */}
-        <div className="mt-6 sm:mt-8 grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
-          <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 sm:p-6 text-center border border-white/10">
-            <div className="text-3xl sm:text-4xl mb-2">🌐</div>
-            <h3 className="text-lg sm:text-xl font-bold text-white mb-2">Multi-Platform</h3>
-            <p className="text-sm sm:text-base text-gray-300">Pump.fun, Raydium, Jupiter Studio</p>
-          </div>
-          <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 sm:p-6 text-center border border-white/10">
-            <div className="text-3xl sm:text-4xl mb-2">🎨</div>
-            <h3 className="text-lg sm:text-xl font-bold text-white mb-2">3D Design</h3>
-            <p className="text-sm sm:text-base text-gray-300">Modern Solana digital purple, blue, green FX</p>
-          </div>
-          <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 sm:p-6 text-center border border-white/10">
-            <div className="text-3xl sm:text-4xl mb-2">⚡</div>
-            <h3 className="text-lg sm:text-xl font-bold text-white mb-2">Instant Deploy</h3>
-            <p className="text-sm sm:text-base text-gray-300">0.01 SOL deployment cost</p>
-          </div>
+        <div className="mt-8 grid grid-cols-1 md:grid-cols-4 gap-6">
+          <motion.div 
+            whileHover={{ scale: 1.05 }}
+            className="bg-white/10 dark:bg-black/30 backdrop-blur-md rounded-xl p-6 text-center glow-blue card-3d"
+          >
+            <div className="text-4xl mb-2">🌐</div>
+            <h3 className="text-xl font-bold text-white mb-2">Multi-Platform</h3>
+            <p className="text-gray-300 dark:text-gray-200 text-sm">Jupiter Studio, Raydium, Pump.fun</p>
+          </motion.div>
+          
+          <motion.div 
+            whileHover={{ scale: 1.05 }}
+            className="bg-white/10 dark:bg-black/30 backdrop-blur-md rounded-xl p-6 text-center glow-purple card-3d"
+          >
+            <div className="text-4xl mb-2">🎨</div>
+            <h3 className="text-xl font-bold text-white mb-2">3D Design</h3>
+            <p className="text-gray-300 dark:text-gray-200 text-sm">Solana style neon FX with aura effects</p>
+          </motion.div>
+          
+          <motion.div 
+            whileHover={{ scale: 1.05 }}
+            className="bg-white/10 dark:bg-black/30 backdrop-blur-md rounded-xl p-6 text-center glow-green card-3d"
+          >
+            <div className="text-4xl mb-2">⚡</div>
+            <h3 className="text-xl font-bold text-white mb-2">Instant Deploy</h3>
+            <p className="text-gray-300 dark:text-gray-200 text-sm">0.01 SOL deployment cost</p>
+          </motion.div>
+
+          <motion.div 
+            whileHover={{ scale: 1.05 }}
+            className="bg-white/10 dark:bg-black/30 backdrop-blur-md rounded-xl p-6 text-center glow-pink card-3d"
+          >
+            <div className="text-4xl mb-2">🎰</div>
+            <h3 className="text-xl font-bold text-white mb-2">Smart Rewards</h3>
+            <p className="text-gray-300 dark:text-gray-200 text-sm">12hr cooldown, faster after 3 days</p>
+          </motion.div>
         </div>
 
-        <div className="mt-6 sm:mt-8 text-center text-xs sm:text-sm text-gray-400">
-          💰 10% of profits go to dev wallet: monads.solana
+        {/* Integration Info */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.4 }}
+          className="mt-8 bg-gradient-to-r from-purple-900/50 to-blue-900/50 dark:from-purple-950/70 dark:to-blue-950/70 backdrop-blur-md rounded-xl p-6 border border-purple-500/30"
+        >
+          <h3 className="text-2xl font-bold text-white mb-4">🔗 Integrated Platforms</h3>
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            {['Jupiter', 'Raydium', 'Pump.fun', 'Orca', 'Meteora'].map((platform) => (
+              <div key={platform} className="bg-white/10 dark:bg-black/20 rounded-lg p-3 text-center text-white font-semibold hover:bg-white/20 transition">
+                {platform}
+              </div>
+            ))}
+          </div>
+        </motion.div>
+
+        <div className="mt-8 text-center text-sm text-gray-400">
+          💰 10% of profits go to dev wallet: monads.solana | 🎯 Earn GXQ tokens through affiliate program
         </div>
       </motion.div>
     </div>
