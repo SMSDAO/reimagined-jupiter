@@ -24,16 +24,64 @@ export default function LaunchpadPage() {
       return;
     }
 
-    alert(`Deploying ${tokenName} (${tokenSymbol}) with ${totalSupply} total supply...`);
-    // Implement actual deployment logic
+    try {
+      alert(`Preparing to deploy ${tokenName} (${tokenSymbol})...\n\nNote: Token deployment requires:\n- SPL Token program integration\n- Metadata creation via Metaplex\n- Initial liquidity provision\n- Pool creation on DEX\n\nThis feature requires backend integration for secure token creation.`);
+      
+      // Real implementation would:
+      // 1. Create token mint with @solana/spl-token
+      // 2. Create token metadata with Metaplex
+      // 3. Mint initial supply
+      // 4. Set up airdrop allocation
+      // 5. Create liquidity pool on Raydium/Orca/Jupiter
+      // 6. Initialize roulette contract
+      
+      console.log('[Launchpad] Token deployment parameters:', {
+        name: tokenName,
+        symbol: tokenSymbol,
+        supply: totalSupply,
+        airdropPercent,
+        deploymentCost,
+      });
+    } catch (error) {
+      console.error('[Launchpad] Deployment error:', error);
+      alert('Token deployment failed. Please try again.');
+    }
   };
 
   const spinRoulette = () => {
+    if (!tokenSymbol) {
+      alert('Please set a token symbol first!');
+      return;
+    }
+    
     setSpinning(true);
+    
+    // Realistic roulette simulation with weighted probabilities
     setTimeout(() => {
       setSpinning(false);
-      const reward = Math.floor(Math.random() * 1000) + 100;
-      alert(`🎉 You won ${reward} ${tokenSymbol || 'tokens'}!`);
+      
+      // Weighted random: 50% small, 30% good, 15% big, 5% grand
+      const rand = Math.random();
+      let reward = 0;
+      let tier = '';
+      
+      if (rand < 0.50) {
+        reward = 100;
+        tier = 'Small Win 🎯';
+      } else if (rand < 0.80) {
+        reward = 1000;
+        tier = 'Good Win 🥉';
+      } else if (rand < 0.95) {
+        reward = 5000;
+        tier = 'Big Win 🥈';
+      } else {
+        reward = 10000;
+        tier = 'Grand Prize 🥇';
+      }
+      
+      alert(`🎉 ${tier}\n\nYou won ${reward} ${tokenSymbol}!\n\nNote: This is a demonstration. Real roulette would require:\n- On-chain smart contract\n- Verifiable random function (VRF)\n- Token distribution logic`);
+      
+      console.log('[Launchpad] Roulette result:', { reward, tier, token: tokenSymbol });
     }, 3000);
   };
 

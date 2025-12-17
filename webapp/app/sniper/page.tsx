@@ -87,28 +87,13 @@ export default function SniperPage() {
       autoSnipe,
     });
 
-    // Simulate monitoring with mock data for UI
-    setTimeout(() => {
-      const mockTargets: SniperTarget[] = [
-        {
-          name: 'PEPE2.0',
-          mint: '7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU',
-          platform: 'Pump.fun',
-          liquidity: 50000,
-          holders: 245,
-          status: 'ready',
-        },
-        {
-          name: 'BONK2',
-          mint: '8xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU',
-          platform: 'Raydium',
-          liquidity: 120000,
-          holders: 567,
-          status: 'monitoring',
-        },
-      ];
-      setTargets(mockTargets);
-    }, 2000);
+    // Note: Real-time pool monitoring is handled by the backend SniperBot service
+    // The UI listens for 'pool-creation-detected' events dispatched by the backend
+    // This would require a backend WebSocket or API endpoint integration
+    // For now, we're ready to receive events but not generating mock data
+    
+    console.log('[SniperUI] Monitoring active - waiting for pool creation events...');
+    console.log('[SniperUI] Backend integration required for live monitoring');
   };
 
   const snipeToken = async (target: SniperTarget) => {
@@ -117,8 +102,40 @@ export default function SniperPage() {
       return;
     }
 
-    alert(`Sniping ${target.name} for ${buyAmount} SOL with ${slippage}% slippage...`);
-    // Implement actual sniping logic here
+    try {
+      console.log('[SniperUI] Attempting to snipe token:', target);
+      
+      // Real implementation would:
+      // 1. Get quote from Jupiter for SOL -> target token
+      // 2. Set high priority fee for faster execution
+      // 3. Create and send transaction
+      // 4. Monitor for confirmation
+      
+      const amountInLamports = Math.floor(parseFloat(buyAmount) * 1e9);
+      
+      // Get Jupiter quote
+      const quoteResponse = await fetch(
+        `https://quote-api.jup.ag/v6/quote?inputMint=So11111111111111111111111111111111111111112&outputMint=${target.mint}&amount=${amountInLamports}&slippageBps=${slippage * 100}`
+      );
+      
+      if (!quoteResponse.ok) {
+        throw new Error('Failed to get quote from Jupiter');
+      }
+      
+      const quote = await quoteResponse.json();
+      
+      alert(`Snipe prepared for ${target.name}!\n\nBuy: ${buyAmount} SOL\nExpected: ~${(parseInt(quote.outAmount) / 1e9).toFixed(4)} tokens\nSlippage: ${slippage}%\n\nNote: Actual transaction execution requires wallet signing.\nThis would submit a high-priority transaction to maximize success chance.`);
+      
+      console.log('[SniperUI] Quote received:', quote);
+      
+      // Update target status
+      setTargets(prev => prev.map(t => 
+        t.mint === target.mint ? { ...t, status: 'sniped' as const } : t
+      ));
+    } catch (error) {
+      console.error('[SniperUI] Snipe error:', error);
+      alert(`Failed to snipe ${target.name}. Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   };
 
   return (

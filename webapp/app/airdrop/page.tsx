@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useWallet, useConnection } from '@solana/wallet-adapter-react';
+import { PublicKey } from '@solana/web3.js';
 import { motion } from 'framer-motion';
 
 interface WalletScore {
@@ -32,29 +33,141 @@ export default function AirdropPage() {
     
     setLoading(true);
     try {
-      // Fetch wallet score
+      // Fetch real wallet score
       const balance = await connection.getBalance(publicKey);
       const signatures = await connection.getSignaturesForAddress(publicKey, { limit: 1000 });
       
-      const mockScore: WalletScore = {
+      // Get token accounts for NFT count
+      const tokenAccounts = await connection.getParsedTokenAccountsByOwner(publicKey, {
+        programId: new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'),
+      });
+      
+      let nftCount = 0;
+      for (const account of tokenAccounts.value) {
+        const amount = account.account.data.parsed.info.tokenAmount.uiAmount;
+        const decimals = account.account.data.parsed.info.tokenAmount.decimals;
+        if (amount === 1 && decimals === 0) {
+          nftCount++;
+        }
+      }
+      
+      // Calculate tier based on metrics
+      const solBalance = balance / 1e9;
+      const txCount = signatures.length;
+      
+      let totalScore = 0;
+      // Balance score (0-30)
+      if (solBalance >= 100) totalScore += 30;
+      else if (solBalance >= 10) totalScore += 25;
+      else if (solBalance >= 1) totalScore += 20;
+      else if (solBalance >= 0.1) totalScore += 15;
+      else totalScore += 10;
+      
+      // Transaction score (0-40)
+      if (txCount >= 1000) totalScore += 40;
+      else if (txCount >= 500) totalScore += 35;
+      else if (txCount >= 100) totalScore += 30;
+      else if (txCount >= 50) totalScore += 25;
+      else if (txCount >= 10) totalScore += 20;
+      else totalScore += 10;
+      
+      // NFT score (0-30)
+      if (nftCount >= 50) totalScore += 30;
+      else if (nftCount >= 20) totalScore += 25;
+      else if (nftCount >= 10) totalScore += 20;
+      else if (nftCount >= 5) totalScore += 15;
+      else if (nftCount >= 1) totalScore += 10;
+      
+      let tier: WalletScore['tier'] = 'NOVICE';
+      if (totalScore >= 80) tier = 'WHALE';
+      else if (totalScore >= 65) tier = 'DEGEN';
+      else if (totalScore >= 50) tier = 'ACTIVE';
+      else if (totalScore >= 30) tier = 'CASUAL';
+      
+      const score: WalletScore = {
         address: publicKey.toString(),
-        totalScore: 75,
-        tier: 'ACTIVE',
-        balance: balance / 1e9,
-        txCount: signatures.length,
-        nftCount: 12,
+        totalScore,
+        tier,
+        balance: solBalance,
+        txCount,
+        nftCount,
       };
-      setWalletScore(mockScore);
+      setWalletScore(score);
 
-      // Mock airdrops
-      const mockAirdrops: Airdrop[] = [
-        { protocol: 'Jupiter', amount: '100 JUP', value: '$125', claimable: true },
-        { protocol: 'Jito', amount: '50 JTO', value: '$89', claimable: true },
-        { protocol: 'Pyth', amount: '25 PYTH', value: '$45', claimable: false },
-        { protocol: 'Kamino', amount: '75 KMNO', value: '$34', claimable: true },
-        { protocol: 'Marginfi', amount: '200 MRGN', value: '$67', claimable: false },
+      // Fetch real airdrops from APIs
+      const fetchedAirdrops: Airdrop[] = [];
+      
+      // Check Jupiter airdrop
+      try {
+        const jupResponse = await fetch(
+          `https://worker.jup.ag/jup-claim-proof/${publicKey.toString()}`
+        );
+        if (jupResponse.ok) {
+          const jupData = await jupResponse.json();
+          if (jupData.amount) {
+            // Get JUP price from Jupiter API
+            const priceResponse = await fetch(
+              'https://price.jup.ag/v6/price?ids=JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN'
+            );
+            const priceData = await priceResponse.json();
+            const jupPrice = priceData.data?.JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN?.price || 0;
+            
+            fetchedAirdrops.push({
+              protocol: 'Jupiter',
+              amount: `${(jupData.amount / 1e6).toFixed(2)} JUP`,
+              value: `$${((jupData.amount / 1e6) * jupPrice).toFixed(2)}`,
+              claimable: true,
+            });
+          }
+        }
+      } catch (err) {
+        console.log('Jupiter airdrop check failed or not eligible:', err);
+      }
+      
+      // Check Jito airdrop
+      try {
+        const jitoResponse = await fetch(
+          `https://kek.jito.network/api/v1/airdrop_allocation/${publicKey.toString()}`
+        );
+        if (jitoResponse.ok) {
+          const jitoData = await jitoResponse.json();
+          if (jitoData.allocation) {
+            // Get JTO price
+            const priceResponse = await fetch(
+              'https://price.jup.ag/v6/price?ids=jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL'
+            );
+            const priceData = await priceResponse.json();
+            const jtoPrice = priceData.data?.jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL?.price || 0;
+            
+            fetchedAirdrops.push({
+              protocol: 'Jito',
+              amount: `${(jitoData.allocation / 1e9).toFixed(2)} JTO`,
+              value: `$${((jitoData.allocation / 1e9) * jtoPrice).toFixed(2)}`,
+              claimable: true,
+            });
+          }
+        }
+      } catch (err) {
+        console.log('Jito airdrop check failed or not eligible:', err);
+      }
+      
+      // Add placeholder for other protocols
+      const otherProtocols = [
+        { protocol: 'Pyth', claimable: false },
+        { protocol: 'Kamino', claimable: false },
+        { protocol: 'Marginfi', claimable: false },
       ];
-      setAirdrops(mockAirdrops);
+      
+      for (const proto of otherProtocols) {
+        fetchedAirdrops.push({
+          protocol: proto.protocol,
+          amount: 'N/A',
+          value: '$0.00',
+          claimable: proto.claimable,
+        });
+      }
+      
+      setAirdrops(fetchedAirdrops);
     } catch (error) {
       console.error('Error checking airdrops:', error);
     } finally {
@@ -63,14 +176,70 @@ export default function AirdropPage() {
   }, [publicKey, connection]);
 
   const claimAirdrop = async (airdrop: Airdrop) => {
-    alert(`Claiming ${airdrop.amount} from ${airdrop.protocol}...`);
-    // Implement actual claim logic
+    if (!publicKey) {
+      alert('Please connect your wallet first!');
+      return;
+    }
+
+    if (!airdrop.claimable) {
+      alert(`${airdrop.protocol} airdrop is not claimable for this wallet.`);
+      return;
+    }
+
+    try {
+      console.log('[Airdrop] Attempting to claim:', airdrop);
+      
+      // Real implementation would:
+      // 1. Fetch claim proof from protocol API
+      // 2. Create claim transaction
+      // 3. Sign and send transaction
+      // 4. Wait for confirmation
+      
+      alert(`Preparing to claim ${airdrop.amount} from ${airdrop.protocol}...\n\nNote: Actual claiming requires:\n- Valid claim proof from protocol\n- Transaction signing\n- Gas fees (~0.001 SOL)\n\nBackend integration needed for secure claim transactions.`);
+      
+      console.log('[Airdrop] Claim initiated for:', {
+        protocol: airdrop.protocol,
+        amount: airdrop.amount,
+        wallet: publicKey.toString(),
+      });
+    } catch (error) {
+      console.error('[Airdrop] Claim error:', error);
+      alert(`Failed to claim ${airdrop.protocol} airdrop. Please try again.`);
+    }
   };
 
   const claimAll = async () => {
+    if (!publicKey) {
+      alert('Please connect your wallet first!');
+      return;
+    }
+
     const claimable = airdrops.filter((a) => a.claimable);
-    alert(`Claiming ${claimable.length} airdrops...`);
-    // Implement batch claim logic
+    
+    if (claimable.length === 0) {
+      alert('No claimable airdrops available.');
+      return;
+    }
+
+    try {
+      console.log('[Airdrop] Batch claiming:', claimable);
+      
+      const totalValue = claimable.reduce(
+        (sum, a) => sum + parseFloat(a.value.replace('$', '')),
+        0
+      );
+      
+      alert(`Preparing to claim ${claimable.length} airdrops...\n\nTotal Value: $${totalValue.toFixed(2)}\nProtocols: ${claimable.map(a => a.protocol).join(', ')}\n\nNote: Batch claiming would:\n- Process each airdrop sequentially\n- Handle claim proofs and signatures\n- Require ~${(claimable.length * 0.001).toFixed(3)} SOL for gas\n\nBackend integration needed for secure batch operations.`);
+      
+      console.log('[Airdrop] Batch claim prepared:', {
+        count: claimable.length,
+        totalValue,
+        protocols: claimable.map(a => a.protocol),
+      });
+    } catch (error) {
+      console.error('[Airdrop] Batch claim error:', error);
+      alert('Failed to batch claim airdrops. Please try claiming individually.');
+    }
   };
 
   useEffect(() => {
