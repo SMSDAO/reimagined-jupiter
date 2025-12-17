@@ -6,12 +6,9 @@ export default {
     '^(\\.{1,2}/.*)\\.js$': '$1',
   },
   transform: {
-    '^.+\\.tsx?$': [
-      'ts-jest',
-      {
-        useESM: true,
-      },
-    ],
+    '^.+\\.ts$': ['ts-jest', {
+      useESM: true,
+    }],
   },
   testMatch: [
     '**/__tests__/**/*.test.ts',
@@ -22,5 +19,6 @@ export default {
     '!src/**/*.d.ts',
     '!src/index.ts',
   ],
-  moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
+  coverageDirectory: 'coverage',
+  coverageReporters: ['text', 'lcov', 'html'],
 };

@@ -1,4 +1,4 @@
-import { Connection, PublicKey } from '@solana/web3.js';
+import { Connection } from '@solana/web3.js';
 import { ProviderManager } from '../services/providerManager.js';
 
 // Mock Connection to avoid actual network calls in tests
