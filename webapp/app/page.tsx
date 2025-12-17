@@ -47,6 +47,12 @@ export default function Home() {
       color: 'from-indigo-500 to-purple-500',
       glow: 'glow-purple',
     },
+    {
+      title: '🔍 Wallet Analysis',
+      description: 'Social intelligence & risk assessment',
+      href: '/wallet-analysis',
+      color: 'from-cyan-500 to-blue-500',
+    },
   ];
 
   return (
