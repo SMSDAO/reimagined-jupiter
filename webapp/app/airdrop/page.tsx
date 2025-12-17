@@ -2,13 +2,24 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useWallet, useConnection } from '@solana/wallet-adapter-react';
-import { PublicKey } from '@solana/web3.js';
 import { motion } from 'framer-motion';
+import { 
+  fetchWalletMetrics, 
+  calculateWalletScore, 
+  getTierColor,
+  type WalletTier 
+} from '@/lib/wallet-utils';
+import { 
+  JupiterAirdropAPI, 
+  JitoAirdropAPI,
+  JupiterPriceAPI,
+  formatUSD 
+} from '@/lib/api-client';
 
 interface WalletScore {
   address: string;
   totalScore: number;
-  tier: 'WHALE' | 'DEGEN' | 'ACTIVE' | 'CASUAL' | 'NOVICE';
+  tier: WalletTier;
   balance: number;
   txCount: number;
   nftCount: number;
@@ -33,122 +44,51 @@ export default function AirdropPage() {
     
     setLoading(true);
     try {
-      // Fetch real wallet score
-      const balance = await connection.getBalance(publicKey);
-      const signatures = await connection.getSignaturesForAddress(publicKey, { limit: 1000 });
+      // Fetch wallet metrics using utility function
+      const metrics = await fetchWalletMetrics(connection, publicKey);
       
-      // Get token accounts for NFT count
-      const tokenAccounts = await connection.getParsedTokenAccountsByOwner(publicKey, {
-        programId: new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'),
-      });
-      
-      let nftCount = 0;
-      for (const account of tokenAccounts.value) {
-        const amount = account.account.data.parsed.info.tokenAmount.uiAmount;
-        const decimals = account.account.data.parsed.info.tokenAmount.decimals;
-        if (amount === 1 && decimals === 0) {
-          nftCount++;
-        }
-      }
-      
-      // Calculate tier based on metrics
-      const solBalance = balance / 1e9;
-      const txCount = signatures.length;
-      
-      let totalScore = 0;
-      // Balance score (0-30)
-      if (solBalance >= 100) totalScore += 30;
-      else if (solBalance >= 10) totalScore += 25;
-      else if (solBalance >= 1) totalScore += 20;
-      else if (solBalance >= 0.1) totalScore += 15;
-      else totalScore += 10;
-      
-      // Transaction score (0-40)
-      if (txCount >= 1000) totalScore += 40;
-      else if (txCount >= 500) totalScore += 35;
-      else if (txCount >= 100) totalScore += 30;
-      else if (txCount >= 50) totalScore += 25;
-      else if (txCount >= 10) totalScore += 20;
-      else totalScore += 10;
-      
-      // NFT score (0-30)
-      if (nftCount >= 50) totalScore += 30;
-      else if (nftCount >= 20) totalScore += 25;
-      else if (nftCount >= 10) totalScore += 20;
-      else if (nftCount >= 5) totalScore += 15;
-      else if (nftCount >= 1) totalScore += 10;
-      
-      let tier: WalletScore['tier'] = 'NOVICE';
-      if (totalScore >= 80) tier = 'WHALE';
-      else if (totalScore >= 65) tier = 'DEGEN';
-      else if (totalScore >= 50) tier = 'ACTIVE';
-      else if (totalScore >= 30) tier = 'CASUAL';
+      // Calculate wallet score
+      const scoreResult = calculateWalletScore(metrics);
       
       const score: WalletScore = {
         address: publicKey.toString(),
-        totalScore,
-        tier,
-        balance: solBalance,
-        txCount,
-        nftCount,
+        totalScore: scoreResult.totalScore,
+        tier: scoreResult.tier,
+        balance: metrics.balance,
+        txCount: metrics.txCount,
+        nftCount: metrics.nftCount,
       };
       setWalletScore(score);
 
-      // Fetch real airdrops from APIs
+      // Fetch real airdrops from APIs using utility functions
       const fetchedAirdrops: Airdrop[] = [];
       
       // Check Jupiter airdrop
-      try {
-        const jupResponse = await fetch(
-          `https://worker.jup.ag/jup-claim-proof/${publicKey.toString()}`
-        );
-        if (jupResponse.ok) {
-          const jupData = await jupResponse.json();
-          if (jupData.amount) {
-            // Get JUP price from Jupiter API
-            const priceResponse = await fetch(
-              'https://price.jup.ag/v6/price?ids=JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN'
-            );
-            const priceData = await priceResponse.json();
-            const jupPrice = priceData.data?.JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN?.price || 0;
-            
-            fetchedAirdrops.push({
-              protocol: 'Jupiter',
-              amount: `${(jupData.amount / 1e6).toFixed(2)} JUP`,
-              value: `$${((jupData.amount / 1e6) * jupPrice).toFixed(2)}`,
-              claimable: true,
-            });
-          }
-        }
-      } catch (err) {
-        console.log('Jupiter airdrop check failed or not eligible:', err);
+      const jupiterEligibility = await JupiterAirdropAPI.checkEligibility(publicKey.toString());
+      if (jupiterEligibility.eligible && jupiterEligibility.amount) {
+        const jupPrice = await JupiterPriceAPI.getPrice('JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN');
+        const amount = jupiterEligibility.amount / 1e6;
+        
+        fetchedAirdrops.push({
+          protocol: 'Jupiter',
+          amount: `${amount.toFixed(2)} JUP`,
+          value: formatUSD(amount * jupPrice),
+          claimable: true,
+        });
       }
       
       // Check Jito airdrop
-      try {
-        const jitoResponse = await fetch(
-          `https://kek.jito.network/api/v1/airdrop_allocation/${publicKey.toString()}`
-        );
-        if (jitoResponse.ok) {
-          const jitoData = await jitoResponse.json();
-          if (jitoData.allocation) {
-            // Get JTO price
-            const priceResponse = await fetch(
-              'https://price.jup.ag/v6/price?ids=jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL'
-            );
-            const priceData = await priceResponse.json();
-            const jtoPrice = priceData.data?.jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL?.price || 0;
-            
-            fetchedAirdrops.push({
-              protocol: 'Jito',
-              amount: `${(jitoData.allocation / 1e9).toFixed(2)} JTO`,
-              value: `$${((jitoData.allocation / 1e9) * jtoPrice).toFixed(2)}`,
-              claimable: true,
-            });
-          }
-        }
-      } catch (err) {
-        console.log('Jito airdrop check failed or not eligible:', err);
+      const jitoEligibility = await JitoAirdropAPI.checkAllocation(publicKey.toString());
+      if (jitoEligibility.eligible && jitoEligibility.allocation) {
+        const jtoPrice = await JupiterPriceAPI.getPrice('jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL');
+        const amount = jitoEligibility.allocation / 1e9;
+        
+        fetchedAirdrops.push({
+          protocol: 'Jito',
+          amount: `${amount.toFixed(2)} JTO`,
+          value: formatUSD(amount * jtoPrice),
+          claimable: true,
+        });
       }
       
       // Add placeholder for other protocols
@@ -248,15 +188,7 @@ export default function AirdropPage() {
     }
   }, [publicKey, checkAirdrops]);
 
-  const getTierColor = (tier: string) => {
-    switch (tier) {
-      case 'WHALE': return 'from-yellow-400 to-orange-500';
-      case 'DEGEN': return 'from-purple-400 to-pink-500';
-      case 'ACTIVE': return 'from-blue-400 to-cyan-500';
-      case 'CASUAL': return 'from-green-400 to-emerald-500';
-      default: return 'from-gray-400 to-gray-500';
-    }
-  };
+
 
   return (
     <div className="max-w-6xl mx-auto">
