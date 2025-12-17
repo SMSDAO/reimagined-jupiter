@@ -1,4 +1,4 @@
-import { Connection, Keypair, PublicKey } from '@solana/web3.js';
+import { Connection } from '@solana/web3.js';
 import { JupiterV6Integration } from '../integrations/jupiter.js';
 
 // Mock axios

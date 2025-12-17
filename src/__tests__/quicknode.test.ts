@@ -157,7 +157,7 @@ describe('QuickNodeIntegration', () => {
       jest.spyOn(console, 'warn').mockImplementation(() => {});
       
       // This test assumes the config would be changed, but we'll just test the warning
-      const result = await quicknode.invokeFunction('testFunction', {});
+      await quicknode.invokeFunction('testFunction', {});
       
       // In actual implementation, it would return null when functionsUrl is not set
       // For now, it will try to call with the mocked URL
