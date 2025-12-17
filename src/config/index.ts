@@ -62,9 +62,12 @@ export const config: Config = {
   },
   profitDistribution: {
     enabled: process.env.PROFIT_DISTRIBUTION_ENABLED !== 'false',
-    reserveWallet: new PublicKey(process.env.RESERVE_WALLET || '11111111111111111111111111111111'), // 70% - monads.skr
-    gasWallet: new PublicKey(process.env.GAS_WALLET || '11111111111111111111111111111111'), // 20% - user wallet for gas coverage
-    daoWallet: new PublicKey(process.env.DAO_WALLET || 'DmtAdUSzFvcBymUmRFgPVawvoXbqdS2o18eZNpe5XcWW'), // 10% - DAO community wallet
+    reserveWallet: process.env.RESERVE_WALLET_ADDRESS || process.env.RESERVE_WALLET || 'monads.skr', // SNS name - 70%
+    reservePercentage: parseFloat(process.env.RESERVE_PERCENTAGE || '0.70'),
+    gasWallet: process.env.GAS_WALLET || '', // 20% - user wallet for gas coverage
+    gasSlippagePercentage: parseFloat(process.env.GAS_SLIPPAGE_PERCENTAGE || '0.20'),
+    daoWallet: new PublicKey(process.env.DAO_WALLET_ADDRESS || process.env.DAO_WALLET || 'DmtAdUSzFvcBymUmRFgPVawvoXbqdS2o18eZNpe5XcWW'), // 10%
+    daoPercentage: parseFloat(process.env.DAO_PERCENTAGE || '0.10'),
   },
   encryption: {
     enabled: process.env.ENCRYPTION_ENABLED !== 'false',
