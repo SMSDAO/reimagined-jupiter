@@ -3,10 +3,6 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
-  --glow-blue: rgba(59, 130, 246, 0.5);
-  --glow-purple: rgba(168, 85, 247, 0.5);
-  --glow-green: rgba(34, 197, 94, 0.5);
-  --glow-pink: rgba(236, 72, 153, 0.5);
 }
 
 @theme inline {
@@ -16,14 +12,11 @@
   --font-mono: var(--font-geist-mono);
 }
 
-[data-theme="dark"] {
-  --background: #0a0a0a;
-  --foreground: #ededed;
-}
-
-[data-theme="light"] {
-  --background: #f5f5f5;
-  --foreground: #1a1a1a;
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
 }
 
 body {
@@ -32,78 +25,245 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
-/* Neon Glow Effects */
-.glow-blue {
-  box-shadow: 0 0 10px var(--glow-blue), 0 0 20px var(--glow-blue), 0 0 30px var(--glow-blue);
-  transition: box-shadow 0.3s ease;
+/* ===================================
+   3D NEON DESIGN SYSTEM ANIMATIONS
+   =================================== */
+
+/* Neon Pulse - 3 second cycle */
+@keyframes neon-pulse {
+  0%, 100% { 
+    box-shadow: 0 0 10px rgba(0, 157, 255, 0.5),
+                inset 0 0 10px rgba(0, 157, 255, 0.2);
+  }
+  50% { 
+    box-shadow: 0 0 25px rgba(0, 157, 255, 1),
+                0 0 50px rgba(0, 157, 255, 0.5),
+                inset 0 0 15px rgba(0, 157, 255, 0.4);
+  }
 }
 
-.glow-purple {
-  box-shadow: 0 0 10px var(--glow-purple), 0 0 20px var(--glow-purple), 0 0 30px var(--glow-purple);
-  transition: box-shadow 0.3s ease;
+/* Neon Pulse Blue - Farcaster theme */
+@keyframes neon-pulse-blue {
+  0%, 100% { 
+    box-shadow: 0 0 15px #009dff,
+                0 0 25px rgba(0, 157, 255, 0.5);
+  }
+  50% { 
+    box-shadow: 0 0 30px #009dff,
+                0 0 60px #009dff,
+                0 0 90px rgba(0, 157, 255, 0.3);
+  }
 }
 
-.glow-green {
-  box-shadow: 0 0 10px var(--glow-green), 0 0 20px var(--glow-green), 0 0 30px var(--glow-green);
-  transition: box-shadow 0.3s ease;
+/* Neon Pulse Green - GM theme */
+@keyframes neon-pulse-green {
+  0%, 100% { 
+    box-shadow: 0 0 15px #00ff9d,
+                0 0 25px rgba(0, 255, 157, 0.5);
+  }
+  50% { 
+    box-shadow: 0 0 30px #00ff9d,
+                0 0 60px #00ff9d,
+                0 0 90px rgba(0, 255, 157, 0.3);
+  }
 }
 
-.glow-pink {
-  box-shadow: 0 0 10px var(--glow-pink), 0 0 20px var(--glow-pink), 0 0 30px var(--glow-pink);
-  transition: box-shadow 0.3s ease;
+/* Float 3D - 4-6 second floating effect */
+@keyframes float-3d {
+  0%, 100% { 
+    transform: translateY(0px) rotateX(0deg);
+  }
+  25% {
+    transform: translateY(-8px) rotateX(2deg);
+  }
+  50% { 
+    transform: translateY(-12px) rotateX(5deg);
+  }
+  75% {
+    transform: translateY(-8px) rotateX(2deg);
+  }
 }
 
-.glow-hover:hover {
-  box-shadow: 0 0 15px var(--glow-purple), 0 0 30px var(--glow-purple), 0 0 45px var(--glow-purple);
+/* Glow Text - 2 second cycle */
+@keyframes glow-text {
+  0%, 100% { 
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.5),
+                 0 0 20px rgba(147, 51, 234, 0.3);
+  }
+  50% { 
+    text-shadow: 0 0 20px rgba(255, 255, 255, 1),
+                 0 0 30px rgba(147, 51, 234, 0.8),
+                 0 0 40px rgba(0, 157, 255, 0.6);
+  }
 }
 
-/* Aura Effects */
-.aura-effect {
+/* Rotate - For orb rings */
+@keyframes rotate {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Rotate Reverse - For orb rings */
+@keyframes rotate-reverse {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(-360deg); }
+}
+
+/* Gradient Animation */
+@keyframes gradient-shift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+/* ===================================
+   3D NEON UTILITY CLASSES
+   =================================== */
+
+.neon-pulse {
+  animation: neon-pulse 3s ease-in-out infinite;
+}
+
+.neon-pulse-blue {
+  animation: neon-pulse-blue 3s ease-in-out infinite;
+}
+
+.neon-pulse-green {
+  animation: neon-pulse-green 3s ease-in-out infinite;
+}
+
+.float-3d {
+  animation: float-3d 5s ease-in-out infinite;
+}
+
+.glow-text {
+  animation: glow-text 2s ease-in-out infinite;
+}
+
+.animated-gradient-text {
+  background: linear-gradient(90deg, #9333ea, #3b82f6, #06b6d4, #10b981, #9333ea);
+  background-size: 200% auto;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: gradient-shift 3s linear infinite;
+}
+
+/* Trust Score Orb */
+.trust-orb {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #009dff, #00ff9d);
+  backdrop-filter: blur(10px);
   position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: float-3d 4s ease-in-out infinite;
+  box-shadow: 0 0 30px rgba(0, 157, 255, 0.5),
+              0 0 60px rgba(0, 255, 157, 0.3);
 }
 
-.aura-effect::before {
+.trust-orb::before,
+.trust-orb::after {
   content: '';
   position: absolute;
-  inset: -2px;
+  top: -5px;
+  left: -5px;
+  right: -5px;
+  bottom: -5px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  pointer-events: none;
+}
+
+.trust-orb::before {
+  border-top-color: #009dff;
+  border-right-color: #009dff;
+  animation: rotate 3s linear infinite;
+}
+
+.trust-orb::after {
+  border-bottom-color: #00ff9d;
+  border-left-color: #00ff9d;
+  animation: rotate-reverse 3s linear infinite;
+}
+
+.trust-orb:hover {
+  transform: translateY(-5px) scale(1.05);
+  box-shadow: 0 0 40px rgba(0, 157, 255, 0.7),
+              0 0 80px rgba(0, 255, 157, 0.5);
+  transition: all 0.3s ease;
+}
+
+/* Social Cards */
+.social-card {
+  position: relative;
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+}
+
+.social-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
   border-radius: inherit;
   padding: 2px;
-  background: linear-gradient(45deg, #3b82f6, #a855f7, #ec4899, #22c55e);
+  background: linear-gradient(135deg, currentColor, transparent);
   -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
-  animation: rotate 4s linear infinite;
+  opacity: 0.5;
 }
 
-@keyframes rotate {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+.social-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
 }
 
-/* 3D Transform Effects */
-.card-3d {
-  transform-style: preserve-3d;
-  transition: transform 0.3s ease;
+.social-card.farcaster-card {
+  color: #009dff;
 }
 
-.card-3d:hover {
-  transform: translateZ(10px) rotateX(2deg) rotateY(2deg);
+.social-card.gm-card {
+  color: #00ff9d;
 }
 
-/* Pulse Animation */
-@keyframes pulse-glow {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.5;
-  }
+/* Metadata Cards with 3D hover */
+.metadata-card {
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
 }
 
-.pulse-glow {
-  animation: pulse-glow 2s ease-in-out infinite;
+.metadata-card:hover {
+  transform: translateY(-5px) rotateX(5deg);
+  box-shadow: 0 10px 30px rgba(147, 51, 234, 0.3);
+}
+
+/* Glass Morphism */
+.glass-morphism {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Risk Level Colors */
+.risk-high-trust {
+  border-color: #10b981;
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.3);
+}
+
+.risk-medium-trust {
+  border-color: #3b82f6;
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+}
+
+.risk-low-trust {
+  border-color: #f59e0b;
+  box-shadow: 0 0 20px rgba(245, 158, 11, 0.3);
+}
+
+.risk-very-low-trust {
+  border-color: #ef4444;
+  box-shadow: 0 0 20px rgba(239, 68, 68, 0.3);
 }

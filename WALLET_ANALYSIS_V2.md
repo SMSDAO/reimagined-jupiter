@@ -1,733 +1,616 @@
-# Wallet Analysis V2 - Complete Documentation
+# 🔍 Wallet Analysis V2 - Social Intelligence Integration
 
-## 🎯 Overview
+## Overview
 
-The GXQ Studio Wallet Analysis V2 is a comprehensive blockchain intelligence system that combines on-chain data analysis, social verification through Farcaster, and advanced risk assessment algorithms to provide a complete 360-degree view of Solana wallet behavior and trustworthiness.
+Wallet Analysis V2 introduces comprehensive social intelligence features powered by Neynar's Farcaster API, enabling multi-dimensional trust and risk assessment for Solana wallets. This advanced system combines on-chain metrics with social proof to provide unprecedented insights into wallet credibility.
 
-## ✨ Key Features
+## 🌟 Key Features
 
-### 1. **Social Intelligence Integration**
-- **Neynar Farcaster API** - Professional-grade Farcaster data provider
-- **Profile Lookup by Wallet** - Automatic detection of Farcaster profiles linked to Solana wallets
-- **Multi-Platform Support** - Supports both Solana and Ethereum addresses
-- **Real-time Updates** - Live data from Farcaster network
+### 1. **Farcaster Social Intelligence**
+- **Profile Lookup by Wallet Address**: Automatically discovers Farcaster profiles linked to Solana wallets
+- **Multi-Factor Scoring**: Analyzes followers, casts, verification status, and influence
+- **Power Badge Recognition**: Identifies verified Farcaster power users
+- **Real-Time Data**: Live integration with Neynar API for up-to-date social metrics
 
-### 2. **Advanced Scoring System**
-- **Farcaster Score** (0-100) - Quantifies social reputation
-- **GM Score** (0-100) - Measures community engagement
-- **Trust Score** (0-100) - Composite metric combining multiple factors
-- **Risk Score** (0-100) - Identifies potentially problematic wallets
+### 2. **Advanced Scoring Algorithms**
 
-### 3. **Comprehensive Wallet Metrics**
-- Wallet age and transaction history
-- Protocol diversity (DeFi, NFT, DEX interactions)
-- Token holdings and portfolio value
-- Activity patterns (swaps, stakes, airdrops, NFTs)
-- Social verification bonus
+#### **Farcaster Score (0-100 Points)**
+A comprehensive social credibility metric with five weighted components:
 
-### 4. **Database Infrastructure**
-- **PostgreSQL** with connection pooling
-- **5 Tables** for complete data tracking
-- **4 Views** for common queries
-- **Automatic indexing** for performance
-- **ACID compliance** for data integrity
+| Component | Weight | Max Points | Criteria |
+|-----------|--------|------------|----------|
+| **Followers** | 30% | 30 | Follower count with exponential scaling |
+| **Casts** | 20% | 20 | Total number of posts/casts |
+| **Power Badge** | 25% | 25 | Verified Farcaster power user status |
+| **Verified Addresses** | 15% | 15 | Number of verified ETH/SOL addresses |
+| **Influencer Status** | 10% | 10 | Average engagement rate on casts |
 
----
+**Scoring Breakdown:**
 
-## 📊 Scoring Algorithms
+**Followers (0-30 points):**
+- 10,000+ followers: 30 points
+- 5,000-9,999: 27 points
+- 2,000-4,999: 24 points
+- 1,000-1,999: 21 points
+- 500-999: 18 points
+- 250-499: 15 points
+- 100-249: 12 points
+- 50-99: 9 points
+- 25-49: 6 points
+- 10-24: 3 points
+- <10: 0 points
 
-### Farcaster Score (0-100 points)
+**Casts (0-20 points):**
+- 1,000+ casts: 20 points
+- 500-999: 18 points
+- 250-499: 16 points
+- 100-249: 14 points
+- 50-99: 12 points
+- 25-49: 10 points
+- 10-24: 8 points
+- 5-9: 6 points
+- 1-4: 4 points
+- 0: 0 points
 
-The Farcaster Score evaluates a user's social reputation on the Farcaster network using a weighted algorithm:
+**Power Badge (0-25 points):**
+- Has power badge: 25 points
+- No power badge: 0 points
 
-#### **Component Breakdown:**
+**Verified Addresses (0-15 points):**
+- 3+ verified addresses: 15 points
+- 2 verified addresses: 10 points
+- 1 verified address: 5 points
+- 0 verified addresses: 0 points
 
-**1. Followers Score (30 points maximum)**
-- Logarithmic scale based on follower count
-- Formula: `min(30, log10(followers + 1) * 10)`
-- Examples:
-  - 0 followers = 0 points
-  - 10 followers = 10 points
-  - 100 followers = 20 points
-  - 1,000 followers = 30 points
-  - 10,000+ followers = 30 points (capped)
+**Influencer Status (0-10 points):**
+Based on average engagement (likes + recasts + replies) per cast:
+- 50+ avg engagement: 10 points
+- 25-49: 8 points
+- 10-24: 6 points
+- 5-9: 4 points
+- 2-4: 2 points
+- <2: 0 points
 
-**2. Casts Score (20 points maximum)**
-- Logarithmic scale based on cast count
-- Formula: `min(20, log10(casts + 1) * 6.67)`
-- Examples:
-  - 0 casts = 0 points
-  - 10 casts = 6.67 points
-  - 100 casts = 13.34 points
-  - 1,000 casts = 20 points
-  - 5,000+ casts = 20 points (capped)
+#### **GM Score (0-100 Points)**
+Measures community engagement through "Good Morning" (GM) casts:
 
-**3. Power Badge (25 points)**
-- Binary: User has Farcaster Power Badge or not
-- Power Badge indicates active, trusted community member
-- Awarded by Farcaster protocol based on engagement and reputation
+| Metric | Weight | Description |
+|--------|--------|-------------|
+| **GM Cast Count** | 30% | Number of GM casts (max 30 pts for 15+ casts) |
+| **Average Likes** | 25% | Average likes on GM casts (max 25 pts) |
+| **Average Recasts** | 20% | Average recasts on GM casts (max 20 pts) |
+| **Consistency** | 25% | Unique days with GM casts (max 25 pts for 12.5+ days) |
 
-**4. Verified Addresses (15 points)**
-- Binary: User has verified ETH or SOL address
-- Verification proves ownership of on-chain assets
-- Increases trust and authenticity
-
-**5. Influencer Status (10 points)**
-- Criteria:
-  - Must have 1,000+ followers
-  - Following/followers ratio < 0.5 (selective following)
-- Indicates high-value content creator
-- Examples:
-  - 2,000 followers, 500 following = Influencer ✅
-  - 1,500 followers, 1,000 following = Not an influencer ❌
-
-#### **Calculation Example:**
-
-```javascript
-User Profile:
-- Followers: 1,250
-- Following: 450
-- Casts: 2,340
-- Power Badge: Yes
-- Verified Addresses: 2 (ETH + SOL)
-
-Score Calculation:
-- Followers: log10(1251) * 10 = 30.97 → 30 points
-- Casts: log10(2341) * 6.67 = 22.35 → 20 points (capped)
-- Power Badge: 25 points
-- Verified: 15 points
-- Influencer: (450/1250 = 0.36 < 0.5) → 10 points
-
-Total Farcaster Score: 30 + 20 + 25 + 15 + 10 = 100 points
+**Formula:**
+```
+GM Score = (gmCastCount × 2) + (avgLikes × 2) + (avgRecasts × 3) + (uniqueDays × 2)
+Maximum: 100 points
 ```
 
----
-
-### GM Score (0-100 points)
-
-The GM Score measures a user's community engagement through "GM" (Good Morning) casts, a popular Farcaster ritual.
-
-#### **Component Breakdown:**
-
-**1. Frequency Score (40 points maximum)**
-- Based on GMs per day over last 30 days
-- Formula: `min(40, (gm_casts / period_days) * 30)`
-- Examples:
-  - 0.5 GM/day (15/month) = 15 points
-  - 1 GM/day (30/month) = 30 points
-  - 2 GM/day (60/month) = 40 points (capped)
-
-**2. Engagement Score (35 points maximum)**
-- Based on average engagement per GM cast
-- Formula: `min(35, gm_engagement_rate * 2)`
-- Engagement = (likes + recasts + replies) / gm_cast_count
-- Examples:
-  - 5 engagements/GM = 10 points
-  - 10 engagements/GM = 20 points
-  - 17.5+ engagements/GM = 35 points (capped)
-
-**3. Consistency Score (25 points maximum)**
-- Based on unique days with GM casts
-- Formula: `(unique_days / period_days) * 25`
-- Examples:
-  - 15/30 days = 12.5 points
-  - 25/30 days = 20.83 points
-  - 30/30 days = 25 points
-
-#### **Calculation Example:**
-
-```javascript
-GM Stats (last 30 days):
-- Total GMs: 45
-- Unique days: 28
-- Total likes: 380
-- Total recasts: 150
-- Total replies: 95
-
-Calculation:
-- Frequency: (45/30) * 30 = 45 → 40 points (capped)
-- Engagement: (380+150+95)/45 = 13.89 → 13.89 * 2 = 27.78 points
-- Consistency: (28/30) * 25 = 23.33 points
-
-Total GM Score: 40 + 27.78 + 23.33 = 91 points
+**Community Engagement Rating:**
+```
+Community Engagement = ((likesScore + recastsScore) / 45) × 100
 ```
 
----
+#### **Trust Score (0-100 Points)**
+Composite metric combining on-chain and social factors:
 
-### Trust Score (0-100 points)
+| Component | Weight | Description |
+|-----------|--------|-------------|
+| **Inverse Risk** | 40% | 100 - calculated risk score |
+| **Farcaster Score** | 30% | Social credibility from Farcaster |
+| **GM Score** | 20% | Community engagement level |
+| **Age Bonus** | 10% | Wallet age bonus (max at 365+ days) |
 
-The Trust Score is a composite metric that combines risk assessment, social verification, and wallet age into a single trustworthiness indicator.
-
-#### **Formula:**
+**Formula:**
 ```
-Trust Score = (40% Inverse Risk) + (30% Farcaster) + (20% GM) + (10% Age Bonus)
-```
+Trust Score = (inverseRisk × 0.4) + (farcasterScore × 0.3) + (gmScore × 0.2) + (ageBonus × 0.1)
 
-#### **Component Breakdown:**
-
-**1. Inverse Risk Component (40% weight)**
-- Formula: `(100 - risk_score) * 0.40`
-- Low risk wallets contribute more to trust
-- Examples:
-  - Risk Score 20 → (100-20) * 0.40 = 32 points
-  - Risk Score 50 → (100-50) * 0.40 = 20 points
-  - Risk Score 80 → (100-80) * 0.40 = 8 points
-
-**2. Farcaster Component (30% weight)**
-- Formula: `farcaster_score * 0.30`
-- Examples:
-  - Farcaster Score 80 → 80 * 0.30 = 24 points
-  - Farcaster Score 50 → 50 * 0.30 = 15 points
-  - Farcaster Score 0 → 0 * 0.30 = 0 points
-
-**3. GM Component (20% weight)**
-- Formula: `gm_score * 0.20`
-- Examples:
-  - GM Score 75 → 75 * 0.20 = 15 points
-  - GM Score 50 → 50 * 0.20 = 10 points
-  - GM Score 0 → 0 * 0.20 = 0 points
-
-**4. Age Bonus (10% weight maximum)**
-- Logarithmic scale based on wallet age
-- Formula: `min(10, log10(age_days + 1) * 4)`
-- Examples:
-  - 7 days old = 3.6 points
-  - 30 days old = 6.0 points
-  - 90 days old = 7.9 points
-  - 365 days old = 10 points
-  - 1000+ days old = 10 points (capped)
-
-**5. Social Verification Bonus**
-- Additional bonus if Farcaster Score > 50
-- Reduces risk score by 15 points
-- Applied separately to risk calculation
-
-#### **Calculation Example:**
-
-```javascript
-Wallet Data:
-- Risk Score: 22
-- Farcaster Score: 87
-- GM Score: 75
-- Wallet Age: 365 days
-
-Trust Score Calculation:
-- Inverse Risk: (100-22) * 0.40 = 31.2 points
-- Farcaster: 87 * 0.30 = 26.1 points
-- GM: 75 * 0.20 = 15.0 points
-- Age Bonus: min(10, log10(366) * 4) = 10.0 points
-
-Total Trust Score: 31.2 + 26.1 + 15.0 + 10.0 = 82.3 ≈ 82 points
-
-Trust Level: HIGH TRUST (70-85 range)
+Where:
+- inverseRisk = (100 - riskScore) × 0.4
+- farcasterScore = Farcaster Score × 0.3
+- gmScore = GM Score × 0.2
+- ageBonus = min(walletAgeInDays / 365, 1) × 10
 ```
 
----
+### 3. **Enhanced Risk Assessment**
 
-### Risk Score (0-100 points)
+#### **Social Verification Bonus**
+Wallets with strong Farcaster presence receive risk reduction:
+- **Farcaster Score > 50**: -15 risk points
+- **Farcaster Score ≤ 50**: 0 adjustment
 
-The Risk Score identifies potentially problematic wallets using pattern recognition and behavioral analysis.
+#### **Multi-Factor Trust Evaluation**
+Reduces false positives by considering:
+1. **On-Chain Activity**: Transaction history, volume, protocols used
+2. **Social Proof**: Farcaster profile strength and engagement
+3. **Community Standing**: GM participation and consistency
+4. **Time Factor**: Wallet age and activity duration
 
-#### **Risk Components:**
+#### **Color-Coded Risk Levels**
+Dynamic neon borders indicate trust levels:
+- **🟢 High Trust (80-100)**: Green neon glow - Safe interaction
+- **🔵 Medium Trust (60-79)**: Blue neon glow - Monitor closely
+- **🟡 Low Trust (40-59)**: Orange neon glow - Exercise caution
+- **🔴 Very Low Trust (0-39)**: Red neon glow - High risk
 
-**1. Age Risk (0-25 points)**
-- New wallets are higher risk
-- < 7 days = 25 points
-- 7-30 days = 15 points
-- 30-90 days = 10 points
-- 90+ days = 5 points
+## 🎨 3D Neon Design System
 
-**2. Balance Risk (0-20 points)**
-- Unusual balance patterns
-- Very high balance with low activity = honeypot indicator
-- Empty wallet = potential bot/spam
+### Color Scheme
+- **Farcaster Blue**: `#009dff` - Represents social credibility
+- **GM Green**: `#00ff9d` - Represents community engagement
+- **Trust Purple**: Gradient blend of blue and green
 
-**3. Activity Risk (0-25 points)**
-- Transaction patterns
-- Too few transactions = suspicious
-- Excessive transactions = bot-like behavior
+### CSS Animations
 
-**4. Diversity Risk (0-15 points)**
-- Protocol interaction variety
-- Single protocol = 15 points (specialized or bot)
-- 2-5 protocols = 10 points
-- 6-10 protocols = 5 points
-- 10+ protocols = 0 points (good diversity)
+```css
+/* Neon Pulse - 3 second cycle */
+@keyframes neon-pulse {
+  0%, 100% { box-shadow: 0 0 10px rgba(0, 157, 255, 0.5); }
+  50% { box-shadow: 0 0 25px rgba(0, 157, 255, 1), 0 0 50px rgba(0, 157, 255, 0.5); }
+}
 
-**5. Pattern Risk (0-15 points)**
-- Behavioral anomalies
-- Honeypot patterns
-- Bot-like behavior
-- Scam indicators
+/* Neon Pulse Blue - Farcaster theme */
+@keyframes neon-pulse-blue {
+  0%, 100% { box-shadow: 0 0 15px #009dff; }
+  50% { box-shadow: 0 0 30px #009dff, 0 0 60px #009dff; }
+}
 
-#### **Risk Levels:**
+/* Float 3D - 4-6 second floating effect */
+@keyframes float-3d {
+  0%, 100% { transform: translateY(0px) rotateX(0deg); }
+  50% { transform: translateY(-10px) rotateX(5deg); }
+}
 
-| Score Range | Level | Color | Description |
-|------------|-------|-------|-------------|
-| 0-25 | LOW | 🟢 Green | Safe, trusted wallet |
-| 26-50 | MEDIUM | 🟡 Orange | Monitor activity |
-| 51-60 | HIGH | 🔴 Red | Exercise caution |
-| 61-100 | CRITICAL | 🔴 Dark Red | Avoid interaction |
-
-#### **Detection Flags:**
-
-**Honeypot Detection:**
-- High balance (>50 SOL) + low activity (<10 txns)
-- Large incoming transfers with no outgoing
-- Single large deposit with no subsequent activity
-
-**Bot Detection:**
-- Excessive NFT minting (>100 mints)
-- Low protocol diversity (<3)
-- Repetitive transaction patterns
-- High frequency, low value transactions
-
-**Scam Wallet:**
-- Multiple incoming transfers from different sources
-- Rapid conversion to stablecoins/SOL
-- Quick withdrawal to new addresses
-- Flagged by community reports
-
-**Airdrop Farmer:**
-- Many transactions but minimal trading
-- Multiple small interactions with airdrop protocols
-- Low actual portfolio value despite high activity
-
-**Founder/VC Wallet:**
-- Old wallet (>180 days)
-- High activity + diverse protocols
-- Large volume transactions
-- Significant token holdings
-
----
-
-## 🗄️ Database Schema
-
-### Table 1: wallet_analysis
-
-Primary table storing comprehensive wallet analysis data.
-
-**Key Columns:**
-
-```sql
--- Identity
-wallet_address VARCHAR(44) PRIMARY KEY
-first_transaction_date TIMESTAMP
-
--- Basic Metrics
-age_days INTEGER
-total_sol_transacted DECIMAL(20, 9)
-total_transactions INTEGER
-protocol_diversity INTEGER
-token_count INTEGER
-portfolio_value_usd DECIMAL(20, 2)
-current_balance_sol DECIMAL(20, 9)
-
--- Activity Breakdown
-swap_count INTEGER
-lp_stake_count INTEGER
-airdrop_count INTEGER
-nft_mint_count INTEGER
-nft_sale_count INTEGER
-
--- Risk Assessment
-risk_score INTEGER (0-100)
-risk_level VARCHAR(20)
-wallet_type VARCHAR(50)
-is_honeypot BOOLEAN
-is_bot BOOLEAN
-is_scam BOOLEAN
-
--- Farcaster Data
-farcaster_fid INTEGER
-farcaster_username VARCHAR(255)
-farcaster_display_name VARCHAR(255)
-farcaster_bio TEXT
-farcaster_followers INTEGER
-farcaster_following INTEGER
-farcaster_casts INTEGER
-farcaster_verified BOOLEAN
-farcaster_power_badge BOOLEAN
-farcaster_active_badge BOOLEAN
-farcaster_score INTEGER (0-100)
-
--- GM Score System
-gm_casts_count INTEGER
-gm_total_likes INTEGER
-gm_total_recasts INTEGER
-gm_engagement_rate DECIMAL(5, 2)
-gm_consistency_days INTEGER
-gm_score INTEGER (0-100)
-
--- Trust Score
-trust_score INTEGER (0-100)
-trust_breakdown JSONB
-social_verification_bonus INTEGER
-
--- Metadata
-last_updated TIMESTAMP
-analysis_version VARCHAR(10)
+/* Glow Text - 2 second cycle */
+@keyframes glow-text {
+  0%, 100% { text-shadow: 0 0 10px rgba(255, 255, 255, 0.5); }
+  50% { text-shadow: 0 0 20px rgba(255, 255, 255, 1), 0 0 30px rgba(0, 157, 255, 0.8); }
+}
 ```
 
-### Table 2: transactions
+### Score Orbs
+**Trust Score Orb (120px Circular Display):**
+- Dual rotating rings with blue-green gradient
+- 3D hover lift effect
+- Glass morphism with backdrop-filter blur
+- Dynamic glow intensity based on score
 
-Individual transaction records for detailed analysis.
+```css
+.trust-orb {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #009dff, #00ff9d);
+  backdrop-filter: blur(10px);
+  animation: float-3d 4s ease-in-out infinite;
+  position: relative;
+}
 
-**Purpose:** Track every transaction for pattern recognition and historical analysis.
+.trust-orb::before,
+.trust-orb::after {
+  content: '';
+  position: absolute;
+  top: -5px;
+  left: -5px;
+  right: -5px;
+  bottom: -5px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  animation: rotate 3s linear infinite;
+}
 
-**Key Columns:**
-- `signature` - Unique transaction identifier
-- `block_time` - When transaction occurred
-- `tx_type` - SWAP, TRANSFER, LP_STAKE, AIRDROP, NFT_MINT, etc.
-- `programs` - Array of program IDs interacted
-- `token_transfers` - JSONB array of token movements
-- `sol_change` - Net SOL change (positive/negative)
+.trust-orb::before {
+  border-top-color: #009dff;
+  border-right-color: #009dff;
+}
 
-### Table 3: arbitrage_opportunities
+.trust-orb::after {
+  border-bottom-color: #00ff9d;
+  border-left-color: #00ff9d;
+  animation-direction: reverse;
+}
+```
 
-Tracks detected and executed arbitrage opportunities.
+## 📊 UI Components
 
-**Purpose:** Monitor profitable trading opportunities and execution success rate.
+### 1. **Hero Header**
+```jsx
+<div className="hero-header">
+  <h1 className="animated-gradient-text glow-text">
+    🔍 Advanced Wallet Analysis
+  </h1>
+  <p className="subtitle">Social Intelligence + On-Chain Metrics</p>
+</div>
+```
 
-**Key Columns:**
-- `opportunity_type` - FLASH_LOAN, TRIANGULAR, HYBRID
-- `token_path` - Token sequence (e.g., SOL → USDC → RAY → SOL)
-- `dex_path` - DEX sequence (e.g., Raydium → Orca → Jupiter)
-- `expected_profit_sol` - Calculated profit
-- `actual_profit_sol` - Real profit after execution
-- `status` - DETECTED, EXECUTING, COMPLETED, FAILED, EXPIRED
-- `confidence_score` - Trade confidence (0-100)
+### 2. **Trust Score Orb**
+```jsx
+<div className="trust-orb-container">
+  <div className="trust-orb" data-score={trustScore.totalScore}>
+    <div className="score-display">
+      <span className="score-value">{trustScore.totalScore}</span>
+      <span className="score-label">Trust</span>
+    </div>
+  </div>
+</div>
+```
 
-### Table 4: risk_assessments
+### 3. **Side-by-Side Social Cards**
+```jsx
+<div className="social-cards-grid">
+  <div className="social-card farcaster-card">
+    <div className="card-header" style={{borderColor: '#009dff'}}>
+      <h3>🟦 Farcaster Score</h3>
+    </div>
+    <div className="score-display">{farcasterScore.totalScore}/100</div>
+    <div className="factors-grid">
+      <Factor label="Followers" value={farcasterScore.factors.followers} />
+      <Factor label="Casts" value={farcasterScore.factors.casts} />
+      <Factor label="Power Badge" value={farcasterScore.factors.powerBadge} />
+      <Factor label="Verified" value={farcasterScore.factors.verified} />
+      <Factor label="Influencer" value={farcasterScore.factors.influencer} />
+    </div>
+  </div>
+  
+  <div className="social-card gm-card">
+    <div className="card-header" style={{borderColor: '#00ff9d'}}>
+      <h3>🟩 GM Score</h3>
+    </div>
+    <div className="score-display">{gmScore.totalScore}/100</div>
+    <div className="metrics-grid">
+      <Metric label="GM Casts" value={gmScore.gmCastCount} />
+      <Metric label="Avg Likes" value={gmScore.averageLikes.toFixed(1)} />
+      <Metric label="Avg Recasts" value={gmScore.averageRecasts.toFixed(1)} />
+      <Metric label="Consistency" value={`${gmScore.consistency} days`} />
+    </div>
+  </div>
+</div>
+```
 
-Historical risk assessment data.
+### 4. **8-Card Metadata Grid**
+```jsx
+<div className="metadata-grid">
+  <MetadataCard icon="💰" label="Balance" value={`${balance.toFixed(2)} SOL`} />
+  <MetadataCard icon="📊" label="Transactions" value={txCount} />
+  <MetadataCard icon="🎨" label="NFTs" value={nftCount} />
+  <MetadataCard icon="🏦" label="DeFi Activity" value={defiScore} />
+  <MetadataCard icon="📅" label="Age" value={`${ageInDays} days`} />
+  <MetadataCard icon="🌐" label="Protocols" value={protocolCount} />
+  <MetadataCard icon="💎" label="Token Types" value={tokenTypes} />
+  <MetadataCard icon="🎯" label="Risk Level" value={riskLevel} />
+</div>
+```
 
-**Purpose:** Track how wallet risk profile changes over time.
-
-**Key Columns:**
-- `risk_score` - Overall risk (0-100)
-- `age_risk`, `balance_risk`, `activity_risk`, `diversity_risk`, `pattern_risk`
-- `honeypot_indicators`, `bot_indicators`, `scam_indicators` (JSONB)
-- `assessment_reason` - Why assessment was triggered
-- `assessed_at` - Timestamp
-
-### Table 5: trading_history
-
-Comprehensive trading activity.
-
-**Purpose:** Performance tracking and strategy analysis.
-
-**Key Columns:**
-- `trade_type` - SWAP, ARBITRAGE, FLASH_LOAN, LIMIT_ORDER
-- `token_in/out` - Token pair details
-- `dex` - Which DEX was used
-- `profit_loss_usd` - Trade performance
-- `slippage` - Actual slippage encountered
-- `strategy_used`, `preset_name` - Trading strategy metadata
-
----
-
-## 📚 Database Views
-
-### 1. high_risk_wallets
-
-Pre-filtered view of wallets with risk_score > 60.
-
-**Use Case:** Security monitoring, fraud detection
-
-**Columns:** wallet_address, risk_score, risk_level, trust_score, farcaster_score, wallet_type
-
-### 2. top_trusted_wallets
-
-Wallets with trust_score >= 70.
-
-**Use Case:** Finding reliable trading partners, community leaders
-
-**Columns:** wallet_address, trust_score, farcaster_score, gm_score, portfolio_value_usd
-
-### 3. active_social_wallets
-
-Wallets with Farcaster or GM activity.
-
-**Use Case:** Community engagement, social marketing
-
-**Columns:** wallet_address, farcaster_username, followers, casts, gm_casts_count, trust_score
-
-### 4. recent_profitable_trades
-
-Last 100 successful trades with profit > 0.
-
-**Use Case:** Strategy analysis, performance tracking
-
-**Columns:** wallet_address, trade_type, tokens, profit_loss_usd, trust_score
-
-### 5. arbitrage_summary
-
-Aggregate statistics for arbitrage opportunities.
-
-**Use Case:** Strategy effectiveness, opportunity analysis
-
-**Columns:** opportunity_type, total_count, completed_count, avg_expected_profit, total_actual_profit
-
----
+### 5. **Activity Summary**
+```jsx
+<div className="activity-summary">
+  <h3>📈 Recent Activity</h3>
+  <div className="metrics-row">
+    <Metric icon="💸" label="Total Volume" value={`$${totalVolume.toLocaleString()}`} />
+    <Metric icon="🔄" label="Swaps" value={swapCount} />
+    <Metric icon="🌊" label="LP Stakes" value={lpStakes} />
+    <Metric icon="🎁" label="Airdrops" value={airdropsClaimed} />
+    <Metric icon="🖼️" label="NFT Activity" value={nftActivity} />
+  </div>
+</div>
+```
 
 ## 🔌 API Integration
 
 ### Neynar Farcaster API
 
-**Base URL:** `https://api.neynar.com/v2`
-
-**Authentication:** API Key in header
-
-**Key Endpoints:**
-
-1. **Get User by Verification**
-   ```
-   GET /farcaster/user/by-verification?address={wallet_address}
-   ```
-   Returns Farcaster profile linked to wallet address.
-
-2. **Get User by FID**
-   ```
-   GET /farcaster/user?fid={fid}
-   ```
-   Returns full user profile by Farcaster ID.
-
-3. **Get User Casts**
-   ```
-   GET /farcaster/casts?fid={fid}&limit=100
-   ```
-   Returns recent casts with engagement data.
-
-**Rate Limits:**
-- Free Tier: 100 requests/hour
-- Pro Tier: 10,000 requests/hour
-- Enterprise: Custom limits
-
----
-
-## 💻 Usage Examples
-
-### 1. Analyze a Wallet
-
-```javascript
-const { getCompleteProfile } = require('./src/integrations/farcaster');
-const db = require('./db/database');
-
-async function analyzeWallet(walletAddress) {
-    // Get Farcaster profile and scores
-    const profile = await getCompleteProfile(walletAddress);
-    
-    // Calculate trust score
-    const riskScore = 22; // From risk assessment
-    const trustData = calculateTrustScore(
-        riskScore,
-        profile.farcaster_score,
-        profile.gm_score,
-        365 // wallet age in days
-    );
-    
-    // Store in database
-    await db.walletAnalysis.upsert({
-        wallet_address: walletAddress,
-        ...profile,
-        ...trustData,
-        age_days: 365,
-        risk_score: riskScore,
-        risk_level: 'LOW'
-    });
-    
-    console.log(`Trust Score: ${trustData.trust_score}`);
-    console.log(`Farcaster Score: ${profile.farcaster_score}`);
-    console.log(`GM Score: ${profile.gm_score}`);
-}
+#### Authentication
+```typescript
+const neynarApiKey = process.env.NEYNAR_API_KEY;
+const headers = {
+  'api_key': neynarApiKey,
+};
 ```
 
-### 2. Find High Trust Wallets
-
-```javascript
-async function findTrustedWallets() {
-    const wallets = await db.walletAnalysis.getTopTrusted(50);
-    
-    wallets.forEach(wallet => {
-        console.log(`${wallet.wallet_address}: Trust ${wallet.trust_score}`);
-    });
-}
+#### Profile Lookup
+```typescript
+// Get Farcaster profile by Solana wallet address
+const response = await axios.get(
+  'https://api.neynar.com/v2/farcaster/user/bulk-by-address',
+  {
+    params: {
+      addresses: walletAddress,
+      address_types: 'verified_addresses',
+    },
+    headers,
+  }
+);
 ```
 
-### 3. Monitor High Risk Wallets
-
-```javascript
-async function monitorHighRisk() {
-    const wallets = await db.walletAnalysis.getHighRisk(100);
-    
-    wallets.forEach(wallet => {
-        console.log(`⚠️ ${wallet.wallet_address}: Risk ${wallet.risk_score} (${wallet.risk_level})`);
-    });
-}
+#### Get User Casts
+```typescript
+// Fetch recent casts from a user
+const response = await axios.get(
+  'https://api.neynar.com/v2/farcaster/feed/user/casts',
+  {
+    params: {
+      fid: farcasterUserId,
+      limit: 100,
+    },
+    headers,
+  }
+);
 ```
 
----
+### Usage Example
 
-## 🎨 UI Component Guidelines
+```typescript
+import { FarcasterScoring } from './services/farcasterScoring';
+import { WalletScoring } from './services/walletScoring';
+import { Connection, PublicKey } from '@solana/web3.js';
 
-### Color Scheme
+// Initialize
+const connection = new Connection(rpcUrl);
+const walletScoring = new WalletScoring(connection, neynarApiKey);
 
-**Farcaster Blue:** `#009dff`
-- Used for Farcaster-related metrics
-- Social verification badges
-- Profile links
+// Analyze wallet with social intelligence
+const walletAddress = new PublicKey('YourWalletAddressHere');
+const analysis = await walletScoring.analyzeWallet(walletAddress, true);
 
-**GM Green:** `#00ff9d`
-- Used for GM Score displays
-- Community engagement metrics
-- Social activity indicators
-
-**Gradient Combinations:**
-- Hero header: Purple → Blue → Green
-- Score orbs: Dual rotating rings (blue/green)
-- Text highlights: Cyan → Blue → Green
-
-### Animations
-
-**neon-pulse (3s duration):**
-```css
-@keyframes neon-pulse {
-    0%, 100% { box-shadow: 0 0 20px #009dff; }
-    50% { box-shadow: 0 0 40px #009dff, 0 0 60px #009dff; }
-}
+console.log('Trust Score:', analysis.socialIntelligence?.trustScore.totalScore);
+console.log('Farcaster Score:', analysis.socialIntelligence?.farcasterScore.totalScore);
+console.log('GM Score:', analysis.socialIntelligence?.gmScore.totalScore);
+console.log('Risk Adjustment:', analysis.socialIntelligence?.riskAdjustment);
 ```
 
-**float-3d (4-6s duration):**
-```css
-@keyframes float-3d {
-    0%, 100% { transform: translateY(0) rotateX(0); }
-    50% { transform: translateY(-10px) rotateX(5deg); }
-}
+## 💾 Database Infrastructure
+
+### PostgreSQL Schema
+
+```sql
+-- Wallet Analysis Table
+CREATE TABLE wallet_analysis (
+  id SERIAL PRIMARY KEY,
+  wallet_address VARCHAR(44) UNIQUE NOT NULL,
+  total_score INTEGER NOT NULL,
+  tier VARCHAR(20) NOT NULL,
+  balance_score INTEGER,
+  transaction_score INTEGER,
+  nft_score INTEGER,
+  defi_score INTEGER,
+  age_score INTEGER,
+  diversification_score INTEGER,
+  farcaster_score INTEGER,
+  gm_score INTEGER,
+  trust_score INTEGER,
+  risk_adjustment INTEGER,
+  airdrop_priority INTEGER,
+  estimated_value DECIMAL(20, 2),
+  analyzed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Farcaster Profiles Table
+CREATE TABLE farcaster_profiles (
+  id SERIAL PRIMARY KEY,
+  wallet_address VARCHAR(44) NOT NULL,
+  fid INTEGER NOT NULL,
+  username VARCHAR(100),
+  display_name VARCHAR(200),
+  follower_count INTEGER DEFAULT 0,
+  following_count INTEGER DEFAULT 0,
+  cast_count INTEGER DEFAULT 0,
+  power_badge BOOLEAN DEFAULT FALSE,
+  verified_eth_count INTEGER DEFAULT 0,
+  verified_sol_count INTEGER DEFAULT 0,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (wallet_address) REFERENCES wallet_analysis(wallet_address)
+);
+
+-- GM Casts Tracking Table
+CREATE TABLE gm_casts (
+  id SERIAL PRIMARY KEY,
+  wallet_address VARCHAR(44) NOT NULL,
+  cast_hash VARCHAR(100) NOT NULL,
+  cast_text TEXT,
+  likes INTEGER DEFAULT 0,
+  recasts INTEGER DEFAULT 0,
+  replies INTEGER DEFAULT 0,
+  cast_date DATE NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (wallet_address) REFERENCES wallet_analysis(wallet_address)
+);
+
+-- Trust Scores History Table
+CREATE TABLE trust_scores_history (
+  id SERIAL PRIMARY KEY,
+  wallet_address VARCHAR(44) NOT NULL,
+  trust_score INTEGER NOT NULL,
+  inverse_risk DECIMAL(5, 2),
+  farcaster_contribution DECIMAL(5, 2),
+  gm_contribution DECIMAL(5, 2),
+  age_bonus DECIMAL(5, 2),
+  calculated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (wallet_address) REFERENCES wallet_analysis(wallet_address)
+);
+
+-- Indexes for performance
+CREATE INDEX idx_wallet_address ON wallet_analysis(wallet_address);
+CREATE INDEX idx_tier ON wallet_analysis(tier);
+CREATE INDEX idx_trust_score ON wallet_analysis(trust_score);
+CREATE INDEX idx_analyzed_at ON wallet_analysis(analyzed_at);
+CREATE INDEX idx_farcaster_fid ON farcaster_profiles(fid);
+CREATE INDEX idx_gm_cast_date ON gm_casts(cast_date);
 ```
 
-**glow-text (2s duration):**
-```css
-@keyframes glow-text {
-    0%, 100% { text-shadow: 0 0 10px #00ff9d; }
-    50% { text-shadow: 0 0 20px #00ff9d, 0 0 30px #00ff9d; }
-}
+### Connection Pooling
+
+```typescript
+import { Pool } from 'pg';
+
+const pool = new Pool({
+  user: process.env.DB_USER,
+  host: process.env.DB_HOST,
+  database: process.env.DB_NAME,
+  password: process.env.DB_PASSWORD,
+  port: parseInt(process.env.DB_PORT || '5432'),
+  max: 20, // Maximum number of clients
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 2000,
+});
+
+export default pool;
 ```
 
-### Score Orb Design
+### API Endpoints
 
-```html
-<div class="score-orb">
-    <div class="orb-rings">
-        <div class="ring ring-blue"></div>
-        <div class="ring ring-green"></div>
-    </div>
-    <div class="orb-content">
-        <div class="score-value">82</div>
-        <div class="score-label">Trust Score</div>
-    </div>
-</div>
+#### 1. Analyze Wallet
+```typescript
+POST /api/wallet/analyze
+Body: { walletAddress: string, includeSocial: boolean }
+Response: WalletScore
 ```
 
----
+#### 2. Get Trust Score
+```typescript
+GET /api/wallet/:address/trust
+Response: TrustScore
+```
 
-## 🚀 Pro Tips
+#### 3. Get Farcaster Profile
+```typescript
+GET /api/wallet/:address/farcaster
+Response: FarcasterProfile
+```
 
-### Optimization
+#### 4. Get GM Score
+```typescript
+GET /api/wallet/:address/gm
+Response: GMScore
+```
 
-1. **Database Indexes:** Already created on wallet_address, risk_score, trust_score
-2. **Connection Pooling:** Configured for 2-20 connections
-3. **Caching:** Store Farcaster profiles for 24 hours to reduce API calls
-4. **Batch Processing:** Analyze multiple wallets in parallel
+## 🎯 Use Cases
 
-### Security
+### 1. **Airdrop Eligibility**
+- **High Trust Wallets (80-100)**: Priority airdrop recipients
+- **Medium Trust (60-79)**: Standard eligibility
+- **Low Trust (<60)**: Manual review required
 
-1. **Never expose API keys** in client-side code
-2. **Validate wallet addresses** before database queries
-3. **Sanitize inputs** to prevent SQL injection
-4. **Rate limit** API endpoints to prevent abuse
+### 2. **Risk Assessment for DeFi**
+- Evaluate counterparties in P2P trades
+- Assess borrower credibility for lending protocols
+- Filter bot accounts from genuine users
+
+### 3. **Community Building**
+- Identify engaged community members (high GM score)
+- Reward consistent participation
+- Build trust networks based on social proof
+
+### 4. **Anti-Sybil Protection**
+- Cross-reference on-chain + social activity
+- Detect coordinated fake accounts
+- Validate genuine user participation
+
+## 💡 Pro Tips
+
+### Optimization Strategies
+
+1. **Cache Social Data**: Store Farcaster data for 24 hours to reduce API calls
+2. **Batch Processing**: Analyze multiple wallets in parallel with rate limiting
+3. **Progressive Loading**: Load on-chain data first, social data second
+4. **Lazy Evaluation**: Only fetch social intelligence when needed
 
 ### Best Practices
 
-1. **Regular Updates:** Re-analyze wallets every 24-48 hours
-2. **Social Verification:** Prioritize wallets with Farcaster profiles
-3. **Trust Score Threshold:** Use 70+ for trusted interactions
-4. **Risk Monitoring:** Alert on risk_score increases >20 points
+1. **API Key Management**: Store NEYNAR_API_KEY in environment variables
+2. **Error Handling**: Gracefully degrade if Farcaster API is unavailable
+3. **Rate Limiting**: Respect Neynar's rate limits (100 requests/minute)
+4. **Data Privacy**: Only display public Farcaster information
 
----
+### Performance Benchmarks
 
-## 📈 Performance Metrics
+- Wallet analysis (on-chain only): ~2-3 seconds
+- Wallet analysis (with social): ~5-7 seconds
+- Batch analysis (10 wallets): ~30-40 seconds
+- Database query: <100ms
 
-### Expected Query Times
+## 🔐 Security Considerations
 
-- Single wallet lookup: <10ms
-- Top trusted wallets (100): <50ms
-- High risk wallets (100): <50ms
-- Transaction history (50): <30ms
-- Risk assessment insert: <20ms
+1. **API Key Protection**: Never expose NEYNAR_API_KEY in client-side code
+2. **Input Validation**: Validate wallet addresses before API calls
+3. **SQL Injection Prevention**: Use parameterized queries
+4. **Rate Limiting**: Implement request throttling
+5. **Data Sanitization**: Clean all user inputs and API responses
 
-### Database Size Estimates
+## 🚀 Getting Started
 
-- 10K wallets: ~50 MB
-- 100K wallets: ~500 MB
-- 1M wallets: ~5 GB
-- 10M wallets: ~50 GB
+### 1. Get Neynar API Key
+Sign up at [neynar.com](https://neynar.com) to get your API key.
 
-### API Call Budget
+### 2. Configure Environment
+```bash
+# Add to .env
+NEYNAR_API_KEY=your_neynar_api_key_here
+```
 
-- Initial analysis: 3 calls (profile + casts + GM stats)
-- Update: 1 call (profile only)
-- Recommended: Update high-activity wallets daily, others weekly
+### 3. Initialize Services
+```typescript
+import { config } from './config';
+import { FarcasterScoring } from './services/farcasterScoring';
+import { WalletScoring } from './services/walletScoring';
+import { Connection } from '@solana/web3.js';
 
----
+const connection = new Connection(config.solana.rpcUrl);
+const walletScoring = new WalletScoring(
+  connection,
+  config.neynar.apiKey
+);
+```
 
-## 🔧 Troubleshooting
+### 4. Analyze Wallets
+```typescript
+const analysis = await walletScoring.analyzeWallet(
+  new PublicKey(walletAddress),
+  true // Include social intelligence
+);
+```
 
-### Common Issues
+## 📈 Roadmap
 
-**"Cannot connect to database"**
-- Check PostgreSQL is running
-- Verify DB_HOST, DB_PORT, DB_USER, DB_PASSWORD in .env
-- Test connection: `psql -h localhost -U postgres -d gxq_wallet_analysis`
+### Phase 1 ✅ (Current)
+- Neynar Farcaster API integration
+- Farcaster Score algorithm
+- GM Score system
+- Trust Score composite
+- Basic UI components
 
-**"Neynar API error 401"**
-- Invalid NEYNAR_API_KEY
-- Get key from https://neynar.com
+### Phase 2 🔄 (In Progress)
+- Database persistence
+- Historical trend analysis
+- Batch processing optimization
+- API endpoint implementation
 
-**"Farcaster profile not found"**
-- Wallet not linked to Farcaster account
-- Try with known Farcaster wallet: `0x1234...` (ETH format)
+### Phase 3 📅 (Planned)
+- Machine learning risk models
+- Cross-chain identity verification
+- Advanced fraud detection
+- Community reputation graphs
 
-**"Trust score is 0"**
-- No Farcaster profile found
-- GM Score requires recent activity (last 30 days)
-- Age bonus requires wallet age > 7 days
+## 📚 Additional Resources
 
----
+- [Neynar API Documentation](https://docs.neynar.com)
+- [Farcaster Protocol](https://www.farcaster.xyz)
+- [Solana Web3.js](https://solana-labs.github.io/solana-web3.js)
+- [PostgreSQL Documentation](https://www.postgresql.org/docs)
 
-## 📝 Future Enhancements
+## 🤝 Contributing
 
-1. **Machine Learning:** Train model on historical data for better risk detection
-2. **Multi-Chain:** Support Ethereum, Polygon, Arbitrum addresses
-3. **Real-Time Alerts:** WebSocket notifications for risk score changes
-4. **Social Graph:** Map connections between wallets via Farcaster network
-5. **Reputation History:** Track trust score changes over time with visualizations
-6. **Community Reports:** Allow users to flag suspicious wallets
-7. **API Webhooks:** Push notifications for trust/risk threshold breaches
-
----
-
-## 📄 License
-
-MIT License - see LICENSE file for details
-
-## 🙏 Acknowledgments
-
-- **Neynar** - Farcaster API provider
-- **Farcaster** - Decentralized social protocol
-- **Solana** - Blockchain infrastructure
-- **PostgreSQL** - Database system
+We welcome contributions! Please see our contributing guidelines for:
+- Code style standards
+- Testing requirements
+- PR review process
+- Documentation updates
 
 ---
 
 **Built with ❤️ by GXQ STUDIO**
+
+*Version: 2.0.0*
+*Last Updated: November 2025*
