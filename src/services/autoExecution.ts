@@ -42,16 +42,32 @@ export class MEVProtection {
   }
   
   async calculatePriorityFee(urgency: 'low' | 'medium' | 'high'): Promise<number> {
-    // Calculate optimal priority fee based on network conditions
-    const baseFee = 1000; // microlamports
-    
-    const multipliers = {
-      low: 1,
-      medium: 2,
-      high: 5,
-    };
-    
-    return baseFee * multipliers[urgency];
+    try {
+      // Get recent prioritization fees from the network
+      const recentFees = await this.connection.getRecentPrioritizationFees();
+      
+      if (!recentFees || recentFees.length === 0) {
+        const baseFee = 10000; // Default: 10,000 microlamports
+        const multipliers = { low: 1, medium: 2, high: 5 };
+        return baseFee * multipliers[urgency];
+      }
+      
+      // Calculate median fee for stability
+      const fees = recentFees.map(f => f.prioritizationFee).sort((a, b) => a - b);
+      const medianFee = fees[Math.floor(fees.length / 2)] || 10000;
+      
+      // Apply multiplier based on urgency
+      const multipliers = { low: 1, medium: 2, high: 3 };
+      const adjustedFee = medianFee * multipliers[urgency];
+      
+      // Cap at reasonable maximum (500,000 microlamports = 0.0005 SOL)
+      return Math.min(adjustedFee, 500000);
+    } catch (error) {
+      console.error('Error calculating dynamic priority fee:', error);
+      const baseFee = 10000;
+      const multipliers = { low: 1, medium: 2, high: 5 };
+      return baseFee * multipliers[urgency];
+    }
   }
   
   async calculateDynamicSlippage(
