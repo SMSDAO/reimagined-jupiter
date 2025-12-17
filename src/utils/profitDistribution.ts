@@ -35,14 +35,14 @@ export class ProfitDistributionManager {
   calculateProfitSplit(totalProfit: number): ProfitSplit {
     const { profitDistribution } = config;
     
-    const reserveAmount = totalProfit * profitDistribution.reservePercentage;
-    const gasSlippageAmount = totalProfit * profitDistribution.gasSlippagePercentage;
-    const daoAmount = totalProfit * profitDistribution.daoPercentage;
+    const reserveAmount = totalProfit * profitDistribution.reserveWalletPercentage;
+    const gasSlippageAmount = totalProfit * profitDistribution.userWalletPercentage;
+    const daoAmount = totalProfit * profitDistribution.daoWalletPercentage;
     
     // Validate splits add up to 100%
-    const sum = profitDistribution.reservePercentage + 
-                profitDistribution.gasSlippagePercentage + 
-                profitDistribution.daoPercentage;
+    const sum = profitDistribution.reserveWalletPercentage + 
+                profitDistribution.userWalletPercentage + 
+                profitDistribution.daoWalletPercentage;
     
     if (Math.abs(sum - 1.0) > 0.001) {
       console.warn(`⚠️  Profit split percentages sum to ${(sum * 100).toFixed(2)}%, not 100%`);
@@ -120,8 +120,8 @@ export class ProfitDistributionManager {
       console.log(`   DAO (10%): ${(split.daoAmount / LAMPORTS_PER_SOL).toFixed(6)} SOL`);
       
       // Resolve reserve wallet address
-      const reserveWallet = await this.resolveWalletAddress(config.profitDistribution.reserveWallet);
-      const daoWallet = config.profitDistribution.daoWallet;
+      const reserveWallet = await this.resolveWalletAddress(config.profitDistribution.reserveWalletDomain);
+      const daoWallet = config.profitDistribution.daoWalletAddress;
       
       const transaction = new Transaction();
       
@@ -197,8 +197,8 @@ export class ProfitDistributionManager {
       console.log(`   DAO (10%): ${split.daoAmount.toFixed(6)}`);
       
       // Resolve reserve wallet address
-      const reserveWallet = await this.resolveWalletAddress(config.profitDistribution.reserveWallet);
-      const daoWallet = config.profitDistribution.daoWallet;
+      const reserveWallet = await this.resolveWalletAddress(config.profitDistribution.reserveWalletDomain);
+      const daoWallet = config.profitDistribution.daoWalletAddress;
       
       // Get associated token accounts
       const fromAta = await getAssociatedTokenAddress(tokenMint, fromKeypair.publicKey);
@@ -289,7 +289,7 @@ export class ProfitDistributionManager {
     console.log('');
     console.log(`  🏛️  DAO Wallet:`);
     console.log(`     ${split.daoAmount.toFixed(6)} ${tokenSymbol} (10%)`);
-    console.log(`     ${config.profitDistribution.daoWallet.toBase58().slice(0, 8)}...`);
+    console.log(`     ${config.profitDistribution.daoWalletAddress.toBase58().slice(0, 8)}...`);
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   }
 }

@@ -1,7 +1,6 @@
-import { Connection, PublicKey } from '@solana/web3.js';
+import { Connection } from '@solana/web3.js';
 import { JupiterV6Integration } from '../integrations/jupiter.js';
 import { SUPPORTED_TOKENS, config } from '../config/index.js';
-import { ArbitrageOpportunity } from '../types.js';
 import { SecurityValidator } from '../utils/security.js';
 import { 
   MarginfiProvider, 
@@ -257,7 +256,6 @@ export class EnhancedArbitrageScanner {
         for (const [providerName, provider] of this.flashLoanProviders.entries()) {
           const PERCENTAGE_DIVISOR = 100;
           const fee = provider.getFee() / PERCENTAGE_DIVISOR;
-          const outAmountB = parseInt(quoteAB.outAmount);
           const backToA = parseInt(quoteBA.outAmount);
           
           // Simple arbitrage check: borrow A, swap to B, swap back to A

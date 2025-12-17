@@ -75,6 +75,7 @@ export default function AirdropSpinGame({ tokenSymbol = 'GXQ', onWin }: SpinGame
   const canSpin = () => {
     if (!publicKey) return false;
     if (!lastSpin) return true;
+    // eslint-disable-next-line react-hooks/purity
     const now = Date.now();
     return now - lastSpin >= cooldownTime;
   };
@@ -149,6 +150,7 @@ export default function AirdropSpinGame({ tokenSymbol = 'GXQ', onWin }: SpinGame
         {/* Outer ring with segments */}
         <div className="absolute inset-0 rounded-full overflow-hidden glow-purple">
           <motion.div
+            // eslint-disable-next-line react-hooks/purity
             animate={spinning ? { rotate: 360 * 5 + Math.random() * 360 } : {}}
             transition={{ duration: 3, ease: [0.34, 1.56, 0.64, 1] }}
             className="absolute inset-0"

@@ -46,10 +46,10 @@ interface TickerResponse {
 const hermesClient = new HermesClient('https://hermes.pyth.network');
 
 // Initialize connection
-const connection = new Connection(
-  process.env.NEXT_PUBLIC_RPC_URL || 'https://api.mainnet-beta.solana.com',
-  'confirmed'
-);
+// const connection = new Connection(
+//   process.env.NEXT_PUBLIC_RPC_URL || 'https://api.mainnet-beta.solana.com',
+//   'confirmed'
+// );
 
 async function fetchPythPrices(): Promise<TokenPrice[]> {
   try {

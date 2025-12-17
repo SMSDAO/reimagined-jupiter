@@ -18,7 +18,7 @@ export default function TermsPage() {
           <section>
             <h2 className="text-2xl font-bold text-white mb-4">1. Acceptance of Terms</h2>
             <p className="text-gray-300 dark:text-gray-200 mb-4">
-              By accessing and using GXQ Studio platform ("Service"), you accept and agree to be bound by the terms
+              By accessing and using GXQ Studio platform (&quot;Service&quot;), you accept and agree to be bound by the terms
               and provision of this agreement. If you do not agree to these terms, please do not use our Service.
             </p>
           </section>

@@ -40,7 +40,9 @@ export default function Ticker({
         }
       });
       
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setPriceChanges(newChanges);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setPrevPrices(newPrevPrices);
     }
   }, [data, prevPrices]);

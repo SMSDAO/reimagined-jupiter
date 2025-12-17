@@ -141,7 +141,7 @@ export class FlashLoanArbitrage {
   
   getProviderInfo(): Array<{ name: string; fee: number; programId: PublicKey }> {
     const info: Array<{ name: string; fee: number; programId: PublicKey }> = [];
-    for (const [_name, provider] of this.providers.entries()) {
+    for (const provider of this.providers.values()) {
       const providerInfo = provider.getInfo();
       info.push({
         name: providerInfo.name,

@@ -170,6 +170,7 @@ export class SecurityValidator {
     return input
       .replace(/[<>]/g, '') // Remove HTML tags
       .replace(/[;]/g, '')  // Remove command separators
+      // eslint-disable-next-line no-control-regex
       .replace(/[\x00-\x1F\x7F]/g, '') // Remove control characters
       .trim()
       .slice(0, 1000); // Limit length

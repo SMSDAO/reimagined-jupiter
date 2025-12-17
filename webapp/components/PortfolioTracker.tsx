@@ -38,7 +38,9 @@ export default function PortfolioTracker() {
   useEffect(() => {
     const total = assets.reduce((sum, asset) => sum + asset.value, 0);
     const avgChange = assets.reduce((sum, asset) => sum + asset.change24h, 0) / assets.length;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setTotalValue(total);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setTotalChange(avgChange);
   }, [assets]);
 
