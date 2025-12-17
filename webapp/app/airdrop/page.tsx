@@ -3,11 +3,24 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useWallet, useConnection } from '@solana/wallet-adapter-react';
 import { motion } from 'framer-motion';
+import { 
+  fetchWalletMetrics, 
+  calculateWalletScore, 
+  getTierColor,
+  type WalletTier 
+} from '@/lib/wallet-utils';
+import { 
+  JupiterAirdropAPI, 
+  JitoAirdropAPI,
+  JupiterPriceAPI,
+  formatUSD 
+} from '@/lib/api-client';
 
-interface WalletScore {
+// Local interface for component-specific wallet score display
+interface WalletScoreDisplay {
   address: string;
   totalScore: number;
-  tier: 'WHALE' | 'DEGEN' | 'ACTIVE' | 'CASUAL' | 'NOVICE';
+  tier: WalletTier;
   balance: number;
   txCount: number;
   nftCount: number;
@@ -23,7 +36,7 @@ interface Airdrop {
 export default function AirdropPage() {
   const { publicKey } = useWallet();
   const { connection } = useConnection();
-  const [walletScore, setWalletScore] = useState<WalletScore | null>(null);
+  const [walletScore, setWalletScore] = useState<WalletScoreDisplay | null>(null);
   const [airdrops, setAirdrops] = useState<Airdrop[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -32,29 +45,70 @@ export default function AirdropPage() {
     
     setLoading(true);
     try {
-      // Fetch wallet score
-      const balance = await connection.getBalance(publicKey);
-      const signatures = await connection.getSignaturesForAddress(publicKey, { limit: 1000 });
+      // Fetch wallet metrics using utility function
+      const metrics = await fetchWalletMetrics(connection, publicKey);
       
-      const mockScore: WalletScore = {
+      // Calculate wallet score
+      const scoreResult = calculateWalletScore(metrics);
+      
+      const score: WalletScoreDisplay = {
         address: publicKey.toString(),
-        totalScore: 75,
-        tier: 'ACTIVE',
-        balance: balance / 1e9,
-        txCount: signatures.length,
-        nftCount: 12,
+        totalScore: scoreResult.totalScore,
+        tier: scoreResult.tier,
+        balance: metrics.balance,
+        txCount: metrics.txCount,
+        nftCount: metrics.nftCount,
       };
-      setWalletScore(mockScore);
+      setWalletScore(score);
 
-      // Mock airdrops
-      const mockAirdrops: Airdrop[] = [
-        { protocol: 'Jupiter', amount: '100 JUP', value: '$125', claimable: true },
-        { protocol: 'Jito', amount: '50 JTO', value: '$89', claimable: true },
-        { protocol: 'Pyth', amount: '25 PYTH', value: '$45', claimable: false },
-        { protocol: 'Kamino', amount: '75 KMNO', value: '$34', claimable: true },
-        { protocol: 'Marginfi', amount: '200 MRGN', value: '$67', claimable: false },
+      // Fetch real airdrops from APIs using utility functions
+      const fetchedAirdrops: Airdrop[] = [];
+      
+      // Check Jupiter airdrop
+      const jupiterEligibility = await JupiterAirdropAPI.checkEligibility(publicKey.toString());
+      if (jupiterEligibility.eligible && jupiterEligibility.amount) {
+        const jupPrice = await JupiterPriceAPI.getPrice('JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN');
+        const amount = jupiterEligibility.amount / 1e6;
+        
+        fetchedAirdrops.push({
+          protocol: 'Jupiter',
+          amount: `${amount.toFixed(2)} JUP`,
+          value: formatUSD(amount * jupPrice),
+          claimable: true,
+        });
+      }
+      
+      // Check Jito airdrop
+      const jitoEligibility = await JitoAirdropAPI.checkAllocation(publicKey.toString());
+      if (jitoEligibility.eligible && jitoEligibility.allocation) {
+        const jtoPrice = await JupiterPriceAPI.getPrice('jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL');
+        const amount = jitoEligibility.allocation / 1e9;
+        
+        fetchedAirdrops.push({
+          protocol: 'Jito',
+          amount: `${amount.toFixed(2)} JTO`,
+          value: formatUSD(amount * jtoPrice),
+          claimable: true,
+        });
+      }
+      
+      // Add placeholder for other protocols
+      const otherProtocols = [
+        { protocol: 'Pyth', claimable: false },
+        { protocol: 'Kamino', claimable: false },
+        { protocol: 'Marginfi', claimable: false },
       ];
-      setAirdrops(mockAirdrops);
+      
+      for (const proto of otherProtocols) {
+        fetchedAirdrops.push({
+          protocol: proto.protocol,
+          amount: 'N/A',
+          value: '$0.00',
+          claimable: proto.claimable,
+        });
+      }
+      
+      setAirdrops(fetchedAirdrops);
     } catch (error) {
       console.error('Error checking airdrops:', error);
     } finally {
@@ -63,14 +117,70 @@ export default function AirdropPage() {
   }, [publicKey, connection]);
 
   const claimAirdrop = async (airdrop: Airdrop) => {
-    alert(`Claiming ${airdrop.amount} from ${airdrop.protocol}...`);
-    // Implement actual claim logic
+    if (!publicKey) {
+      alert('Please connect your wallet first!');
+      return;
+    }
+
+    if (!airdrop.claimable) {
+      alert(`${airdrop.protocol} airdrop is not claimable for this wallet.`);
+      return;
+    }
+
+    try {
+      console.log('[Airdrop] Attempting to claim:', airdrop);
+      
+      // Real implementation would:
+      // 1. Fetch claim proof from protocol API
+      // 2. Create claim transaction
+      // 3. Sign and send transaction
+      // 4. Wait for confirmation
+      
+      alert(`Preparing to claim ${airdrop.amount} from ${airdrop.protocol}...\n\nNote: Actual claiming requires:\n- Valid claim proof from protocol\n- Transaction signing\n- Gas fees (~0.001 SOL)\n\nBackend integration needed for secure claim transactions.`);
+      
+      console.log('[Airdrop] Claim initiated for:', {
+        protocol: airdrop.protocol,
+        amount: airdrop.amount,
+        wallet: publicKey.toString(),
+      });
+    } catch (error) {
+      console.error('[Airdrop] Claim error:', error);
+      alert(`Failed to claim ${airdrop.protocol} airdrop. Please try again.`);
+    }
   };
 
   const claimAll = async () => {
+    if (!publicKey) {
+      alert('Please connect your wallet first!');
+      return;
+    }
+
     const claimable = airdrops.filter((a) => a.claimable);
-    alert(`Claiming ${claimable.length} airdrops...`);
-    // Implement batch claim logic
+    
+    if (claimable.length === 0) {
+      alert('No claimable airdrops available.');
+      return;
+    }
+
+    try {
+      console.log('[Airdrop] Batch claiming:', claimable);
+      
+      const totalValue = claimable.reduce(
+        (sum, a) => sum + parseFloat(a.value.replace('$', '')),
+        0
+      );
+      
+      alert(`Preparing to claim ${claimable.length} airdrops...\n\nTotal Value: $${totalValue.toFixed(2)}\nProtocols: ${claimable.map(a => a.protocol).join(', ')}\n\nNote: Batch claiming would:\n- Process each airdrop sequentially\n- Handle claim proofs and signatures\n- Require ~${(claimable.length * 0.001).toFixed(3)} SOL for gas\n\nBackend integration needed for secure batch operations.`);
+      
+      console.log('[Airdrop] Batch claim prepared:', {
+        count: claimable.length,
+        totalValue,
+        protocols: claimable.map(a => a.protocol),
+      });
+    } catch (error) {
+      console.error('[Airdrop] Batch claim error:', error);
+      alert('Failed to batch claim airdrops. Please try claiming individually.');
+    }
   };
 
   useEffect(() => {
@@ -79,15 +189,7 @@ export default function AirdropPage() {
     }
   }, [publicKey, checkAirdrops]);
 
-  const getTierColor = (tier: string) => {
-    switch (tier) {
-      case 'WHALE': return 'from-yellow-400 to-orange-500';
-      case 'DEGEN': return 'from-purple-400 to-pink-500';
-      case 'ACTIVE': return 'from-blue-400 to-cyan-500';
-      case 'CASUAL': return 'from-green-400 to-emerald-500';
-      default: return 'from-gray-400 to-gray-500';
-    }
-  };
+
 
   return (
     <div className="max-w-6xl mx-auto">

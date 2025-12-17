@@ -37,14 +37,17 @@ export default function PriceTicker() {
         
         const priceData: TokenPrice[] = POPULAR_TOKENS.map(token => {
           const priceInfo = data.data[token.mint];
-          // Use random 24h change for demo purposes (-5% to +5%)
-          // In production, this should come from historical price data
-          const mockChange = (Math.random() - 0.5) * 10;
+          // Note: Jupiter Price API v6 doesn't provide historical 24h change data
+          // The API only returns current price information
+          // For production, integrate Birdeye API or CoinGecko API for historical data
+          // Setting to 0 for now to indicate no change data available
+          const change24h = 0;
+          
           return {
             symbol: token.symbol,
             mint: token.mint,
             price: priceInfo?.price || 0,
-            change24h: mockChange
+            change24h: change24h
           };
         });
 

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Connection, PublicKey } from '@solana/web3.js';
 import { motion } from 'framer-motion';
+import { KNOWN_TOKENS } from '@/lib/api-client';
 
 // Types
 interface WalletAnalysis {
@@ -226,25 +227,72 @@ export default function WalletAnalysis() {
 
       console.log(`🎯 Wallet Type: ${walletType}`);
 
-      // Calculate portfolio value (simplified)
-      const portfolioValue = solBalance * 150; // Assume $150/SOL
+      // Get SOL price from Jupiter
+      let solPrice = 150; // Default fallback
+      try {
+        const solPriceResponse = await fetch(
+          'https://price.jup.ag/v6/price?ids=So11111111111111111111111111111111111111112'
+        );
+        const solPriceData = await solPriceResponse.json();
+        solPrice = solPriceData.data?.So11111111111111111111111111111111111111112?.price || 150;
+      } catch (err) {
+        console.log('Failed to fetch SOL price, using default:', err);
+      }
 
-      // Parse token holdings
-      const tokens: TokenHolding[] = tokenAccounts.value
+      // Calculate portfolio value with real SOL price
+      const portfolioValue = solBalance * solPrice;
+
+      // Parse token holdings with real metadata
+      const tokens: TokenHolding[] = [];
+      const tokenMints = tokenAccounts.value
         .slice(0, 10) // Limit to top 10
-        .map(acc => ({
-          mint: acc.account.data.parsed.info.mint,
-          symbol: 'TOKEN', // Would need token metadata API for real symbols
-          balance: acc.account.data.parsed.info.tokenAmount.uiAmount || 0,
-          usdValue: 0, // Would need price API
-        }));
+        .map(acc => acc.account.data.parsed.info.mint);
+      
+      // Fetch prices for all tokens
+      if (tokenMints.length > 0) {
+        try {
+          const mintAddresses = tokenMints.join(',');
+          const pricesResponse = await fetch(
+            `https://price.jup.ag/v6/price?ids=${mintAddresses}`
+          );
+          const pricesData = await pricesResponse.json();
+          
+          for (const acc of tokenAccounts.value.slice(0, 10)) {
+            const mint = acc.account.data.parsed.info.mint;
+            const balance = acc.account.data.parsed.info.tokenAmount.uiAmount || 0;
+            const priceInfo = pricesData.data?.[mint];
+            const price = priceInfo?.price || 0;
+            
+            // Import token symbols from centralized list
+            const symbol = mint in KNOWN_TOKENS ? KNOWN_TOKENS[mint] : mint.slice(0, 4).toUpperCase();
+            
+            tokens.push({
+              mint,
+              symbol,
+              balance,
+              usdValue: balance * price,
+            });
+          }
+        } catch (err) {
+          console.log('Failed to fetch token prices:', err);
+          // Fallback without prices
+          for (const acc of tokenAccounts.value.slice(0, 10)) {
+            tokens.push({
+              mint: acc.account.data.parsed.info.mint,
+              symbol: 'TOKEN',
+              balance: acc.account.data.parsed.info.tokenAmount.uiAmount || 0,
+              usdValue: 0,
+            });
+          }
+        }
+      }
 
       const walletAnalysis: WalletAnalysis = {
         address: walletAddress,
         age: walletAge,
         creationDate,
         solBalance,
-        solBalanceUSD: solBalance * 150,
+        solBalanceUSD: solBalance * solPrice,
         totalTransactions,
         totalSOLTransacted,
         uniqueProtocols,
