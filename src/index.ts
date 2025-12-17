@@ -1,5 +1,4 @@
 import { Connection, Keypair, PublicKey } from '@solana/web3.js';
-import bs58 from 'bs58';
 import { config } from './config/index.js';
 import { QuickNodeIntegration } from './integrations/quicknode.js';
 import { PresetManager } from './services/presetManager.js';
@@ -67,8 +66,30 @@ class GXQStudio {
     // Initialize encryption, analytics, and profit distribution services
     this.encryptionService = new EncryptionService();
     this.analyticsLogger = new AnalyticsLogger('./analytics');
-    this.profitDistributionService = new ProfitDistributionService(this.connection);
-    this.daoAirdropService = new DAOAirdropService(this.connection);
+    
+    // Parse wallet addresses for profit distribution
+    let reserveWalletKey: PublicKey;
+    try {
+      reserveWalletKey = new PublicKey(config.profitDistribution.reserveWallet);
+    } catch {
+      console.warn('⚠️  Reserve wallet address is invalid or SNS (not yet supported), using placeholder');
+      reserveWalletKey = new PublicKey('11111111111111111111111111111111');
+    }
+    
+    let gasWalletKey: PublicKey;
+    try {
+      gasWalletKey = new PublicKey(config.profitDistribution.gasWallet);
+    } catch {
+      console.warn('⚠️  Gas wallet address is invalid, using placeholder');
+      gasWalletKey = new PublicKey('11111111111111111111111111111111');
+    }
+    
+    this.profitDistributionService = new ProfitDistributionService(this.connection, {
+      reserveWallet: reserveWalletKey,
+      gasWallet: gasWalletKey,
+      daoWallet: config.profitDistribution.daoWallet
+    });
+    this.daoAirdropService = new DAOAirdropService(this.connection, config.profitDistribution.daoWallet);
     
     // Initialize user keypair if available
     if (config.solana.walletPrivateKey) {
