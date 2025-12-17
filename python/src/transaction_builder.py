@@ -140,6 +140,11 @@ class TransactionBuilder:
         Returns:
             Signed Transaction object
         """
+        # Get recent blockhash if not provided
+        if recent_blockhash is None:
+            response = self.client.get_latest_blockhash()
+            recent_blockhash = response.value.blockhash
+        
         # Build unsigned transaction
         transaction = self.build(recent_blockhash)
         
@@ -149,8 +154,8 @@ class TransactionBuilder:
         elif self.payer not in signers:
             signers = [self.payer] + signers
         
-        # Sign transaction
-        transaction.sign(signers)
+        # Sign transaction with recent_blockhash
+        transaction.sign(signers, recent_blockhash)
         return transaction
 
     def reset(self) -> "TransactionBuilder":

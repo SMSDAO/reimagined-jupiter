@@ -89,8 +89,9 @@ class TestKeypairManager:
         message = b"Hello, Solana!"
         signature = manager.sign_message(message)
         
-        assert isinstance(signature, bytes)
-        assert len(signature) > 0
+        # solders returns a Signature object, not raw bytes
+        assert signature is not None
+        assert len(bytes(signature)) > 0
 
     def test_invalid_private_key(self):
         """Test that invalid private key raises error."""

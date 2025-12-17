@@ -23,11 +23,13 @@ class TestTransactionBuilder:
     @pytest.fixture
     def mock_client(self):
         """Create a mock RPC client."""
+        from solders.hash import Hash
         client = Mock()
-        # Mock get_latest_blockhash
+        # Mock get_latest_blockhash with a real Hash object
         mock_response = Mock()
         mock_response.value = Mock()
-        mock_response.value.blockhash = Mock()
+        # Create a real Hash object (using zero hash for testing)
+        mock_response.value.blockhash = Hash.default()
         client.get_latest_blockhash.return_value = mock_response
         return client
 
