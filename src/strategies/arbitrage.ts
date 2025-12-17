@@ -6,7 +6,8 @@ import {
   SolendProvider, 
   MangoProvider, 
   KaminoProvider, 
-  PortFinanceProvider 
+  PortFinanceProvider,
+  SaveFinanceProvider
 } from '../providers/flashLoan.js';
 import { config, FLASH_LOAN_FEES, SUPPORTED_TOKENS } from '../config/index.js';
 import { TransactionExecutor } from '../utils/transactionExecutor.js';
@@ -14,7 +15,7 @@ import { ProfitDistributionManager } from '../utils/profitDistribution.js';
 
 export class FlashLoanArbitrage {
   private connection: Connection;
-  private providers: Map<string, MarginfiProvider | SolendProvider | MangoProvider | KaminoProvider | PortFinanceProvider>;
+  private providers: Map<string, MarginfiProvider | SolendProvider | MangoProvider | KaminoProvider | PortFinanceProvider | SaveFinanceProvider>;
   private transactionExecutor: TransactionExecutor;
   private profitDistributor: ProfitDistributionManager;
   
@@ -100,7 +101,7 @@ export class FlashLoanArbitrage {
     tokenA: TokenConfig,
     tokenB: TokenConfig,
     providerName: string,
-    provider: MarginfiProvider | SolendProvider | MangoProvider | KaminoProvider | PortFinanceProvider
+    provider: MarginfiProvider | SolendProvider | MangoProvider | KaminoProvider | PortFinanceProvider | SaveFinanceProvider
   ): Promise<ArbitrageOpportunity | null> {
     try {
       const loanAmount = 100000; // Test amount
@@ -257,9 +258,12 @@ export class FlashLoanArbitrage {
   getProviderInfo(): FlashLoanProvider[] {
     const info: FlashLoanProvider[] = [];
     for (const provider of this.providers.values()) {
-      const providerInfo = provider.getInfo();
-      providerInfo.fee = provider.getFee();
-      info.push(providerInfo);
+      const baseInfo = provider.getInfo();
+      // Create new object to avoid mutating the returned value
+      info.push({
+        ...baseInfo,
+        fee: provider.getFee(),
+      });
     }
     return info;
   }

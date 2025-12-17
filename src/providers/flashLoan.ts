@@ -72,6 +72,10 @@ export abstract class BaseFlashLoanProvider {
   }
 }
 
+// Placeholder values for testing - TODO: Replace with actual protocol queries
+const PLACEHOLDER_MAX_LOAN = 1000000;
+const PLACEHOLDER_LIQUIDITY = 500000;
+
 export class MarginfiProvider extends BaseFlashLoanProvider {
   getName(): string {
     return 'Marginfi';
@@ -92,11 +96,12 @@ export class MarginfiProvider extends BaseFlashLoanProvider {
 
       console.log(`[Marginfi] Fetching max loan amount for token: ${_tokenMint.toString().slice(0, 8)}...`);
       
-      // Implementation would query Marginfi protocol
-      const maxLoan = 1000000; // Placeholder
-      const liquidity = 500000; // Fetch both at once for efficiency
+      // TODO: Implement actual Marginfi protocol query
+      // In production, both values should be fetched together to optimize RPC calls
+      const maxLoan = PLACEHOLDER_MAX_LOAN;
+      const liquidity = PLACEHOLDER_LIQUIDITY;
       
-      // Cache the result
+      // Cache both values together
       this.setCachedLiquidity(_tokenMint, maxLoan, liquidity);
       
       console.log(`[Marginfi] Max loan amount: ${maxLoan}`);
@@ -122,11 +127,12 @@ export class MarginfiProvider extends BaseFlashLoanProvider {
 
       console.log(`[Marginfi] Fetching available liquidity for token: ${_tokenMint.toString().slice(0, 8)}...`);
       
-      // Implementation would query Marginfi protocol
-      const maxLoan = 1000000; // Fetch both at once for efficiency
-      const liquidity = 500000; // Placeholder
+      // TODO: Implement actual Marginfi protocol query
+      // In production, both values should be fetched together to optimize RPC calls
+      const maxLoan = PLACEHOLDER_MAX_LOAN;
+      const liquidity = PLACEHOLDER_LIQUIDITY;
       
-      // Cache the result
+      // Cache both values together
       this.setCachedLiquidity(_tokenMint, maxLoan, liquidity);
       
       console.log(`[Marginfi] Available liquidity: ${liquidity}`);
