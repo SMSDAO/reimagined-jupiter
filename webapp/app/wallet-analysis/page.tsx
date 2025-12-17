@@ -362,17 +362,17 @@ export default function WalletAnalysis() {
   };
 
   return (
-    <div className="space-y-8">
+    <div className="max-w-7xl mx-auto px-4 space-y-6 sm:space-y-8">
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="text-center space-y-4"
+        className="text-center space-y-3 sm:space-y-4"
       >
-        <h1 className="text-5xl font-bold bg-gradient-to-r from-purple-400 via-pink-400 to-blue-400 bg-clip-text text-transparent">
+        <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold bg-gradient-to-r from-purple-400 via-pink-400 to-blue-400 bg-clip-text text-transparent">
           🔍 Enhanced Wallet Analysis
         </h1>
-        <p className="text-xl text-gray-300">
+        <p className="text-base sm:text-lg lg:text-xl text-gray-300">
           Professional-grade wallet forensics with risk assessment
         </p>
       </motion.div>
@@ -382,11 +382,11 @@ export default function WalletAnalysis() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
-        className="bg-white/10 backdrop-blur-md rounded-xl p-6"
+        className="bg-white/10 backdrop-blur-md rounded-xl p-4 sm:p-6 border border-white/10"
       >
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
+            <label className="block text-xs sm:text-sm font-medium text-gray-300 mb-2">
               Wallet Address
             </label>
             <input
@@ -394,15 +394,19 @@ export default function WalletAnalysis() {
               value={walletAddress}
               onChange={(e) => setWalletAddress(e.target.value)}
               placeholder="Enter Solana wallet address..."
-              className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
+              className="w-full px-3 sm:px-4 py-2 sm:py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm sm:text-base"
             />
           </div>
           <button
             onClick={analyzeWallet}
             disabled={loading || !walletAddress}
-            className="w-full px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg font-semibold hover:from-purple-600 hover:to-pink-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            className="w-full px-4 sm:px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg font-semibold hover:from-purple-600 hover:to-pink-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg text-sm sm:text-base"
           >
-            {loading ? '🔍 Analyzing...' : '🔍 Analyze Wallet'}
+            {loading ? (
+              <span className="flex items-center justify-center gap-2">
+                <span className="animate-pulse-glow">🔍</span> Analyzing...
+              </span>
+            ) : '🔍 Analyze Wallet'}
           </button>
         </div>
       </motion.div>
@@ -412,7 +416,7 @@ export default function WalletAnalysis() {
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="bg-red-500/10 border border-red-500 rounded-xl p-4 text-red-400"
+          className="bg-red-500/10 border border-red-500 rounded-xl p-3 sm:p-4 text-red-400 text-sm sm:text-base"
         >
           ❌ {error}
         </motion.div>
@@ -423,33 +427,33 @@ export default function WalletAnalysis() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="space-y-6"
+          className="space-y-4 sm:space-y-6"
         >
           {/* Risk Assessment Card */}
-          <div className={`border-2 rounded-xl p-6 ${getRiskColor(analysis.riskLevel)}`}>
-            <h2 className="text-2xl font-bold text-white mb-4">
+          <div className={`border-2 rounded-xl p-4 sm:p-6 ${getRiskColor(analysis.riskLevel)}`}>
+            <h2 className="text-xl sm:text-2xl font-bold text-white mb-4">
               🛡️ Risk Assessment
             </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-              <div>
-                <div className="text-sm text-gray-400">Risk Score</div>
-                <div className={`text-3xl font-bold ${getRiskTextColor(analysis.riskLevel)}`}>
+            <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-4">
+              <div className="bg-white/5 rounded-lg p-3">
+                <div className="text-xs sm:text-sm text-gray-400">Risk Score</div>
+                <div className={`text-2xl sm:text-3xl font-bold ${getRiskTextColor(analysis.riskLevel)}`}>
                   {analysis.riskScore}/100
                 </div>
               </div>
-              <div>
-                <div className="text-sm text-gray-400">Risk Level</div>
-                <div className={`text-3xl font-bold ${getRiskTextColor(analysis.riskLevel)}`}>
+              <div className="bg-white/5 rounded-lg p-3">
+                <div className="text-xs sm:text-sm text-gray-400">Risk Level</div>
+                <div className={`text-2xl sm:text-3xl font-bold ${getRiskTextColor(analysis.riskLevel)}`}>
                   {analysis.riskLevel}
                 </div>
               </div>
             </div>
             {analysis.riskFlags.length > 0 && (
               <div>
-                <div className="text-sm text-gray-400 mb-2">Risk Flags:</div>
+                <div className="text-xs sm:text-sm text-gray-400 mb-2">Risk Flags:</div>
                 <ul className="space-y-1">
                   {analysis.riskFlags.map((flag, idx) => (
-                    <li key={idx} className="text-white">
+                    <li key={idx} className="text-white text-xs sm:text-sm">
                       {flag}
                     </li>
                   ))}
@@ -459,43 +463,43 @@ export default function WalletAnalysis() {
           </div>
 
           {/* Wallet Metadata Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="bg-white/10 backdrop-blur-md rounded-xl p-4">
-              <div className="text-sm text-gray-400">Wallet Age</div>
-              <div className="text-2xl font-bold text-white">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+            <div className="bg-white/10 backdrop-blur-md rounded-xl p-3 sm:p-4 border border-white/10">
+              <div className="text-xs sm:text-sm text-gray-400">Wallet Age</div>
+              <div className="text-xl sm:text-2xl font-bold text-white">
                 {analysis.age} days
               </div>
-              <div className="text-xs text-gray-500">
-                Created: {analysis.creationDate}
+              <div className="text-xs text-gray-500 truncate">
+                {analysis.creationDate}
               </div>
             </div>
 
-            <div className="bg-white/10 backdrop-blur-md rounded-xl p-4">
-              <div className="text-sm text-gray-400">SOL Balance</div>
-              <div className="text-2xl font-bold text-white">
-                {analysis.solBalance.toFixed(4)} SOL
+            <div className="bg-white/10 backdrop-blur-md rounded-xl p-3 sm:p-4 border border-white/10">
+              <div className="text-xs sm:text-sm text-gray-400">SOL Balance</div>
+              <div className="text-xl sm:text-2xl font-bold text-white truncate">
+                {analysis.solBalance.toFixed(4)}
               </div>
               <div className="text-xs text-gray-500">
                 ${analysis.solBalanceUSD.toFixed(2)}
               </div>
             </div>
 
-            <div className="bg-white/10 backdrop-blur-md rounded-xl p-4">
-              <div className="text-sm text-gray-400">Total Transactions</div>
-              <div className="text-2xl font-bold text-white">
+            <div className="bg-white/10 backdrop-blur-md rounded-xl p-3 sm:p-4 border border-white/10">
+              <div className="text-xs sm:text-sm text-gray-400">Transactions</div>
+              <div className="text-xl sm:text-2xl font-bold text-white">
                 {analysis.totalTransactions}
               </div>
             </div>
 
-            <div className="bg-white/10 backdrop-blur-md rounded-xl p-4">
-              <div className="text-sm text-gray-400">Total SOL Transacted</div>
-              <div className="text-2xl font-bold text-white">
+            <div className="bg-white/10 backdrop-blur-md rounded-xl p-3 sm:p-4 border border-white/10">
+              <div className="text-xs sm:text-sm text-gray-400">SOL Transacted</div>
+              <div className="text-xl sm:text-2xl font-bold text-white truncate">
                 {analysis.totalSOLTransacted.toFixed(2)}
               </div>
             </div>
 
-            <div className="bg-white/10 backdrop-blur-md rounded-xl p-4">
-              <div className="text-sm text-gray-400">Unique Protocols</div>
+            <div className="bg-white/10 backdrop-blur-md rounded-xl p-3 sm:p-4 border border-white/10">
+              <div className="text-xs sm:text-sm text-gray-400">Unique Protocols</div>
               <div className="text-2xl font-bold text-white">
                 {analysis.uniqueProtocols}
               </div>

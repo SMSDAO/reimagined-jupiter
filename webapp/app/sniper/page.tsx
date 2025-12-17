@@ -146,57 +146,62 @@ export default function SniperPage() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto">
+    <div className="max-w-7xl mx-auto px-4">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
       >
-        <h1 className="text-5xl font-bold text-white mb-2">🎯 Sniper Bot</h1>
-        <p className="text-gray-300 mb-8">
+        <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-2">🎯 Sniper Bot</h1>
+        <p className="text-sm sm:text-base text-gray-300 mb-6 sm:mb-8">
           Monitor and snipe new token launches across Pump.fun + Raydium, Orca, Meteora, Phoenix & more DEXs
         </p>
         {monitoring && detectedCount > 0 && (
-          <div className="bg-green-600 text-white px-4 py-2 rounded-lg mb-4 inline-block">
-            ✅ {detectedCount} pool{detectedCount !== 1 ? 's' : ''} detected
-          </div>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-green-600 text-white px-4 py-2 rounded-lg mb-4 inline-flex items-center gap-2 shadow-lg"
+          >
+            <span className="animate-pulse-glow">✅</span>
+            <span className="text-sm sm:text-base">{detectedCount} pool{detectedCount !== 1 ? 's' : ''} detected</span>
+          </motion.div>
         )}
 
         {/* Configuration Panel */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          <div className="bg-white/10 backdrop-blur-md rounded-xl p-6">
-            <h2 className="text-2xl font-bold text-white mb-4">⚙️ Configuration</h2>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
+          <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 sm:p-6 border border-white/10">
+            <h2 className="text-xl sm:text-2xl font-bold text-white mb-4">⚙️ Configuration</h2>
             
             <div className="space-y-4">
               <div>
-                <label className="text-white text-sm mb-2 block">Buy Amount (SOL)</label>
+                <label className="text-white text-xs sm:text-sm mb-2 block">Buy Amount (SOL)</label>
                 <input
                   type="number"
                   value={buyAmount}
                   onChange={(e) => setBuyAmount(e.target.value)}
-                  className="w-full bg-white/10 text-white px-4 py-2 rounded-lg"
+                  className="w-full bg-white/10 text-white px-3 sm:px-4 py-2 rounded-lg border border-white/10 focus:border-purple-500 outline-none text-sm sm:text-base"
                   step="0.01"
                   min="0.01"
                 />
               </div>
 
               <div>
-                <label className="text-white text-sm mb-2 block">Slippage Tolerance (%)</label>
+                <label className="text-white text-xs sm:text-sm mb-2 block">Slippage Tolerance (%)</label>
                 <input
                   type="number"
                   value={slippage}
                   onChange={(e) => setSlippage(parseInt(e.target.value))}
-                  className="w-full bg-white/10 text-white px-4 py-2 rounded-lg"
+                  className="w-full bg-white/10 text-white px-3 sm:px-4 py-2 rounded-lg border border-white/10 focus:border-purple-500 outline-none text-sm sm:text-base"
                   min="1"
                   max="50"
                 />
               </div>
 
-              <div className="flex items-center justify-between">
-                <span className="text-white">Auto-Snipe</span>
+              <div className="flex items-center justify-between pt-2">
+                <span className="text-white text-sm sm:text-base">Auto-Snipe</span>
                 <button
                   onClick={() => setAutoSnipe(!autoSnipe)}
-                  className={`px-4 py-2 rounded-lg ${
-                    autoSnipe ? 'bg-green-600' : 'bg-gray-600'
+                  className={`px-4 py-2 rounded-lg font-semibold transition-all text-sm sm:text-base ${
+                    autoSnipe ? 'bg-green-600 shadow-lg shadow-green-500/50' : 'bg-gray-600'
                   }`}
                 >
                   {autoSnipe ? 'ON' : 'OFF'}
@@ -205,17 +210,17 @@ export default function SniperPage() {
             </div>
           </div>
 
-          <div className="bg-white/10 backdrop-blur-md rounded-xl p-6">
-            <h2 className="text-2xl font-bold text-white mb-4">🌐 Monitored Platforms</h2>
-            <div className="space-y-2">
+          <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 sm:p-6 border border-white/10">
+            <h2 className="text-xl sm:text-2xl font-bold text-white mb-4">🌐 Monitored Platforms</h2>
+            <div className="space-y-2 max-h-64 overflow-y-auto pr-2">
               {platforms.map((platform) => (
-                <div key={platform.name} className="flex items-center justify-between">
-                  <span className="text-white">{platform.name}</span>
+                <div key={platform.name} className="flex items-center justify-between p-2 rounded-lg hover:bg-white/5 transition-colors">
+                  <span className="text-white text-sm sm:text-base">{platform.name}</span>
                   <div className="flex items-center gap-2">
-                    <span className="text-gray-400 text-sm">{platform.launches} today</span>
+                    <span className="text-gray-400 text-xs sm:text-sm">{platform.launches} today</span>
                     <span
-                      className={`w-3 h-3 rounded-full ${
-                        platform.active ? 'bg-green-500' : 'bg-red-500'
+                      className={`w-2 h-2 sm:w-3 sm:h-3 rounded-full ${
+                        platform.active ? 'bg-green-500 animate-pulse-glow' : 'bg-red-500'
                       }`}
                     />
                   </div>
@@ -226,13 +231,17 @@ export default function SniperPage() {
         </div>
 
         {/* Monitoring Control */}
-        <div className="mb-8">
+        <div className="mb-6 sm:mb-8">
           <button
             onClick={startMonitoring}
             disabled={monitoring || !publicKey}
-            className="w-full bg-gradient-to-r from-pink-600 to-red-600 text-white font-bold py-4 rounded-xl hover:from-pink-700 hover:to-red-700 transition disabled:opacity-50"
+            className="w-full bg-gradient-to-r from-pink-600 to-red-600 text-white font-bold py-3 sm:py-4 rounded-xl hover:from-pink-700 hover:to-red-700 transition-all disabled:opacity-50 shadow-lg text-sm sm:text-base"
           >
-            {monitoring ? '🔴 Monitoring Active...' : publicKey ? '▶️ Start Monitoring' : 'Connect Wallet'}
+            {monitoring ? (
+              <span className="flex items-center justify-center gap-2">
+                <span className="animate-pulse-glow">🔴</span> Monitoring Active...
+              </span>
+            ) : publicKey ? '▶️ Start Monitoring' : '🔗 Connect Wallet'}
           </button>
         </div>
 
@@ -241,46 +250,53 @@ export default function SniperPage() {
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="bg-white/10 backdrop-blur-md rounded-xl p-6"
+            className="bg-white/10 backdrop-blur-md rounded-xl p-4 sm:p-6 border border-white/10"
           >
-            <h2 className="text-2xl font-bold text-white mb-4">🎯 Detected Targets</h2>
-            <div className="space-y-4">
+            <h2 className="text-xl sm:text-2xl font-bold text-white mb-4 flex items-center gap-2">
+              <span className="animate-pulse-glow text-green-400">🔴</span>
+              Detected Targets ({targets.length})
+            </h2>
+            <div className="space-y-3 sm:space-y-4">
               {targets.map((target) => (
-                <div
+                <motion.div
                   key={target.mint}
-                  className="bg-white/5 rounded-xl p-4 flex items-center justify-between"
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  className="bg-white/5 rounded-xl p-3 sm:p-4 hover:bg-white/10 transition-colors"
                 >
-                  <div>
-                    <h3 className="text-xl font-bold text-white">{target.name}</h3>
-                    <p className="text-gray-400 text-sm">{target.platform}</p>
-                    <div className="flex gap-4 mt-2">
-                      <span className="text-green-400">💰 ${target.liquidity.toLocaleString()}</span>
-                      <span className="text-blue-400">👥 {target.holders} holders</span>
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
+                    <div className="flex-1 min-w-0 w-full">
+                      <h3 className="text-lg sm:text-xl font-bold text-white truncate">{target.name}</h3>
+                      <p className="text-gray-400 text-xs sm:text-sm mb-2">{target.platform}</p>
+                      <div className="flex flex-wrap gap-3 sm:gap-4">
+                        <span className="text-green-400 text-xs sm:text-sm">💰 ${target.liquidity.toLocaleString()}</span>
+                        <span className="text-blue-400 text-xs sm:text-sm">👥 {target.holders} holders</span>
+                      </div>
+                    </div>
+                    <div className="flex gap-2 w-full sm:w-auto">
+                      {target.status === 'ready' && (
+                        <button
+                          onClick={() => snipeToken(target)}
+                          className="flex-1 sm:flex-none bg-green-600 hover:bg-green-700 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg font-bold text-sm sm:text-base shadow-lg whitespace-nowrap"
+                        >
+                          SNIPE NOW
+                        </button>
+                      )}
+                      {target.status === 'monitoring' && (
+                        <span className="flex-1 sm:flex-none bg-yellow-600 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg font-bold text-sm sm:text-base text-center whitespace-nowrap">
+                          Monitoring...
+                        </span>
+                      )}
                     </div>
                   </div>
-                  <div className="flex gap-2">
-                    {target.status === 'ready' && (
-                      <button
-                        onClick={() => snipeToken(target)}
-                        className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-bold"
-                      >
-                        SNIPE NOW
-                      </button>
-                    )}
-                    {target.status === 'monitoring' && (
-                      <span className="bg-yellow-600 text-white px-6 py-3 rounded-lg font-bold">
-                        Monitoring...
-                      </span>
-                    )}
-                  </div>
-                </div>
+                </motion.div>
               ))}
             </div>
           </motion.div>
         )}
 
         {/* Dev Fee Notice */}
-        <div className="mt-8 text-center text-sm text-gray-400">
+        <div className="mt-6 sm:mt-8 text-center text-xs sm:text-sm text-gray-400">
           💰 10% of profits go to dev wallet: monads.solana
         </div>
       </motion.div>
