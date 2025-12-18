@@ -45,6 +45,8 @@ export class JupiterPriceService {
   private cacheDuration = 30000; // 30 seconds
   private subscriptions = new Map<string, PriceSubscription[]>();
   private wsConnections = new Map<string, WebSocket>();
+  private globalPollingInterval: NodeJS.Timeout | null = null;
+  private pollingIntervalMs = 5000; // 5 seconds
 
   /**
    * Get price for a single token
@@ -253,9 +255,8 @@ export class JupiterPriceService {
    * Close all WebSocket connections
    */
   closeAllConnections(): void {
-    for (const [tokenId] of this.wsConnections) {
-      this.closeWebSocket(tokenId);
-    }
+    this.stopGlobalPolling();
+    this.wsConnections.clear();
     this.subscriptions.clear();
   }
 
@@ -283,46 +284,68 @@ export class JupiterPriceService {
 
   private initializeWebSocket(tokenId: string): void {
     try {
-      // Note: Jupiter Price API doesn't have a public WebSocket endpoint
-      // This implementation uses polling as a fallback
-      // In a production environment, you would use a proper WebSocket if available
-      
-      const pollInterval = setInterval(async () => {
-        const price = await this.getTokenPrice(tokenId);
-        if (price) {
-          const subs = this.subscriptions.get(tokenId);
-          if (subs) {
-            subs.forEach(sub => {
-              try {
-                sub.callback(price);
-              } catch (error) {
-                console.error('[JupiterPrice] Error in subscription callback:', error);
-              }
-            });
-          }
-        }
-      }, 5000); // Poll every 5 seconds
-
-      // Store the interval ID as a pseudo-WebSocket
-      const pseudoWs = {
-        close: () => clearInterval(pollInterval),
-      } as WebSocket;
-
+      // Mark this token as having an active connection
+      const pseudoWs = { close: () => {} } as WebSocket;
       this.wsConnections.set(tokenId, pseudoWs);
+      
+      // Start global polling if not already running
+      this.startGlobalPolling();
     } catch (error) {
       console.error(`[JupiterPrice] Error initializing WebSocket for ${tokenId}:`, error);
     }
   }
 
-  private closeWebSocket(tokenId: string): void {
-    const ws = this.wsConnections.get(tokenId);
-    if (ws) {
-      try {
-        ws.close();
-      } catch (error) {
-        console.error(`[JupiterPrice] Error closing WebSocket for ${tokenId}:`, error);
+  private startGlobalPolling(): void {
+    if (this.globalPollingInterval !== null) {
+      return; // Already running
+    }
+
+    // Note: Jupiter Price API doesn't have a public WebSocket endpoint
+    // This implementation uses bulk polling as an efficient fallback
+    this.globalPollingInterval = setInterval(async () => {
+      const subscribedTokens = Array.from(this.subscriptions.keys());
+      
+      if (subscribedTokens.length === 0) {
+        this.stopGlobalPolling();
+        return;
       }
-      this.wsConnections.delete(tokenId);
+
+      try {
+        // Fetch all subscribed tokens in a single bulk request
+        const pricesMap = await this.getBulkPrices(subscribedTokens);
+        
+        // Notify all subscribers
+        pricesMap.forEach((priceData, tokenId) => {
+          const subs = this.subscriptions.get(tokenId);
+          if (subs) {
+            subs.forEach(sub => {
+              try {
+                sub.callback(priceData);
+              } catch (error) {
+                console.error('[JupiterPrice] Error in subscription callback:', error);
+              }
+            });
+          }
+        });
+      } catch (error) {
+        console.error('[JupiterPrice] Error in global polling:', error);
+      }
+    }, this.pollingIntervalMs);
+  }
+
+  private stopGlobalPolling(): void {
+    if (this.globalPollingInterval !== null) {
+      clearInterval(this.globalPollingInterval);
+      this.globalPollingInterval = null;
+    }
+  }
+
+  private closeWebSocket(tokenId: string): void {
+    this.wsConnections.delete(tokenId);
+    
+    // Stop global polling if no more subscriptions
+    if (this.subscriptions.size === 0) {
+      this.stopGlobalPolling();
     }
   }
 }

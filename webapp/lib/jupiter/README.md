@@ -207,7 +207,14 @@ The service automatically caches price data for 30 seconds to reduce API calls a
 
 ## WebSocket Implementation
 
-The current WebSocket implementation uses polling (5-second intervals) as Jupiter Price API v6 doesn't expose a public WebSocket endpoint. For production use with actual WebSocket support, replace the polling implementation in `initializeWebSocket()`.
+The current WebSocket implementation uses efficient bulk polling (5-second intervals) as Jupiter Price API v6 doesn't expose a public WebSocket endpoint. 
+
+**Key Features:**
+- **Bulk Polling**: Single API call fetches prices for all subscribed tokens
+- **Automatic Management**: Polling starts when first subscription is added, stops when last subscription is removed
+- **Rate Limit Friendly**: Prevents excessive API calls by batching all subscriptions
+
+For production use with actual WebSocket support, replace the polling implementation in `startGlobalPolling()`.
 
 ## Error Handling
 
@@ -235,6 +242,7 @@ node scripts/simple-test.mjs
 2. **Bulk Fetching**: Always prefer `getBulkPrices()` over multiple `getTokenPrice()` calls
 3. **Connection Pooling**: Singleton service instance reuses connections
 4. **Subscription Cleanup**: Always call unsubscribe() to prevent memory leaks
+5. **Efficient Polling**: All subscriptions share a single bulk polling mechanism (one API call per interval)
 
 ## Common Token Addresses
 
