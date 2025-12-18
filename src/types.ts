@@ -12,6 +12,9 @@ export interface Config {
     kvUrl: string;
     streamsUrl: string;
   };
+  neynar: {
+    apiKey: string;
+  };
   flashLoanProviders: {
     marginfi: PublicKey;
     solend: PublicKey;
@@ -48,6 +51,12 @@ export interface Config {
     maxSlippage: number;
     gasBuffer: number;
   };
+  scanner: {
+    pollingIntervalMs: number;
+    enableLiveUpdates: boolean;
+    enableNotifications: boolean;
+    minConfidence: number;
+  };
   devFee: {
     enabled: boolean;
     percentage: number;
@@ -55,16 +64,11 @@ export interface Config {
   };
   profitDistribution: {
     enabled: boolean;
-    reserveWallet: string; // SNS address or PublicKey - 70%
-    reservePercentage: number;
-    gasWallet: string; // User wallet for gas coverage - 20%
-    gasSlippagePercentage: number;
-    daoWallet: PublicKey; // DAO community wallet - 10%
-    daoPercentage: number;
-  };
-  encryption: {
-    enabled: boolean;
-    masterKey: string;
+    reserveWalletDomain: string;
+    reserveWalletPercentage: number;
+    userWalletPercentage: number;
+    daoWalletPercentage: number;
+    daoWalletAddress: PublicKey;
   };
 }
 

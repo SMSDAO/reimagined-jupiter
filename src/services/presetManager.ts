@@ -212,7 +212,7 @@ export class PresetManager {
     }
   }
   
-  async syncToQuickNodeKV(quicknode: any): Promise<boolean> {
+  async syncToQuickNodeKV(quicknode: { kvSet: (key: string, value: unknown, ttl?: number) => Promise<boolean> }): Promise<boolean> {
     try {
       const presetsData = await this.exportPresets();
       const success = await quicknode.kvSet('presets-backup', presetsData, 86400 * 7); // 7 days TTL
@@ -224,10 +224,10 @@ export class PresetManager {
     }
   }
   
-  async restoreFromQuickNodeKV(quicknode: any): Promise<number> {
+  async restoreFromQuickNodeKV(quicknode: { kvGet: (key: string) => Promise<unknown> }): Promise<number> {
     try {
       const presetsData = await quicknode.kvGet('presets-backup');
-      if (presetsData) {
+      if (presetsData && typeof presetsData === 'string') {
         const imported = await this.importPresets(presetsData);
         console.log(`Restored ${imported} presets from QuickNode KV`);
         return imported;

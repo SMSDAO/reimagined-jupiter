@@ -2,30 +2,6 @@
 
 The most advanced Solana DeFi platform with flash loan arbitrage, sniper bot, token launchpad, and comprehensive Web3 UI.
 
-## 🚀 Latest Updates (December 2025)
-
-**Enhanced with cutting-edge DeFi features!**
-
-- 📡 **Pyth Hermes WebSocket**: Live 1-second price updates for SOL, USDC, and 10+ tokens
-- ⚡ **Enhanced Arbitrage Scanner**: Multi-aggregator scanning (Raydium, Orca, Meteora, Pump) with 1-second intervals
-- 🎯 **Advanced Gas Tuning**: Dynamic prioritization fees (max 10M lamports) and user-defined slippage
-- 💰 **Marginfi v2 Integration**: Seamless multi-DEX flash loan routing with atomic transactions
-- 🔐 **MEV Protection**: Jito bundle integration for front-running prevention
-- 💼 **Phantom Wallet**: Full Phantom wallet integration in webapp
-
-## 🤖 CI/CD & Automation
-
-**Fully automated testing, deployment, and monitoring!**
-
-- ✅ **Automated Testing**: CI runs on every PR with comprehensive checks
-- 🔄 **Auto-Merge**: Smart PR merging with approval and test requirements
-- 🔧 **Failed Job Recovery**: Automatic retry and issue creation for CI failures
-- 📊 **Performance Monitoring**: Regular dependency, security, and build analysis
-- 🌐 **Real-Time Data**: WebSocket service with Pyth Network price feeds
-- ⚡ **Live Updates**: Real-time arbitrage opportunities and trade notifications
-
-See [CI_CD_GUIDE.md](CI_CD_GUIDE.md) for complete documentation and [REALTIME_MONITORING.md](REALTIME_MONITORING.md) for WebSocket integration.
-
 ## 🌐 Web Application (NEW!)
 
 **Production-ready Next.js web app with full Solana integration!**
@@ -37,10 +13,6 @@ See [CI_CD_GUIDE.md](CI_CD_GUIDE.md) for complete documentation and [REALTIME_MO
 - 🎁 **Airdrop Checker** - Wallet scoring and auto-claim with Jupiter integration
 - 💎 **Staking** - Marinade, Lido, Jito, Kamino integration
 - ⚡ **Flash Loan Arbitrage** - Real-time opportunity scanning and execution
-- ⚙️ **Settings Panel** - Configure multiple API providers with rotation and on-chain storage
-- 🔧 **Admin Panel** - Live bot runner, opportunity finder, wallet scoring, and portfolio analysis
-- 🔍 **Enhanced Wallet Analysis** - Risk scoring with Jupiter/Raydium transaction analysis
-- 📊 **Pyth Price Integration** - Real-time price feeds from Pyth Network
 - 📱 **Responsive Design** - Mobile, tablet, and desktop optimized
 - 🎨 **Modern UI** - Solana-themed with purple, blue, green gradients and 3D effects
 
@@ -103,20 +75,24 @@ See [VERCEL_DEPLOY.md](VERCEL_DEPLOY.md) for detailed instructions and troublesh
 - **Memecoins**: BONK, WIF, SAMO, MYRO, POPCAT, WEN
 - **GXQ Ecosystem**: GXQ, sGXQ, xGXQ
 
+### Enhanced Scanner (NEW!)
+- 🔍 **Multi-Angle Scanning**: Flash loan, triangular, and cross-DEX arbitrage detection
+- ⚡ **1-Second Polling**: Real-time opportunity detection with configurable intervals
+- 🌐 **20+ Aggregators**: Jupiter + 12 direct DEX integrations for comprehensive coverage
+- 💾 **Historical Analysis**: Database-backed tracking and analytics
+- 📊 **Dynamic Gas Estimation**: Real-time compute unit estimation via Solana RPC
+- 🎯 **User-Configurable Slippage**: Set maximum slippage tolerance
+- 🔔 **Live Notifications**: Real-time alerts for profitable opportunities
+- 📈 **Performance Metrics**: Detailed statistics and success rate tracking
+
 ### Additional Features
 - 🎁 **Airdrop Checker**: Automatic detection and claiming of airdrops
 - 📋 **Preset Management**: Pre-configured strategies for different market conditions
 - 🛡️ **MEV Protection**: Jito bundle integration to prevent front-running
 - ⚡ **Auto-Execution**: Continuous monitoring and execution of profitable opportunities
 - 🔧 **Manual Execution**: Review and manually execute opportunities with "sweet profit"
-- 💰 **Profit Distribution System**: Automated allocation (70% reserve, 20% gas, 10% DAO)
-- 🔐 **Encryption Service**: AES-256-GCM encryption for sensitive data
-- 📊 **Analytics & Logging**: Comprehensive transaction tracking and auditing
-- 🎁 **DAO Airdrops**: Community airdrops funded from 10% DAO treasury share
-- 📈 **Dynamic Slippage**: Market-aware slippage calculation for optimal execution
+- 💰 **Dev Fee System**: Automatic 10% profit sharing to development wallet
 - 💎 **GXQ Ecosystem Integration**: Native support for GXQ tokens
-- 🌐 **WebSocket Service**: Real-time data streaming for prices, opportunities, and trades
-- 📡 **Pyth Network Integration**: High-frequency, low-latency price feeds
 
 ## 📦 Installation
 
@@ -159,15 +135,10 @@ MIN_PROFIT_THRESHOLD=0.005
 MAX_SLIPPAGE=0.01
 GAS_BUFFER=1.5
 
-# Profit Distribution Configuration (NEW)
-PROFIT_DISTRIBUTION_ENABLED=true
-RESERVE_WALLET=your_reserve_wallet  # 70% - monads.skr
-GAS_WALLET=your_gas_wallet          # 20% - user wallet for gas coverage
-DAO_WALLET=DmtAdUSzFvcBymUmRFgPVawvoXbqdS2o18eZNpe5XcWW  # 10% - DAO community
-
-# Encryption Configuration
-ENCRYPTION_ENABLED=true
-ENCRYPTION_KEY=your_secure_encryption_key
+# Dev Fee Configuration (10% of profits)
+DEV_FEE_ENABLED=true
+DEV_FEE_PERCENTAGE=0.10
+DEV_FEE_WALLET=monads.solana
 ```
 
 ## 🎯 Usage
@@ -208,81 +179,23 @@ npm start manual
 npm start providers
 ```
 
-### Enhanced Features (NEW)
-
-#### Live Price Streaming
-Stream real-time prices from Pyth Network (1-second updates):
+### Enhanced Scanner (NEW!)
+**Real-time multi-angle arbitrage detection with 1-second polling:**
 ```bash
-npm start prices
-# Or specify tokens
-npm start prices SOL USDC BTC ETH
-```
-
-#### Enhanced Arbitrage Scanner
-Multi-aggregator scanning with 1-second intervals:
-```bash
+# Start enhanced scanner
 npm start enhanced-scan
+
+# View scanner statistics
+npm start scanner-stats
+
+# View database statistics
+npm start db-stats
+
+# Historical analysis
+npm start history
 ```
 
-#### Marginfi v2 Info
-View Marginfi v2 flash loan provider details:
-```bash
-npm start marginfi-v2
-```
-
-#### Configure Scanner Settings
-Adjust arbitrage scanner parameters:
-```bash
-# View current settings
-npm start config
-
-# Set minimum profit threshold (in %)
-npm start config minProfit 0.5
-
-# Set maximum slippage (in %)
-npm start config maxSlippage 1.0
-
-# Set maximum gas fee (in lamports, max 10M)
-npm start config maxGas 5000000
-
-# Set scan interval (in milliseconds)
-npm start config scanInterval 1000
-```
-
-#### Security & Management Features (NEW)
-
-##### Encryption
-Generate and use encryption keys for securing sensitive data:
-```bash
-# Generate a master encryption key
-npm start generate-key
-
-# Encrypt a private key
-npm start encrypt-key <your_private_key>
-```
-
-##### Analytics & Logging
-View comprehensive analytics and logs:
-```bash
-# View analytics report
-npm start analytics
-
-# View profit distribution statistics
-npm start profit-stats
-
-# View DAO airdrop campaigns
-npm start dao-airdrops
-```
-
-##### Profit Distribution Testing
-Test the profit distribution system:
-```bash
-# Test with default 1 SOL
-npm start test-distribution
-
-# Test with custom amount (in SOL)
-npm start test-distribution 0.5
-```
+See [ENHANCED_SCANNER.md](ENHANCED_SCANNER.md) for complete documentation.
 
 ## 📋 Preset Strategies
 
@@ -322,32 +235,6 @@ npm start test-distribution 0.5
 - **Risk**: Medium
 - **Min Profit**: 0.6%
 
-## 💰 Profit Distribution Model
-
-**NEW**: Automated profit allocation system for transparent and fair distribution:
-
-### Distribution Breakdown
-- **70%** → **Reserve Wallet** (`monads.skr` via Solana Name Service)
-  - Long-term treasury and development fund
-  - Ensures sustainable project growth
-  
-- **20%** → **Gas Wallet** (User wallet)
-  - Covers transaction costs
-  - Ensures continuous bot operation
-  - No need for manual gas refills
-  
-- **10%** → **DAO Community Wallet** (`DmtAdUSzFvcBymUmRFgPVawvoXbqdS2o18eZNpe5XcWW`)
-  - Community airdrops
-  - Governance rewards
-  - Ecosystem development
-
-### Features
-- ✅ Automatic distribution after each profitable trade
-- ✅ Transaction logging and audit trail
-- ✅ Analytics dashboard for tracking distributions
-- ✅ DAO airdrop campaigns funded from treasury
-- ✅ Configurable via environment variables
-
 ## 🛡️ MEV Protection
 
 The system includes multiple layers of MEV protection:
@@ -371,45 +258,6 @@ src/
 ├── types.ts        # TypeScript type definitions
 └── index.ts        # Main entry point and CLI
 ```
-
-## 🐍 Python Integration (NEW!)
-
-**Powerful Python tools for advanced Solana operations!**
-
-The platform now includes Python integration using `solana-py` and `solders` for high-performance blockchain operations.
-
-### Features
-- 🔑 **Keypair Management** - Secure key handling with solders
-- 🔗 **RPC Client** - Full Solana RPC API support (sync/async)
-- 🏗️ **Transaction Builder** - Build complex transactions with ease
-- 🪙 **Token Operations** - SPL token transfers and account management
-- ⚡ **High Performance** - Rust-based solders for maximum speed
-
-### Quick Start
-
-```bash
-# Install Python dependencies
-pip install -r requirements.txt
-
-# Run basic transaction example
-cd python
-python examples/basic_transaction.py
-
-# Run token transfer example
-python examples/token_transfer.py
-
-# Run performance benchmarks
-python examples/solders_performance.py
-```
-
-### Run Python Tests
-
-```bash
-cd python
-pytest
-```
-
-See [PYTHON_INTEGRATION.md](PYTHON_INTEGRATION.md) for comprehensive documentation, examples, and integration patterns.
 
 ## 🔧 Development
 

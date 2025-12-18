@@ -44,6 +44,9 @@ jobs:
       - name: Run tests
         run: npm test || echo "No tests configured yet"
         continue-on-error: true
+        env:
+          NODE_ENV: test
+          JEST_TIMEOUT: 30000
         
       - name: Upload test results
         if: always()

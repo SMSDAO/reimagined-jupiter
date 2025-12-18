@@ -1,617 +1,453 @@
 'use client';
 
 import { useState } from 'react';
-import { Connection, PublicKey } from '@solana/web3.js';
+import { useWallet } from '@solana/wallet-adapter-react';
 import { motion } from 'framer-motion';
-import { KNOWN_TOKENS } from '@/lib/api-client';
+import './styles.css';
 
-// Types
+// Solana address length constants
+const SOLANA_ADDRESS_LENGTH_LONG = 44;
+const SOLANA_ADDRESS_LENGTH_SHORT = 43;
+
+// Wallet analysis response interface
 interface WalletAnalysis {
-  address: string;
-  age: number;
-  creationDate: string;
-  solBalance: number;
-  solBalanceUSD: number;
-  totalTransactions: number;
-  totalSOLTransacted: number;
-  uniqueProtocols: number;
-  tokenAccounts: number;
-  portfolioValue: number;
-  walletType: WalletType;
-  riskScore: number;
-  riskLevel: RiskLevel;
-  riskFlags: string[];
-  activity: {
-    swaps: number;
-    lpStakes: number;
-    airdrops: number;
-    nftMints: number;
-    nftSales: number;
+  wallet_address: string;
+  age_days: number;
+  first_transaction_date: string;
+  total_sol_transacted: number;
+  total_transactions: number;
+  protocol_diversity: number;
+  token_count: number;
+  portfolio_value_usd: number;
+  current_balance_sol: number;
+  swap_count: number;
+  lp_stake_count: number;
+  airdrop_count: number;
+  nft_mint_count: number;
+  nft_sale_count: number;
+  risk_score: number;
+  risk_level: string;
+  wallet_type: string;
+  is_honeypot: boolean;
+  is_bot: boolean;
+  is_scam: boolean;
+  farcaster_fid?: number;
+  farcaster_username?: string;
+  farcaster_display_name?: string;
+  farcaster_bio?: string;
+  farcaster_followers?: number;
+  farcaster_following?: number;
+  farcaster_casts?: number;
+  farcaster_verified?: boolean;
+  farcaster_power_badge?: boolean;
+  farcaster_active_badge?: boolean;
+  farcaster_score?: number;
+  gm_casts_count?: number;
+  gm_total_likes?: number;
+  gm_total_recasts?: number;
+  gm_engagement_rate?: number;
+  gm_consistency_days?: number;
+  gm_score?: number;
+  trust_score: number;
+  trust_breakdown?: {
+    inverse_risk: number;
+    farcaster: number;
+    gm: number;
+    age_bonus: number;
   };
-  tokens: TokenHolding[];
+  social_verification_bonus?: number;
+  last_updated: string;
+  analysis_version: string;
 }
-
-interface TokenHolding {
-  mint: string;
-  symbol: string;
-  balance: number;
-  usdValue: number;
-}
-
-type WalletType = 'Founder/VC' | 'Scam' | 'Trader' | 'NFT Collector' | 'Regular';
-type RiskLevel = 'Low' | 'Medium' | 'High' | 'Critical';
 
 export default function WalletAnalysis() {
+  const { publicKey } = useWallet();
   const [walletAddress, setWalletAddress] = useState('');
-  const [loading, setLoading] = useState(false);
   const [analysis, setAnalysis] = useState<WalletAnalysis | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  const analyzeWallet = async () => {
-    if (!walletAddress) {
-      setError('Please enter a wallet address');
+  const analyzeWallet = async (address: string) => {
+    if (!address || (address.length !== SOLANA_ADDRESS_LENGTH_LONG && address.length !== SOLANA_ADDRESS_LENGTH_SHORT)) {
+      setError('Invalid Solana wallet address');
       return;
     }
 
     setLoading(true);
-    setError(null);
-    setAnalysis(null);
+    setError('');
 
     try {
-      console.log('🔍 Starting wallet analysis for:', walletAddress);
-
-      // Validate address
-      const publicKey = new PublicKey(walletAddress);
+      // Fetch wallet analysis data
+      const response = await fetch(`/api/wallet-analysis/${address}`);
       
-      // Get RPC connection
-      const rpcUrl = process.env.NEXT_PUBLIC_RPC_URL || 'https://api.mainnet-beta.solana.com';
-      const connection = new Connection(rpcUrl, 'confirmed');
-
-      console.log('📊 Fetching wallet data...');
-
-      // Get basic wallet info
-      const balance = await connection.getBalance(publicKey);
-      const solBalance = balance / 1e9;
-
-      // Get token accounts
-      const tokenAccounts = await connection.getParsedTokenAccountsByOwner(publicKey, {
-        programId: new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'),
-      });
-
-      // Get transaction signatures (last 200)
-      const signatures = await connection.getSignaturesForAddress(publicKey, { limit: 1000 });
-      const totalTransactions = signatures.length;
-
-      console.log(`📈 Found ${totalTransactions} transactions`);
-
-      // Calculate wallet age
-      const oldestSignature = signatures[signatures.length - 1];
-      const walletAge = oldestSignature?.blockTime 
-        ? Math.floor((Date.now() / 1000 - oldestSignature.blockTime) / 86400)
-        : 0;
-      
-      const creationDate = oldestSignature?.blockTime
-        ? new Date(oldestSignature.blockTime * 1000).toLocaleDateString()
-        : 'Unknown';
-
-      console.log(`📅 Wallet age: ${walletAge} days (created ${creationDate})`);
-
-      // Analyze last 50 transactions for SOL volume
-      const recentSigs = signatures.slice(0, Math.min(50, signatures.length));
-      let totalSOLTransacted = 0;
-      const uniquePrograms = new Set<string>();
-      const activity = {
-        swaps: 0,
-        lpStakes: 0,
-        airdrops: 0,
-        nftMints: 0,
-        nftSales: 0,
-      };
-
-      console.log('🔬 Analyzing transaction patterns...');
-
-      for (const sig of recentSigs) {
-        try {
-          const tx = await connection.getParsedTransaction(sig.signature, {
-            maxSupportedTransactionVersion: 0,
-          });
-
-          if (tx?.meta) {
-            // Calculate SOL transacted
-            const preBalance = tx.meta.preBalances[0] || 0;
-            const postBalance = tx.meta.postBalances[0] || 0;
-            const diff = Math.abs(preBalance - postBalance) / 1e9;
-            totalSOLTransacted += diff;
-
-            // Track unique programs
-            tx.transaction.message.instructions.forEach((ix: { programId?: { toString: () => string } }) => {
-              const programId = ix.programId?.toString() || '';
-              if (programId) {
-                uniquePrograms.add(programId);
-                
-                // Detect activity types
-                if (programId.includes('Jupiter') || programId.includes('Raydium') || programId.includes('Orca')) {
-                  activity.swaps++;
-                }
-                if (programId.includes('Marinade') || programId.includes('Lido') || programId.includes('Kamino')) {
-                  activity.lpStakes++;
-                }
-                if (programId.includes('Metaplex') || programId.includes('Token Metadata')) {
-                  activity.nftMints++;
-                }
-              }
-            });
-          }
-        } catch (err) {
-          // Skip failed transaction fetches
-          console.log('Skipping transaction:', err);
-        }
+      if (!response.ok) {
+        throw new Error('Failed to fetch wallet analysis');
       }
 
-      const uniqueProtocols = uniquePrograms.size;
-
-      console.log(`💰 Total SOL transacted: ${totalSOLTransacted.toFixed(2)}`);
-      console.log(`🔗 Unique protocols: ${uniqueProtocols}`);
-      console.log(`📊 Activity:`, activity);
-
-      // Risk Assessment Algorithm
-      let riskScore = 0;
-      const riskFlags: string[] = [];
-
-      // New wallet detection
-      if (walletAge < 7) {
-        riskScore += 20;
-        riskFlags.push('⚠️ Very new wallet (< 7 days)');
-      } else if (walletAge < 30) {
-        riskScore += 10;
-        riskFlags.push('⚠️ New wallet (< 30 days)');
-      }
-
-      // Low activity flagging
-      if (totalTransactions < 10) {
-        riskScore += 15;
-        riskFlags.push('⚠️ Very low transaction count');
-      }
-
-      // Honeypot detection
-      if (solBalance > 10 && totalTransactions < 20) {
-        riskScore += 30;
-        riskFlags.push('🚨 Honeypot risk: High balance + low activity');
-      }
-
-      // Airdrop farmer pattern
-      if (activity.swaps === 0 && totalTransactions > 10) {
-        riskScore += 10;
-        riskFlags.push('⚠️ No trading activity (airdrop farmer?)');
-      }
-
-      // Bot detection
-      if (activity.nftMints > 20) {
-        riskScore += 15;
-        riskFlags.push('⚠️ High NFT minting activity (bot?)');
-      }
-
-      // Determine risk level
-      let riskLevel: RiskLevel;
-      if (riskScore <= 25) {
-        riskLevel = 'Low';
-      } else if (riskScore <= 50) {
-        riskLevel = 'Medium';
-      } else if (riskScore <= 60) {
-        riskLevel = 'High';
-      } else {
-        riskLevel = 'Critical';
-      }
-
-      console.log(`🛡️ Risk Score: ${riskScore} (${riskLevel})`);
-
-      // Wallet Type Classification
-      let walletType: WalletType = 'Regular';
-
-      if (riskScore > 60 || riskFlags.some(f => f.includes('Honeypot'))) {
-        walletType = 'Scam';
-        riskFlags.push('🚨 SCAM WALLET: Suspicious patterns detected');
-      } else if (walletAge > 365 && totalTransactions > 500 && uniqueProtocols > 20 && totalSOLTransacted > 1000) {
-        walletType = 'Founder/VC';
-        riskFlags.push('👑 Likely Founder/VC wallet');
-        riskScore = Math.max(0, riskScore - 20); // Reduce risk for established wallets
-      } else if (activity.swaps > 50) {
-        walletType = 'Trader';
-      } else if (activity.nftMints > 20 || tokenAccounts.value.filter(acc => {
-        const amount = acc.account.data.parsed.info.tokenAmount.uiAmount;
-        const decimals = acc.account.data.parsed.info.tokenAmount.decimals;
-        return amount === 1 && decimals === 0;
-      }).length > 20) {
-        walletType = 'NFT Collector';
-      }
-
-      console.log(`🎯 Wallet Type: ${walletType}`);
-
-      // Get SOL price from Jupiter
-      let solPrice = 150; // Default fallback
-      try {
-        const solPriceResponse = await fetch(
-          'https://price.jup.ag/v6/price?ids=So11111111111111111111111111111111111111112'
-        );
-        const solPriceData = await solPriceResponse.json();
-        solPrice = solPriceData.data?.So11111111111111111111111111111111111111112?.price || 150;
-      } catch (err) {
-        console.log('Failed to fetch SOL price, using default:', err);
-      }
-
-      // Calculate portfolio value with real SOL price
-      const portfolioValue = solBalance * solPrice;
-
-      // Parse token holdings with real metadata
-      const tokens: TokenHolding[] = [];
-      const tokenMints = tokenAccounts.value
-        .slice(0, 10) // Limit to top 10
-        .map(acc => acc.account.data.parsed.info.mint);
-      
-      // Fetch prices for all tokens
-      if (tokenMints.length > 0) {
-        try {
-          const mintAddresses = tokenMints.join(',');
-          const pricesResponse = await fetch(
-            `https://price.jup.ag/v6/price?ids=${mintAddresses}`
-          );
-          const pricesData = await pricesResponse.json();
-          
-          for (const acc of tokenAccounts.value.slice(0, 10)) {
-            const mint = acc.account.data.parsed.info.mint;
-            const balance = acc.account.data.parsed.info.tokenAmount.uiAmount || 0;
-            const priceInfo = pricesData.data?.[mint];
-            const price = priceInfo?.price || 0;
-            
-            // Import token symbols from centralized list
-            const symbol = mint in KNOWN_TOKENS ? KNOWN_TOKENS[mint] : mint.slice(0, 4).toUpperCase();
-            
-            tokens.push({
-              mint,
-              symbol,
-              balance,
-              usdValue: balance * price,
-            });
-          }
-        } catch (err) {
-          console.log('Failed to fetch token prices:', err);
-          // Fallback without prices
-          for (const acc of tokenAccounts.value.slice(0, 10)) {
-            tokens.push({
-              mint: acc.account.data.parsed.info.mint,
-              symbol: 'TOKEN',
-              balance: acc.account.data.parsed.info.tokenAmount.uiAmount || 0,
-              usdValue: 0,
-            });
-          }
-        }
-      }
-
-      const walletAnalysis: WalletAnalysis = {
-        address: walletAddress,
-        age: walletAge,
-        creationDate,
-        solBalance,
-        solBalanceUSD: solBalance * solPrice,
-        totalTransactions,
-        totalSOLTransacted,
-        uniqueProtocols,
-        tokenAccounts: tokenAccounts.value.length,
-        portfolioValue,
-        walletType,
-        riskScore,
-        riskLevel,
-        riskFlags,
-        activity,
-        tokens,
-      };
-
-      console.log('✅ Analysis complete:', walletAnalysis);
-      setAnalysis(walletAnalysis);
+      const data = await response.json();
+      setAnalysis(data);
     } catch (err) {
-      console.error('❌ Error analyzing wallet:', err);
-      setError((err as Error).message || 'Failed to analyze wallet');
+      setError(err instanceof Error ? err.message : 'Failed to analyze wallet');
+      setAnalysis(null);
     } finally {
       setLoading(false);
     }
   };
 
-  const getRiskColor = (level: RiskLevel) => {
-    switch (level) {
-      case 'Low':
-        return 'border-green-500 bg-green-500/10';
-      case 'Medium':
-        return 'border-orange-500 bg-orange-500/10';
-      case 'High':
-        return 'border-red-500 bg-red-500/10';
-      case 'Critical':
-        return 'border-red-700 bg-red-700/10';
-      default:
-        return 'border-gray-500 bg-gray-500/10';
-    }
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    analyzeWallet(walletAddress);
   };
 
-  const getRiskTextColor = (level: RiskLevel) => {
-    switch (level) {
-      case 'Low':
-        return 'text-green-400';
-      case 'Medium':
-        return 'text-orange-400';
-      case 'High':
-        return 'text-red-400';
-      case 'Critical':
-        return 'text-red-600';
-      default:
-        return 'text-gray-400';
-    }
-  };
-
-  const getWalletTypeIcon = (type: WalletType) => {
-    switch (type) {
-      case 'Founder/VC':
-        return '👑';
-      case 'Scam':
-        return '🚨';
-      case 'Trader':
-        return '💹';
-      case 'NFT Collector':
-        return '🎨';
-      default:
-        return '👤';
+  const handleConnectedWallet = () => {
+    if (publicKey) {
+      const address = publicKey.toBase58();
+      setWalletAddress(address);
+      analyzeWallet(address);
     }
   };
 
   return (
-    <div className="space-y-8">
-      {/* Header */}
+    <div className="wallet-analysis-container">
+      {/* Hero Header */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="text-center space-y-4"
+        className="hero-header"
       >
-        <h1 className="text-5xl font-bold bg-gradient-to-r from-purple-400 via-pink-400 to-blue-400 bg-clip-text text-transparent">
-          🔍 Enhanced Wallet Analysis
+        <h1 className="hero-title gradient-text glow-text">
+          🔍 Wallet Intelligence V2
         </h1>
-        <p className="text-xl text-gray-300">
-          Professional-grade wallet forensics with risk assessment
+        <p className="hero-subtitle">
+          Advanced Social Intelligence • Risk Assessment • Trust Scoring
         </p>
       </motion.div>
 
-      {/* Input Section */}
+      {/* Search Section */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
-        className="bg-white/10 backdrop-blur-md rounded-xl p-6"
+        className="search-section"
       >
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              Wallet Address
-            </label>
-            <input
-              type="text"
-              value={walletAddress}
-              onChange={(e) => setWalletAddress(e.target.value)}
-              placeholder="Enter Solana wallet address..."
-              className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
-            />
-          </div>
-          <button
-            onClick={analyzeWallet}
-            disabled={loading || !walletAddress}
-            className="w-full px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg font-semibold hover:from-purple-600 hover:to-pink-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-          >
-            {loading ? '🔍 Analyzing...' : '🔍 Analyze Wallet'}
+        <form onSubmit={handleSubmit} className="search-form">
+          <input
+            type="text"
+            value={walletAddress}
+            onChange={(e) => setWalletAddress(e.target.value)}
+            placeholder="Enter Solana wallet address..."
+            className="search-input"
+          />
+          <button type="submit" className="btn-primary" disabled={loading}>
+            {loading ? '🔄 Analyzing...' : '🔍 Analyze'}
           </button>
-        </div>
-      </motion.div>
+        </form>
 
-      {/* Error Display */}
-      {error && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="bg-red-500/10 border border-red-500 rounded-xl p-4 text-red-400"
-        >
-          ❌ {error}
-        </motion.div>
-      )}
+        {publicKey && (
+          <button onClick={handleConnectedWallet} className="btn-secondary">
+            📱 Analyze Connected Wallet
+          </button>
+        )}
+
+        {error && (
+          <div className="error-message">
+            ⚠️ {error}
+          </div>
+        )}
+      </motion.div>
 
       {/* Analysis Results */}
       {analysis && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="space-y-6"
-        >
-          {/* Risk Assessment Card */}
-          <div className={`border-2 rounded-xl p-6 ${getRiskColor(analysis.riskLevel)}`}>
-            <h2 className="text-2xl font-bold text-white mb-4">
-              🛡️ Risk Assessment
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-              <div>
-                <div className="text-sm text-gray-400">Risk Score</div>
-                <div className={`text-3xl font-bold ${getRiskTextColor(analysis.riskLevel)}`}>
-                  {analysis.riskScore}/100
-                </div>
+        <div className="analysis-results">
+          {/* Trust Score Orb */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.2 }}
+            className="trust-score-orb-container"
+          >
+            <div className="trust-score-orb float-3d">
+              <div className="orb-rings">
+                <div className="ring ring-blue neon-pulse-blue"></div>
+                <div className="ring ring-green neon-pulse"></div>
               </div>
-              <div>
-                <div className="text-sm text-gray-400">Risk Level</div>
-                <div className={`text-3xl font-bold ${getRiskTextColor(analysis.riskLevel)}`}>
-                  {analysis.riskLevel}
+              <div className="orb-content">
+                <div className="score-value gradient-text">{analysis.trust_score || 0}</div>
+                <div className="score-label">Trust Score</div>
+                <div className="score-breakdown">
+                  {analysis.trust_breakdown && (
+                    <>
+                      <span>Risk: {analysis.trust_breakdown.inverse_risk}%</span>
+                      <span>Social: {analysis.trust_breakdown.farcaster}%</span>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
-            {analysis.riskFlags.length > 0 && (
-              <div>
-                <div className="text-sm text-gray-400 mb-2">Risk Flags:</div>
-                <ul className="space-y-1">
-                  {analysis.riskFlags.map((flag, idx) => (
-                    <li key={idx} className="text-white">
-                      {flag}
-                    </li>
-                  ))}
-                </ul>
+          </motion.div>
+
+          {/* Social Cards Side by Side */}
+          <div className="social-cards-container">
+            {/* Farcaster Card */}
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.3 }}
+              className="social-card farcaster-card"
+            >
+              <div className="card-header">
+                <h3 className="card-title">🌐 Farcaster Score</h3>
+                <div className="score-badge farcaster-badge">
+                  {analysis.farcaster_score || 0}
+                </div>
               </div>
-            )}
+              
+              {analysis.farcaster_username ? (
+                <div className="card-content">
+                  <div className="profile-info">
+                    <div className="profile-name">{analysis.farcaster_display_name}</div>
+                    <div className="profile-username">@{analysis.farcaster_username}</div>
+                    {analysis.farcaster_bio && (
+                      <div className="profile-bio">{analysis.farcaster_bio}</div>
+                    )}
+                  </div>
+                  
+                  <div className="stats-grid">
+                    <div className="stat-item">
+                      <div className="stat-value">{analysis.farcaster_followers || 0}</div>
+                      <div className="stat-label">Followers</div>
+                    </div>
+                    <div className="stat-item">
+                      <div className="stat-value">{analysis.farcaster_casts || 0}</div>
+                      <div className="stat-label">Casts</div>
+                    </div>
+                  </div>
+
+                  <div className="badges-row">
+                    {analysis.farcaster_power_badge && (
+                      <span className="badge badge-power">⚡ Power</span>
+                    )}
+                    {analysis.farcaster_verified && (
+                      <span className="badge badge-verified">✓ Verified</span>
+                    )}
+                    {analysis.farcaster_active_badge && (
+                      <span className="badge badge-active">🟢 Active</span>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="card-content-empty">
+                  <p>No Farcaster profile linked to this wallet</p>
+                </div>
+              )}
+            </motion.div>
+
+            {/* GM Score Card */}
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.3 }}
+              className="social-card gm-card"
+            >
+              <div className="card-header">
+                <h3 className="card-title">☀️ GM Score</h3>
+                <div className="score-badge gm-badge">
+                  {analysis.gm_score || 0}
+                </div>
+              </div>
+              
+              <div className="card-content">
+                <div className="stats-grid">
+                  <div className="stat-item">
+                    <div className="stat-value">{analysis.gm_casts_count || 0}</div>
+                    <div className="stat-label">GM Casts</div>
+                  </div>
+                  <div className="stat-item">
+                    <div className="stat-value">{analysis.gm_total_likes || 0}</div>
+                    <div className="stat-label">Total Likes</div>
+                  </div>
+                  <div className="stat-item">
+                    <div className="stat-value">{analysis.gm_total_recasts || 0}</div>
+                    <div className="stat-label">Recasts</div>
+                  </div>
+                  <div className="stat-item">
+                    <div className="stat-value">{analysis.gm_engagement_rate || 0}%</div>
+                    <div className="stat-label">Engagement</div>
+                  </div>
+                </div>
+
+                <div className="consistency-bar">
+                  <div className="consistency-label">
+                    🔥 {analysis.gm_consistency_days || 0} Day Streak
+                  </div>
+                  <div className="consistency-progress">
+                    <div 
+                      className="consistency-fill" 
+                      style={{ width: `${Math.min(100, (analysis.gm_consistency_days || 0) / 30 * 100)}%` }}
+                    ></div>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
           </div>
 
-          {/* Wallet Metadata Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="bg-white/10 backdrop-blur-md rounded-xl p-4">
-              <div className="text-sm text-gray-400">Wallet Age</div>
-              <div className="text-2xl font-bold text-white">
-                {analysis.age} days
-              </div>
-              <div className="text-xs text-gray-500">
-                Created: {analysis.creationDate}
-              </div>
+          {/* 8-Card Metadata Grid */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+            className="metadata-grid"
+          >
+            <div className="meta-card">
+              <div className="meta-icon">📅</div>
+              <div className="meta-value">{analysis.age_days || 0} days</div>
+              <div className="meta-label">Wallet Age</div>
             </div>
 
-            <div className="bg-white/10 backdrop-blur-md rounded-xl p-4">
-              <div className="text-sm text-gray-400">SOL Balance</div>
-              <div className="text-2xl font-bold text-white">
-                {analysis.solBalance.toFixed(4)} SOL
-              </div>
-              <div className="text-xs text-gray-500">
-                ${analysis.solBalanceUSD.toFixed(2)}
-              </div>
+            <div className="meta-card">
+              <div className="meta-icon">💰</div>
+              <div className="meta-value">{analysis.current_balance_sol?.toFixed(2) || 0} SOL</div>
+              <div className="meta-label">Balance</div>
             </div>
 
-            <div className="bg-white/10 backdrop-blur-md rounded-xl p-4">
-              <div className="text-sm text-gray-400">Total Transactions</div>
-              <div className="text-2xl font-bold text-white">
-                {analysis.totalTransactions}
-              </div>
+            <div className="meta-card">
+              <div className="meta-icon">📊</div>
+              <div className="meta-value">{analysis.total_transactions || 0}</div>
+              <div className="meta-label">Transactions</div>
             </div>
 
-            <div className="bg-white/10 backdrop-blur-md rounded-xl p-4">
-              <div className="text-sm text-gray-400">Total SOL Transacted</div>
-              <div className="text-2xl font-bold text-white">
-                {analysis.totalSOLTransacted.toFixed(2)}
-              </div>
+            <div className="meta-card">
+              <div className="meta-icon">💎</div>
+              <div className="meta-value">{analysis.total_sol_transacted?.toFixed(2) || 0}</div>
+              <div className="meta-label">SOL Volume</div>
             </div>
 
-            <div className="bg-white/10 backdrop-blur-md rounded-xl p-4">
-              <div className="text-sm text-gray-400">Unique Protocols</div>
-              <div className="text-2xl font-bold text-white">
-                {analysis.uniqueProtocols}
-              </div>
+            <div className="meta-card">
+              <div className="meta-icon">🎯</div>
+              <div className="meta-value">{analysis.protocol_diversity || 0}</div>
+              <div className="meta-label">Protocols</div>
             </div>
 
-            <div className="bg-white/10 backdrop-blur-md rounded-xl p-4">
-              <div className="text-sm text-gray-400">Token Accounts</div>
-              <div className="text-2xl font-bold text-white">
-                {analysis.tokenAccounts}
-              </div>
+            <div className="meta-card">
+              <div className="meta-icon">🪙</div>
+              <div className="meta-value">{analysis.token_count || 0}</div>
+              <div className="meta-label">Tokens</div>
             </div>
 
-            <div className="bg-white/10 backdrop-blur-md rounded-xl p-4">
-              <div className="text-sm text-gray-400">Portfolio Value</div>
-              <div className="text-2xl font-bold text-white">
-                ${analysis.portfolioValue.toFixed(2)}
-              </div>
+            <div className="meta-card">
+              <div className="meta-icon">💵</div>
+              <div className="meta-value">${analysis.portfolio_value_usd?.toFixed(2) || 0}</div>
+              <div className="meta-label">Portfolio</div>
             </div>
 
-            <div className="bg-white/10 backdrop-blur-md rounded-xl p-4">
-              <div className="text-sm text-gray-400">Wallet Type</div>
-              <div className="text-2xl font-bold text-white">
-                {getWalletTypeIcon(analysis.walletType)} {analysis.walletType}
+            <div className="meta-card">
+              <div className="meta-icon">🏷️</div>
+              <div className="meta-value">{analysis.wallet_type || 'Unknown'}</div>
+              <div className="meta-label">Type</div>
+            </div>
+          </motion.div>
+
+          {/* Activity Summary (5 metrics) */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5 }}
+            className="activity-summary"
+          >
+            <h3 className="section-title">📈 Activity Breakdown</h3>
+            <div className="activity-grid">
+              <div className="activity-item">
+                <div className="activity-icon">🔄</div>
+                <div className="activity-count">{analysis.swap_count || 0}</div>
+                <div className="activity-label">Swaps</div>
+              </div>
+
+              <div className="activity-item">
+                <div className="activity-icon">💧</div>
+                <div className="activity-count">{analysis.lp_stake_count || 0}</div>
+                <div className="activity-label">LP Stakes</div>
+              </div>
+
+              <div className="activity-item">
+                <div className="activity-icon">🎁</div>
+                <div className="activity-count">{analysis.airdrop_count || 0}</div>
+                <div className="activity-label">Airdrops</div>
+              </div>
+
+              <div className="activity-item">
+                <div className="activity-icon">🎨</div>
+                <div className="activity-count">{analysis.nft_mint_count || 0}</div>
+                <div className="activity-label">NFT Mints</div>
+              </div>
+
+              <div className="activity-item">
+                <div className="activity-icon">💸</div>
+                <div className="activity-count">{analysis.nft_sale_count || 0}</div>
+                <div className="activity-label">NFT Sales</div>
               </div>
             </div>
-          </div>
+          </motion.div>
 
-          {/* Activity Summary */}
-          <div className="bg-white/10 backdrop-blur-md rounded-xl p-6">
-            <h2 className="text-2xl font-bold text-white mb-4">
-              📊 Activity Summary
-            </h2>
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-              <div>
-                <div className="text-sm text-gray-400">🔄 Swaps</div>
-                <div className="text-xl font-bold text-white">
-                  {analysis.activity.swaps}
-                </div>
+          {/* Risk Assessment */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.6 }}
+            className={`risk-assessment risk-level-${analysis.risk_level?.toLowerCase() || 'unknown'}`}
+          >
+            <h3 className="section-title">🛡️ Risk Assessment</h3>
+            <div className="risk-content">
+              <div className="risk-score-display">
+                <div className="risk-score-value">{analysis.risk_score || 0}</div>
+                <div className="risk-score-label">{analysis.risk_level || 'UNKNOWN'} RISK</div>
               </div>
-              <div>
-                <div className="text-sm text-gray-400">💎 LP Stakes</div>
-                <div className="text-xl font-bold text-white">
-                  {analysis.activity.lpStakes}
-                </div>
+
+              <div className="risk-indicators">
+                {analysis.is_honeypot && <span className="risk-badge">⚠️ Honeypot Pattern</span>}
+                {analysis.is_bot && <span className="risk-badge">🤖 Bot-like Behavior</span>}
+                {analysis.is_scam && <span className="risk-badge">🚨 Scam Indicators</span>}
+                {(analysis.social_verification_bonus ?? 0) > 0 && (
+                  <span className="risk-badge bonus">✓ Social Verified (-{analysis.social_verification_bonus})</span>
+                )}
               </div>
-              <div>
-                <div className="text-sm text-gray-400">🎁 Airdrops</div>
-                <div className="text-xl font-bold text-white">
-                  {analysis.activity.airdrops}
-                </div>
-              </div>
-              <div>
-                <div className="text-sm text-gray-400">🎨 NFT Mints</div>
-                <div className="text-xl font-bold text-white">
-                  {analysis.activity.nftMints}
-                </div>
-              </div>
-              <div>
-                <div className="text-sm text-gray-400">💰 NFT Sales</div>
-                <div className="text-xl font-bold text-white">
-                  {analysis.activity.nftSales}
-                </div>
+
+              <div className="risk-description">
+                {analysis.risk_level === 'LOW' && '🟢 Low risk - Safe for interaction'}
+                {analysis.risk_level === 'MEDIUM' && '🟡 Medium risk - Monitor activity'}
+                {analysis.risk_level === 'HIGH' && '🔴 High risk - Exercise caution'}
+                {analysis.risk_level === 'CRITICAL' && '🔴 Critical risk - Avoid interaction'}
               </div>
             </div>
-          </div>
+          </motion.div>
 
-          {/* Token Holdings */}
-          {analysis.tokens.length > 0 && (
-            <div className="bg-white/10 backdrop-blur-md rounded-xl p-6">
-              <h2 className="text-2xl font-bold text-white mb-4">
-                💰 Token Holdings (Top 10)
-              </h2>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-white/10">
-                      <th className="text-left py-2 text-gray-400">Token</th>
-                      <th className="text-right py-2 text-gray-400">Balance</th>
-                      <th className="text-right py-2 text-gray-400">Value</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {analysis.tokens.map((token, idx) => (
-                      <tr key={idx} className="border-b border-white/5">
-                        <td className="py-2 text-white">
-                          {token.symbol}
-                          <div className="text-xs text-gray-500 font-mono">
-                            {token.mint.slice(0, 8)}...
-                          </div>
-                        </td>
-                        <td className="text-right py-2 text-white">
-                          {token.balance.toFixed(4)}
-                        </td>
-                        <td className="text-right py-2 text-white">
-                          ${token.usdValue.toFixed(2)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-
-          {/* Solscan Link */}
-          <div className="text-center">
+          {/* External Links */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.7 }}
+            className="external-links"
+          >
             <a
-              href={`https://solscan.io/account/${encodeURIComponent(analysis.address)}`}
+              href={`https://solscan.io/account/${encodeURIComponent(walletAddress)}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-lg font-semibold hover:from-blue-600 hover:to-cyan-600 transition-all"
+              className="external-link"
             >
               🔗 View on Solscan
             </a>
-          </div>
-        </motion.div>
+
+            {analysis.farcaster_username && (
+              <a
+                href={`https://warpcast.com/${encodeURIComponent(analysis.farcaster_username)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="external-link farcaster-link"
+              >
+                🌐 View Farcaster Profile
+              </a>
+            )}
+          </motion.div>
+        </div>
       )}
     </div>
   );

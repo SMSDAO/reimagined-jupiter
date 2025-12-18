@@ -1,4 +1,5 @@
 import { Connection, Keypair, PublicKey } from '@solana/web3.js';
+import bs58 from 'bs58';
 import { config } from './config/index.js';
 import { QuickNodeIntegration } from './integrations/quicknode.js';
 import { PresetManager } from './services/presetManager.js';
@@ -8,15 +9,8 @@ import { FlashLoanArbitrage, TriangularArbitrage } from './strategies/arbitrage.
 import { AddressBook } from './services/addressBook.js';
 import { WalletScoring } from './services/walletScoring.js';
 import { RouteTemplateManager } from './services/routeTemplates.js';
-import { PythPriceStreamService } from './services/pythPriceStream.js';
-import { EnhancedArbitrageScanner } from './services/enhancedArbitrage.js';
-import { MarginfiV2Integration } from './integrations/marginfiV2.js';
-import { SecurityManager, EnvironmentSecurityChecker } from './utils/security.js';
-import { ExecutionLogger } from './utils/executionLogger.js';
-import { EncryptionService } from './utils/encryption.js';
-import { AnalyticsLogger } from './services/analyticsLogger.js';
-import { ProfitDistributionService } from './services/profitDistribution.js';
-import { DAOAirdropService } from './services/daoAirdrop.js';
+import { EnhancedArbitrageScanner } from './services/enhancedScanner.js';
+import { ArbitrageDatabase } from './services/database.js';
 
 class GXQStudio {
   private connection: Connection;
@@ -30,20 +24,10 @@ class GXQStudio {
   private addressBook: AddressBook;
   private walletScoring: WalletScoring;
   private routeTemplates: RouteTemplateManager;
-  private pythStream: PythPriceStreamService;
   private enhancedScanner: EnhancedArbitrageScanner;
-  private marginfiV2: MarginfiV2Integration;
-  private securityManager: SecurityManager;
-  private executionLogger: ExecutionLogger;
-  private encryptionService: EncryptionService;
-  private analyticsLogger: AnalyticsLogger;
-  private profitDistributionService: ProfitDistributionService;
-  private daoAirdropService: DAOAirdropService;
+  private database: ArbitrageDatabase;
   
   constructor() {
-    // Run security checks first
-    EnvironmentSecurityChecker.printSecurityCheck();
-    
     // Initialize QuickNode first
     this.quicknode = new QuickNodeIntegration();
     this.connection = this.quicknode.getRpcConnection();
@@ -55,62 +39,23 @@ class GXQStudio {
     this.addressBook = new AddressBook('./address-book');
     this.walletScoring = new WalletScoring(this.connection);
     this.routeTemplates = new RouteTemplateManager('./route-templates');
-    
-    // Initialize new features
-    this.pythStream = new PythPriceStreamService('https://hermes.pyth.network');
-    this.enhancedScanner = new EnhancedArbitrageScanner(this.connection, this.pythStream);
-    this.marginfiV2 = new MarginfiV2Integration(this.connection);
-    this.securityManager = new SecurityManager(this.connection);
-    this.executionLogger = new ExecutionLogger('./logs');
-    
-    // Initialize encryption, analytics, and profit distribution services
-    this.encryptionService = new EncryptionService();
-    this.analyticsLogger = new AnalyticsLogger('./analytics');
-    
-    // Parse wallet addresses for profit distribution
-    let reserveWalletKey: PublicKey;
-    try {
-      reserveWalletKey = new PublicKey(config.profitDistribution.reserveWallet);
-    } catch {
-      console.warn('⚠️  Reserve wallet address is invalid or SNS (not yet supported), using placeholder');
-      reserveWalletKey = new PublicKey('11111111111111111111111111111111');
-    }
-    
-    let gasWalletKey: PublicKey;
-    try {
-      gasWalletKey = new PublicKey(config.profitDistribution.gasWallet);
-    } catch {
-      console.warn('⚠️  Gas wallet address is invalid, using placeholder');
-      gasWalletKey = new PublicKey('11111111111111111111111111111111');
-    }
-    
-    this.profitDistributionService = new ProfitDistributionService(this.connection, {
-      reserveWallet: reserveWalletKey,
-      gasWallet: gasWalletKey,
-      daoWallet: config.profitDistribution.daoWallet
-    });
-    this.daoAirdropService = new DAOAirdropService(this.connection, config.profitDistribution.daoWallet);
+    this.enhancedScanner = new EnhancedArbitrageScanner(this.connection);
+    this.database = new ArbitrageDatabase('./data');
     
     // Initialize user keypair if available
     if (config.solana.walletPrivateKey) {
       try {
-        const keypair = this.securityManager.loadKeypairFromEnv(config.solana.walletPrivateKey);
-        
-        if (keypair) {
-          this.userKeypair = keypair;
-          this.airdropChecker = new AirdropChecker(this.connection, this.userKeypair.publicKey);
-          this.autoExecutionEngine = new AutoExecutionEngine(
-            this.connection,
-            this.userKeypair,
-            this.presetManager,
-            this.quicknode
-          );
-        } else {
-          console.warn('⚠️  Failed to load wallet keypair, running in read-only mode');
-        }
+        const privateKeyBytes = bs58.decode(config.solana.walletPrivateKey);
+        this.userKeypair = Keypair.fromSecretKey(privateKeyBytes);
+        this.airdropChecker = new AirdropChecker(this.connection, this.userKeypair.publicKey);
+        this.autoExecutionEngine = new AutoExecutionEngine(
+          this.connection,
+          this.userKeypair,
+          this.presetManager,
+          this.quicknode
+        );
       } catch (error) {
-        console.warn('⚠️  Invalid wallet private key, running in read-only mode');
-        console.error(error);
+        console.warn('Invalid wallet private key, running in read-only mode');
       }
     }
   }
@@ -122,16 +67,7 @@ class GXQStudio {
     await this.presetManager.initialize();
     await this.addressBook.initialize();
     await this.routeTemplates.initialize();
-    await this.executionLogger.initialize();
-    
-    // Validate wallet if configured
-    if (this.userKeypair) {
-      const validation = await this.securityManager.validateKeypair(this.userKeypair, 0.01);
-      if (!validation.valid) {
-        console.error(`❌ Wallet validation failed: ${validation.error}`);
-        console.error('⚠️  Some features will be disabled');
-      }
-    }
+    await this.database.initialize();
     
     console.log('✅ Initialization complete\n');
     this.printSystemInfo();
@@ -141,10 +77,8 @@ class GXQStudio {
     console.log('📊 System Information:');
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     console.log(`🌐 QuickNode Integration: ${config.quicknode.rpcUrl ? '✓' : '✗'}`);
-    console.log(`📡 Pyth Price Streaming: ✓ (Hermes HTTP API - 1s polling)`);
-    console.log(`⚡ Enhanced Arbitrage Scanner: ✓ (1s intervals)`);
     console.log(`💰 Flash Loan Providers: 6`);
-    console.log(`   - Marginfi v2 (${config.flashLoanProviders.marginfi.toBase58().slice(0, 8)}...) - 0.09% fee - Multi-DEX routing`);
+    console.log(`   - Marginfi (${config.flashLoanProviders.marginfi.toBase58().slice(0, 8)}...) - 0.09% fee`);
     console.log(`   - Solend (${config.flashLoanProviders.solend.toBase58().slice(0, 8)}...) - 0.10% fee`);
     console.log(`   - Save Finance (${config.flashLoanProviders.saveFinance.toBase58().slice(0, 8)}...) - 0.11% fee`);
     console.log(`   - Kamino (${config.flashLoanProviders.kamino.toBase58().slice(0, 8)}...) - 0.12% fee`);
@@ -160,6 +94,8 @@ class GXQStudio {
     console.log(`⚡ Auto-Execution: ${this.autoExecutionEngine ? '✓' : '✗'}`);
     console.log(`🛡️  MEV Protection: ✓`);
     console.log(`💎 GXQ Ecosystem: ${config.gxq.tokenMint.toBase58().slice(0, 8)}...`);
+    console.log(`🔍 Enhanced Scanner: ✓ (1s polling, 20+ aggregators)`);
+    console.log(`💾 Database: ✓ (Historical analysis enabled)`);
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
   }
   
@@ -383,147 +319,95 @@ class GXQStudio {
     }
   }
   
-  async startLivePrices(tokens?: string[]): Promise<void> {
-    const defaultTokens = ['SOL', 'USDC', 'USDT', 'BTC', 'ETH', 'JUP', 'RAY', 'ORCA', 'BONK'];
-    const tokensToTrack = tokens || defaultTokens;
+  async startEnhancedScanner(pollingMs?: number): Promise<void> {
+    console.log('🚀 Starting Enhanced Arbitrage Scanner...\n');
     
-    console.log('📡 Starting Pyth live price stream...');
-    console.log(`Tracking: ${tokensToTrack.join(', ')}\n`);
+    // Set up scanner with custom polling if provided
+    if (pollingMs) {
+      console.log(`Custom polling interval: ${pollingMs}ms\n`);
+    }
     
-    // Listen for price updates
-    this.pythStream.on('price-update', (update) => {
-      console.log(`[${update.symbol}] $${update.price.toFixed(4)} ± $${update.confidence.toFixed(4)} | ${new Date(update.publishTime * 1000).toISOString()}`);
-    });
+    // Set up database integration
+    const scanner = this.enhancedScanner;
     
-    await this.pythStream.start(tokensToTrack);
+    // Start scanner in background and log opportunities to database
+    const scannerPromise = scanner.startScanning();
     
-    console.log('\nPress Ctrl+C to stop...\n');
+    // Periodically save opportunities to database
+    const saveInterval = setInterval(async () => {
+      const opportunities = scanner.getOpportunities();
+      for (const opp of opportunities) {
+        await this.database.addOpportunity(opp);
+      }
+      scanner.clearHistory(); // Clear after saving to avoid duplicates
+    }, 10000); // Save every 10 seconds
     
-    // Keep process alive
+    // Handle graceful shutdown
     process.on('SIGINT', () => {
-      console.log('\n\nStopping price stream...');
-      this.pythStream.stop();
+      console.log('\n\n🛑 Shutting down scanner...');
+      scanner.stopScanning();
+      clearInterval(saveInterval);
       process.exit(0);
     });
+    
+    await scannerPromise;
   }
   
-  async startEnhancedScanner(): Promise<void> {
-    console.log('⚡ Starting Enhanced Arbitrage Scanner...\n');
+  async showScannerStats(): Promise<void> {
+    console.log('📊 Scanner Statistics\n');
     
-    const tokens = ['SOL', 'USDC', 'USDT', 'RAY', 'ORCA', 'JUP'];
+    const stats = this.enhancedScanner.getStatistics();
+    console.log(`Total Scans: ${stats.totalScans}`);
+    console.log(`Opportunities Found: ${stats.opportunitiesFound}\n`);
     
-    // Display configuration
-    const scannerConfig = this.enhancedScanner.getConfig();
-    console.log('Configuration:');
-    console.log(`  Scan Interval: ${scannerConfig.scanIntervalMs}ms`);
-    console.log(`  Min Profit: ${(scannerConfig.minProfitThreshold * 100).toFixed(2)}%`);
-    console.log(`  Max Slippage: ${(scannerConfig.maxSlippage * 100).toFixed(2)}%`);
-    console.log(`  Max Gas: ${scannerConfig.prioritizationFeeLamports} lamports`);
-    console.log(`  Aggregators: ${scannerConfig.enabledAggregators.join(', ')}\n`);
-    
-    await this.enhancedScanner.startScanning(tokens);
-    
-    console.log('Press Ctrl+C to stop...\n');
-    
-    // Display opportunities every 5 seconds
-    const displayInterval = setInterval(() => {
-      const opportunities = this.enhancedScanner.getOpportunities();
-      if (opportunities.length > 0) {
-        console.log(`\n📊 Current Opportunities: ${opportunities.length}`);
-        opportunities.slice(0, 5).forEach((opp, idx) => {
-          console.log(`  ${idx + 1}. ${opp.path.map(t => t.symbol).join(' -> ')}`);
-          console.log(`     Profit: $${opp.estimatedProfit.toFixed(4)} | Aggregators: ${opp.aggregators.join(', ')}`);
-        });
-      }
-    }, 5000);
-    
-    process.on('SIGINT', () => {
-      console.log('\n\nStopping scanner...');
-      clearInterval(displayInterval);
-      this.enhancedScanner.stopScanning();
-      process.exit(0);
-    });
-  }
-  
-  async showMarginfiV2Info(): Promise<void> {
-    console.log('💰 Marginfi v2 Flash Loan Provider\n');
-    
-    const info = this.marginfiV2.getProviderInfo();
-    console.log(`Name: ${info.name}`);
-    console.log(`Version: ${info.version}`);
-    console.log(`Program ID: ${info.programId.slice(0, 16)}...`);
-    console.log(`Fee: ${info.fee}%`);
-    console.log('\n✨ Features:');
-    info.features.forEach(feature => {
-      console.log(`  ✓ ${feature}`);
-    });
-  }
-  
-  async configureScannerSettings(args: string[]): Promise<void> {
-    console.log('⚙️  Enhanced Scanner Configuration\n');
-    
-    if (args.length === 0) {
-      const config = this.enhancedScanner.getConfig();
-      console.log('Current Settings:');
-      console.log(`  Min Profit Threshold: ${(config.minProfitThreshold * 100).toFixed(2)}%`);
-      console.log(`  Max Slippage: ${(config.maxSlippage * 100).toFixed(2)}%`);
-      console.log(`  Prioritization Fee: ${config.prioritizationFeeLamports} lamports`);
-      console.log(`  Scan Interval: ${config.scanIntervalMs}ms`);
-      console.log(`  Enabled Aggregators: ${config.enabledAggregators.join(', ')}`);
-      console.log('\nUsage: npm start config <setting> <value>');
-      console.log('Settings: minProfit, maxSlippage, maxGas, scanInterval');
-      return;
-    }
-    
-    const [setting, value] = args;
-    
-    switch (setting) {
-      case 'minProfit':
-        this.enhancedScanner.updateConfig({ minProfitThreshold: parseFloat(value) / 100 });
-        console.log(`✓ Min profit threshold set to ${value}%`);
-        break;
-      case 'maxSlippage':
-        this.enhancedScanner.updateConfig({ maxSlippage: parseFloat(value) / 100 });
-        console.log(`✓ Max slippage set to ${value}%`);
-        break;
-      case 'maxGas':
-        this.enhancedScanner.updateConfig({ prioritizationFeeLamports: parseInt(value) });
-        console.log(`✓ Max gas set to ${value} lamports`);
-        break;
-      case 'scanInterval':
-        this.enhancedScanner.updateConfig({ scanIntervalMs: parseInt(value) });
-        console.log(`✓ Scan interval set to ${value}ms`);
-        break;
-      default:
-        console.log('Unknown setting. Use: minProfit, maxSlippage, maxGas, scanInterval');
-    }
-  }
-  
-  async showExecutionStats(args: string[]): Promise<void> {
-    console.log('📊 Execution Statistics\n');
-    
-    let since: Date | undefined;
-    if (args.length > 0) {
-      const period = args[0];
-      const now = new Date();
-      
-      switch (period) {
-        case 'today':
-          since = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-          break;
-        case 'week':
-          since = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-          break;
-        case 'month':
-          since = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
-          break;
-        default:
-          console.log('Invalid period. Use: today, week, month');
-          return;
+    if (stats.recentOpportunities.length > 0) {
+      console.log('Recent Opportunities:');
+      for (const opp of stats.recentOpportunities) {
+        console.log(`  ${opp.type} - ${opp.tokens.join(' -> ')} - ${(opp.estimatedProfit * 100).toFixed(3)}%`);
       }
     }
+  }
+  
+  async showDatabaseStats(): Promise<void> {
+    console.log('💾 Database Statistics\n');
     
-    await this.executionLogger.printStatistics(since);
+    const stats = this.database.getStatistics();
+    console.log(`Total Opportunities: ${stats.totalOpportunities}`);
+    console.log(`Total Executed: ${stats.totalExecuted}`);
+    console.log(`Success Rate: ${(stats.successRate * 100).toFixed(1)}%`);
+    console.log(`Total Profit: $${stats.totalProfit.toFixed(2)}`);
+    console.log(`Average Profit: $${stats.averageProfit.toFixed(2)}\n`);
+    
+    console.log('By Type:');
+    for (const [type, count] of Object.entries(stats.byType)) {
+      console.log(`  ${type}: ${count}`);
+    }
+    
+    console.log('\nBy Provider:');
+    for (const [provider, count] of Object.entries(stats.byProvider)) {
+      console.log(`  ${provider}: ${count}`);
+    }
+  }
+  
+  async showHistoricalAnalysis(days?: number): Promise<void> {
+    const period = days || 7;
+    console.log(`📈 Historical Analysis (Last ${period} days)\n`);
+    
+    const analysis = await this.database.getHistoricalAnalysis(period);
+    console.log(`Period: ${analysis.period}`);
+    console.log(`Opportunities: ${analysis.opportunities}`);
+    console.log(`Executed: ${analysis.executed}`);
+    console.log(`Total Profit: $${analysis.totalProfit.toFixed(2)}\n`);
+    
+    console.log('Top Tokens:');
+    for (const { token, count } of analysis.topTokens.slice(0, 5)) {
+      console.log(`  ${token}: ${count}`);
+    }
+    
+    console.log('\nTop Providers:');
+    for (const { provider, count } of analysis.topProviders) {
+      console.log(`  ${provider}: ${count}`);
+    }
   }
 }
 
@@ -572,20 +456,17 @@ async function main() {
     case 'sync':
       await studio.syncToCloud();
       break;
-    case 'prices':
-      await studio.startLivePrices(args.slice(1));
-      break;
     case 'enhanced-scan':
-      await studio.startEnhancedScanner();
+      await studio.startEnhancedScanner(args[1] ? parseInt(args[1]) : undefined);
       break;
-    case 'marginfi-v2':
-      await studio.showMarginfiV2Info();
+    case 'scanner-stats':
+      await studio.showScannerStats();
       break;
-    case 'config':
-      await studio.configureScannerSettings(args.slice(1));
+    case 'db-stats':
+      await studio.showDatabaseStats();
       break;
-    case 'stats':
-      await studio.showExecutionStats(args.slice(1));
+    case 'history':
+      await studio.showHistoricalAnalysis(args[1] ? parseInt(args[1]) : undefined);
       break;
     default:
       console.log('Usage:');
@@ -597,19 +478,18 @@ async function main() {
       console.log('  npm start manual      - Manual execution mode (review opportunities)');
       console.log('  npm start providers   - Show flash loan providers');
       console.log('');
+      console.log('Enhanced Scanner (NEW):');
+      console.log('  npm start enhanced-scan [interval]  - Start enhanced scanner (1s default)');
+      console.log('  npm start scanner-stats             - Show scanner statistics');
+      console.log('  npm start db-stats                  - Show database statistics');
+      console.log('  npm start history [days]            - Historical analysis (7 days default)');
+      console.log('');
       console.log('Phase 2 Features:');
       console.log('  npm start analyze [address]  - Analyze wallet score and tier');
       console.log('  npm start addresses [action] - Manage address book');
       console.log('  npm start templates          - View route templates');
       console.log('  npm start export [type]      - Export config (presets/templates/addresses)');
       console.log('  npm start sync               - Sync presets to QuickNode KV');
-      console.log('');
-      console.log('Enhanced Features (NEW):');
-      console.log('  npm start prices [tokens]    - Start Pyth live price streaming');
-      console.log('  npm start enhanced-scan      - Enhanced arbitrage scanner (1s intervals)');
-      console.log('  npm start marginfi-v2        - Show Marginfi v2 provider info');
-      console.log('  npm start config [setting] [value] - Configure scanner settings');
-      console.log('  npm start stats [period]     - View execution statistics (today/week/month/all)');
       break;
   }
 }

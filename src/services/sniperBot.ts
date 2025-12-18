@@ -315,12 +315,12 @@ export class SniperBot {
 
     // Dispatch custom event for UI (only in browser environment)
     try {
-      if (typeof globalThis !== 'undefined' && typeof (globalThis as any).dispatchEvent === 'function') {
+      if (typeof globalThis !== 'undefined' && typeof (globalThis as unknown as { dispatchEvent?: (event: Event) => void }).dispatchEvent === 'function') {
         const customEvent = new CustomEvent('pool-creation-detected', {
           detail: event,
         });
-        // Use globalThis directly with any cast to avoid window type issues in Node
-        (globalThis as any).dispatchEvent(customEvent);
+        // Use globalThis directly to dispatch event in browser
+        (globalThis as unknown as { dispatchEvent: (event: Event) => void }).dispatchEvent(customEvent);
       }
     } catch (error) {
       // Ignore errors in non-browser environments

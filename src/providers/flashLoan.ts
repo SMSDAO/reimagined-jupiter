@@ -1,15 +1,24 @@
 import { Connection, PublicKey, TransactionInstruction } from '@solana/web3.js';
 import { FlashLoanProvider } from '../types.js';
 
+interface LiquidityCache {
+  maxLoanAmount: number;
+  availableLiquidity: number;
+  timestamp: number;
+}
+
 export abstract class BaseFlashLoanProvider {
   protected connection: Connection;
   protected programId: PublicKey;
   protected fee: number;
+  private liquidityCache: Map<string, LiquidityCache>;
+  private readonly CACHE_TTL = 5000; // 5 seconds cache
   
   constructor(connection: Connection, programId: PublicKey, fee: number) {
     this.connection = connection;
     this.programId = programId;
     this.fee = fee;
+    this.liquidityCache = new Map();
   }
   
   abstract getName(): string;
@@ -21,6 +30,32 @@ export abstract class BaseFlashLoanProvider {
     userAccount: PublicKey,
     instructions: TransactionInstruction[]
   ): Promise<TransactionInstruction[]>;
+  
+  protected getCachedLiquidity(tokenMint: PublicKey): LiquidityCache | null {
+    const key = tokenMint.toString();
+    const cached = this.liquidityCache.get(key);
+    if (cached && Date.now() - cached.timestamp < this.CACHE_TTL) {
+      return cached;
+    }
+    return null;
+  }
+  
+  protected setCachedLiquidity(
+    tokenMint: PublicKey,
+    maxLoanAmount: number,
+    availableLiquidity: number
+  ): void {
+    const key = tokenMint.toString();
+    this.liquidityCache.set(key, {
+      maxLoanAmount,
+      availableLiquidity,
+      timestamp: Date.now(),
+    });
+  }
+  
+  clearCache(): void {
+    this.liquidityCache.clear();
+  }
   
   getFee(): number {
     return this.fee;
@@ -37,6 +72,10 @@ export abstract class BaseFlashLoanProvider {
   }
 }
 
+// Placeholder values for testing - TODO: Replace with actual protocol queries
+const PLACEHOLDER_MAX_LOAN = 1000000;
+const PLACEHOLDER_LIQUIDITY = 500000;
+
 export class MarginfiProvider extends BaseFlashLoanProvider {
   getName(): string {
     return 'Marginfi';
@@ -49,10 +88,21 @@ export class MarginfiProvider extends BaseFlashLoanProvider {
         return 0;
       }
 
+      // Check cache first
+      const cached = this.getCachedLiquidity(_tokenMint);
+      if (cached) {
+        return cached.maxLoanAmount;
+      }
+
       console.log(`[Marginfi] Fetching max loan amount for token: ${_tokenMint.toString().slice(0, 8)}...`);
       
-      // Implementation would query Marginfi protocol
-      const maxLoan = 1000000; // Placeholder
+      // TODO: Implement actual Marginfi protocol query
+      // In production, both values should be fetched together to optimize RPC calls
+      const maxLoan = PLACEHOLDER_MAX_LOAN;
+      const liquidity = PLACEHOLDER_LIQUIDITY;
+      
+      // Cache both values together
+      this.setCachedLiquidity(_tokenMint, maxLoan, liquidity);
       
       console.log(`[Marginfi] Max loan amount: ${maxLoan}`);
       return maxLoan;
@@ -69,10 +119,21 @@ export class MarginfiProvider extends BaseFlashLoanProvider {
         return 0;
       }
 
+      // Check cache first
+      const cached = this.getCachedLiquidity(_tokenMint);
+      if (cached) {
+        return cached.availableLiquidity;
+      }
+
       console.log(`[Marginfi] Fetching available liquidity for token: ${_tokenMint.toString().slice(0, 8)}...`);
       
-      // Implementation would query Marginfi protocol
-      const liquidity = 500000; // Placeholder
+      // TODO: Implement actual Marginfi protocol query
+      // In production, both values should be fetched together to optimize RPC calls
+      const maxLoan = PLACEHOLDER_MAX_LOAN;
+      const liquidity = PLACEHOLDER_LIQUIDITY;
+      
+      // Cache both values together
+      this.setCachedLiquidity(_tokenMint, maxLoan, liquidity);
       
       console.log(`[Marginfi] Available liquidity: ${liquidity}`);
       return liquidity;

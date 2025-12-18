@@ -117,7 +117,7 @@ describe('QuickNodeIntegration', () => {
         },
       });
 
-      await quicknode.callRpcMethod('customMethod', params);
+      await quicknode.callRpcMethod('customMethod', params as any);
 
       expect(mockedAxios.post).toHaveBeenCalledWith(
         expect.any(String),
@@ -186,7 +186,7 @@ describe('QuickNodeIntegration', () => {
     it('should pass null params as empty object', async () => {
       mockedAxios.post.mockResolvedValue({ data: { result: 'ok' } });
 
-      await quicknode.invokeFunction('testFunction', null);
+      await quicknode.invokeFunction('testFunction', null as any);
 
       expect(mockedAxios.post).toHaveBeenCalledWith(
         expect.any(String),

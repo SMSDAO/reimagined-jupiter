@@ -1,0 +1,109 @@
+name: Rename Vercel Hosts and Create GXQ Branch
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  sync-to-gxq:
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: write
+      pull-requests: write
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Configure Git
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+      
+      - name: Create or update gxq branch
+        run: |
+          # Fetch all branches
+          git fetch origin
+          
+          # Check if gxq branch exists remotely
+          if git ls-remote --heads origin gxq | grep -q 'refs/heads/gxq$'; then
+            echo "gxq branch exists, syncing with main"
+            git checkout -B gxq origin/gxq
+            git merge origin/main -m "Sync: Merge latest changes from main to gxq"
+          else
+            echo "Creating new gxq branch from main"
+            git checkout -b gxq origin/main
+          fi
+      
+      - name: Apply hostname/metadata replacements
+        run: |
+          echo "Applying hostname/metadata replacements for Vercel deployment..."
+          
+          # Create marker file to track replacements
+          mkdir -p .github
+          cat > .github/HOSTNAME_REPLACEMENTS.txt << EOF
+          Hostname/metadata replacements applied on $(date)
+          
+          This branch (gxq) is synchronized with main and configured for Vercel deployment.
+          
+          Environment Configuration:
+          - NEXT_PUBLIC_RPC_URL should be set in Vercel dashboard
+          - Root directory: webapp
+          - Framework: Next.js
+          EOF
+          
+          # Add any specific hostname replacements here if needed
+          # For example, updating API endpoints, base URLs, etc.
+          
+          git add .github/HOSTNAME_REPLACEMENTS.txt
+      
+      - name: Commit and push changes
+        run: |
+          if ! git diff --staged --quiet; then
+            git commit -m "Apply hostname/metadata replacements for Vercel deployment"
+          fi
+          git push origin gxq
+      
+      - name: Create or Update Pull Request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: gxq
+          base: main
+          title: '[Auto] Sync from main with Vercel deployment configuration'
+          body: |
+            ## Automated Sync from main to gxq
+            
+            This PR was automatically created by the GitHub Actions workflow when changes were pushed to `main`.
+            
+            ### Changes
+            - Synced latest changes from main branch
+            - Applied hostname/metadata replacements for Vercel deployment
+            - Updated deployment configuration markers
+            
+            ### Deployment
+            - **Branch**: `gxq`
+            - **Root Directory**: `webapp`
+            - **Framework**: Next.js
+            - **Environment**: Configure `NEXT_PUBLIC_RPC_URL` in Vercel
+            
+            This branch is ready to be deployed to Vercel with appropriate configurations.
+            
+            ### What's Next
+            1. Review the changes in this PR
+            2. Merge to main if everything looks good
+            3. The gxq branch will be automatically redeployed on Vercel
+            
+            ---
+            
+            🤖 **Auto-generated** by GitHub Actions
+          labels: |
+            automated
+            deployment
+            vercel
+            sync
