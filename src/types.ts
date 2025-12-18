@@ -100,6 +100,14 @@ export interface ArbitrageOpportunity {
   estimatedProfit: number;
   requiredCapital: number;
   confidence: number;
+  timestamp?: number | Date;
+  priceImpact?: number;
+  estimatedSlippage?: number;
+  estimatedGasFee?: number;
+  routeDetails?: {
+    dexes: string[];
+    priceImpactPct: string;
+  };
 }
 
 export interface PresetConfig {

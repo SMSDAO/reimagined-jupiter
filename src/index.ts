@@ -11,6 +11,7 @@ import { WalletScoring } from './services/walletScoring.js';
 import { RouteTemplateManager } from './services/routeTemplates.js';
 import { EnhancedArbitrageScanner } from './services/enhancedScanner.js';
 import { ArbitrageDatabase } from './services/database.js';
+import { RealTimeArbitrageScanner } from './services/realTimeArbitrageScanner.js';
 
 class GXQStudio {
   private connection: Connection;
@@ -26,6 +27,7 @@ class GXQStudio {
   private routeTemplates: RouteTemplateManager;
   private enhancedScanner: EnhancedArbitrageScanner;
   private database: ArbitrageDatabase;
+  private realTimeScanner: RealTimeArbitrageScanner;
   
   constructor() {
     // Initialize QuickNode first
@@ -41,6 +43,7 @@ class GXQStudio {
     this.routeTemplates = new RouteTemplateManager('./route-templates');
     this.enhancedScanner = new EnhancedArbitrageScanner(this.connection);
     this.database = new ArbitrageDatabase('./data');
+    this.realTimeScanner = new RealTimeArbitrageScanner(this.connection);
     
     // Initialize user keypair if available
     if (config.solana.walletPrivateKey) {
@@ -409,6 +412,78 @@ class GXQStudio {
       console.log(`  ${provider}: ${count}`);
     }
   }
+
+  async startRealTimeScanner(tokens?: string[]): Promise<void> {
+    console.log('🔍 Starting Real-Time Arbitrage Scanner...\n');
+    
+    // Initialize with specific tokens or use default
+    if (tokens && tokens.length > 0) {
+      this.realTimeScanner.initializeTokenPairs(tokens);
+      console.log(`Monitoring ${tokens.join(', ')}`);
+    } else {
+      this.realTimeScanner.initializeTokenPairs();
+      console.log('Monitoring all supported token pairs');
+    }
+    
+    // Register callback for found opportunities
+    this.realTimeScanner.onOpportunityFound((opportunity) => {
+      console.log('\n🎯 NEW OPPORTUNITY FOUND!');
+      console.log(`  Type: ${opportunity.type}`);
+      console.log(`  Path: ${opportunity.path.map(t => t.symbol).join(' -> ')}`);
+      console.log(`  Estimated Profit: ${opportunity.estimatedProfit.toFixed(6)} ${opportunity.path[0].symbol}`);
+      console.log(`  Required Capital: ${opportunity.requiredCapital.toFixed(6)} ${opportunity.path[0].symbol}`);
+      console.log(`  Confidence: ${(opportunity.confidence * 100).toFixed(1)}%`);
+      console.log(`  Price Impact: ${opportunity.priceImpact?.toFixed(4)}%`);
+      console.log(`  Est. Slippage: ${(opportunity.estimatedSlippage! * 100).toFixed(2)}%`);
+      console.log(`  Est. Gas Fee: ${opportunity.estimatedGasFee?.toFixed(9)} SOL`);
+      if (opportunity.routeDetails) {
+        console.log(`  DEXes: ${opportunity.routeDetails.dexes.join(', ')}`);
+      }
+      console.log('');
+    });
+    
+    const config = this.realTimeScanner.getConfig();
+    console.log(`\nScanner Configuration:`);
+    console.log(`  Polling Interval: ${config.pollingIntervalMs}ms`);
+    console.log(`  Min Profit: ${(config.minProfitThreshold * 100).toFixed(2)}%`);
+    console.log(`  Max Slippage: ${(config.maxSlippage * 100).toFixed(2)}%`);
+    console.log(`  Min Confidence: ${(config.minConfidence * 100).toFixed(0)}%`);
+    console.log(`\nPress Ctrl+C to stop scanning\n`);
+    
+    await this.realTimeScanner.startScanning();
+    
+    // Keep the process running
+    await new Promise(() => {
+      // This will run indefinitely until Ctrl+C
+    });
+  }
+
+  async scanRealTimeOnce(tokens?: string[]): Promise<void> {
+    console.log('🔍 One-time Real-Time Arbitrage Scan...\n');
+    
+    const tokenList = tokens || ['SOL', 'USDC', 'USDT', 'BONK', 'RAY', 'ORCA'];
+    const opportunities = await this.realTimeScanner.scanForOpportunities(tokenList);
+    
+    if (opportunities.length === 0) {
+      console.log('No profitable opportunities found at this time.');
+      return;
+    }
+    
+    console.log(`Found ${opportunities.length} profitable opportunities:\n`);
+    
+    for (let i = 0; i < Math.min(opportunities.length, 10); i++) {
+      const opp = opportunities[i];
+      console.log(`${i + 1}. ${opp.path.map(t => t.symbol).join(' -> ')}`);
+      console.log(`   Profit: ${opp.estimatedProfit.toFixed(6)} ${opp.path[0].symbol}`);
+      console.log(`   Capital Required: ${opp.requiredCapital.toFixed(6)} ${opp.path[0].symbol}`);
+      console.log(`   Confidence: ${(opp.confidence * 100).toFixed(1)}%`);
+      console.log(`   Price Impact: ${opp.priceImpact?.toFixed(4)}%`);
+      if (opp.routeDetails) {
+        console.log(`   DEXes: ${opp.routeDetails.dexes.join(', ')}`);
+      }
+      console.log('');
+    }
+  }
 }
 
 // CLI Interface
@@ -468,6 +543,12 @@ async function main() {
     case 'history':
       await studio.showHistoricalAnalysis(args[1] ? parseInt(args[1]) : undefined);
       break;
+    case 'realtime-scan':
+      await studio.startRealTimeScanner(args.slice(1));
+      break;
+    case 'realtime-once':
+      await studio.scanRealTimeOnce(args.slice(1));
+      break;
     default:
       console.log('Usage:');
       console.log('  npm start airdrops    - Check for claimable airdrops');
@@ -478,11 +559,16 @@ async function main() {
       console.log('  npm start manual      - Manual execution mode (review opportunities)');
       console.log('  npm start providers   - Show flash loan providers');
       console.log('');
-      console.log('Enhanced Scanner (NEW):');
+      console.log('Enhanced Scanner:');
       console.log('  npm start enhanced-scan [interval]  - Start enhanced scanner (1s default)');
       console.log('  npm start scanner-stats             - Show scanner statistics');
       console.log('  npm start db-stats                  - Show database statistics');
       console.log('  npm start history [days]            - Historical analysis (7 days default)');
+      console.log('');
+      console.log('Real-Time Arbitrage Scanner (NEW):');
+      console.log('  npm start realtime-scan [tokens...] - Start real-time scanner (all tokens default)');
+      console.log('  npm start realtime-once [tokens...] - One-time scan for opportunities');
+      console.log('  Example: npm start realtime-scan SOL USDC USDT');
       console.log('');
       console.log('Phase 2 Features:');
       console.log('  npm start analyze [address]  - Analyze wallet score and tier');
