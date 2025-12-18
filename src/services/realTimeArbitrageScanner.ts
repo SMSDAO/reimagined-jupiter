@@ -9,6 +9,9 @@ export interface ScannerConfig {
   minProfitThreshold: number;
   maxSlippage: number;
   minConfidence: number;
+  batchSize?: number;
+  startAmount?: number;
+  estimatedGasFeeLamports?: number;
 }
 
 export type OpportunityCallback = (opportunity: ArbitrageOpportunity) => void;
@@ -34,6 +37,9 @@ export class RealTimeArbitrageScanner {
       minProfitThreshold: customConfig?.minProfitThreshold ?? config.arbitrage.minProfitThreshold,
       maxSlippage: customConfig?.maxSlippage ?? config.arbitrage.maxSlippage,
       minConfidence: customConfig?.minConfidence ?? config.scanner.minConfidence,
+      batchSize: customConfig?.batchSize ?? 10,
+      startAmount: customConfig?.startAmount ?? 1000000,
+      estimatedGasFeeLamports: customConfig?.estimatedGasFeeLamports ?? 10000,
     };
     this.isScanning = false;
     this.scanIntervalId = null;
@@ -130,7 +136,7 @@ export class RealTimeArbitrageScanner {
     let opportunitiesFound = 0;
 
     // Scan in batches to avoid overwhelming the API
-    const batchSize = 10;
+    const batchSize = this.scannerConfig.batchSize || 10;
     for (let i = 0; i < this.tokenPairs.length; i += batchSize) {
       const batch = this.tokenPairs.slice(i, i + batchSize);
       const batchResults = await Promise.allSettled(
@@ -141,6 +147,11 @@ export class RealTimeArbitrageScanner {
         if (result.status === 'fulfilled' && result.value) {
           opportunitiesFound++;
           this.notifyOpportunity(result.value);
+        } else if (result.status === 'rejected') {
+          // Log rejected results at debug level
+          if (process.env.DEBUG_SCANNER === 'true') {
+            console.debug(`[Scanner] Scan rejected: ${result.reason}`);
+          }
         }
       }
     }
@@ -158,7 +169,9 @@ export class RealTimeArbitrageScanner {
     tokenC: TokenConfig
   ): Promise<ArbitrageOpportunity | null> {
     try {
-      const startAmount = 1000000; // Base amount in smallest unit (adjust based on token decimals)
+      // Use configured start amount, adjusting for token decimals
+      const baseAmount = this.scannerConfig.startAmount || 1000000;
+      const startAmount = Math.floor(baseAmount * Math.pow(10, tokenA.decimals) / 1e9);
       const timestamp = Date.now();
 
       // Get quote for A -> B
@@ -201,8 +214,8 @@ export class RealTimeArbitrageScanner {
       const rawProfit = finalAmountA - startAmount;
       const totalPriceImpact = priceImpactAB + priceImpactBC + priceImpactCA;
       
-      // Estimate gas fees (approximate in lamports)
-      const estimatedGasFee = 10000; // ~0.00001 SOL for 3 swaps
+      // Use configured gas fee estimate (in lamports)
+      const estimatedGasFee = this.scannerConfig.estimatedGasFeeLamports || 10000;
       const profitAfterGas = rawProfit - estimatedGasFee;
       
       // Calculate profit percentage
@@ -259,7 +272,10 @@ export class RealTimeArbitrageScanner {
 
       return opportunity;
     } catch (error) {
-      // Silently handle errors to avoid flooding logs during continuous scanning
+      // Log errors at debug level to avoid flooding logs during continuous scanning
+      if (process.env.DEBUG_SCANNER === 'true') {
+        console.debug(`[Scanner] Error scanning ${tokenA.symbol}->${tokenB.symbol}->${tokenC.symbol}:`, error);
+      }
       return null;
     }
   }
