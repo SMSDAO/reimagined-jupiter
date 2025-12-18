@@ -107,8 +107,9 @@ async function fetchJupiterPrices(symbols?: string[]): Promise<TokenPrice[]> {
     // Determine which tokens to fetch
     let tokensToFetch = Object.keys(TOKEN_MINTS);
     if (symbols && symbols.length > 0) {
+      const uppercaseSymbols = symbols.map(s => s.toUpperCase());
       tokensToFetch = tokensToFetch.filter(symbol => 
-        symbols.some(s => s.toUpperCase() === symbol.toUpperCase())
+        uppercaseSymbols.includes(symbol.toUpperCase())
       );
     }
     

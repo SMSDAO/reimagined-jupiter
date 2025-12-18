@@ -100,6 +100,7 @@ async function testSubscription() {
   console.log('\n=== Test 5: Real-time Price Subscription ===');
   
   const service = getJupiterPriceService();
+  const TEST_SUBSCRIPTION_DURATION_MS = 15000;
   
   let updateCount = 0;
   const unsubscribe = service.subscribeToPrice(SOL_MINT, (price) => {
@@ -108,8 +109,8 @@ async function testSubscription() {
   });
   
   // Wait for a few updates
-  console.log('Waiting for price updates (15 seconds)...');
-  await new Promise(resolve => setTimeout(resolve, 15000));
+  console.log(`Waiting for price updates (${TEST_SUBSCRIPTION_DURATION_MS / 1000} seconds)...`);
+  await new Promise(resolve => setTimeout(resolve, TEST_SUBSCRIPTION_DURATION_MS));
   
   unsubscribe();
   

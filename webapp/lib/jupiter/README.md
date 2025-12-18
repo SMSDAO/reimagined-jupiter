@@ -229,11 +229,14 @@ All methods handle errors gracefully:
 Run the test scripts to verify functionality:
 
 ```bash
-# Test API directly (requires running dev server)
-./scripts/test-price-api.sh
+# Test service implementation with full test suite (requires tsx)
+npx tsx scripts/test-price-service.ts
 
-# Test service implementation
+# Test Jupiter API directly
 node scripts/simple-test.mjs
+
+# Test API endpoint (requires running dev server)
+./scripts/test-price-api.sh
 ```
 
 ## Performance Considerations
