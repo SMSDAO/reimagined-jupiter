@@ -176,9 +176,12 @@ export class FlashloanExecutor {
       // and sent to the network. For API endpoint, we return the unsigned transaction
       // or the transaction data for the client to sign.
       
+      // TODO: Return serialized transaction for client-side signing
+      // const serializedTx = transaction.serialize({ requireAllSignatures: false });
+      
       return {
         success: true,
-        signature: 'SIMULATION_ONLY', // Would be replaced with actual signature
+        signature: 'SIMULATION_SUCCESS', // Simulation only - requires client-side signing
         profit: profitability.profit,
         provider: provider.name,
       };
@@ -275,13 +278,15 @@ export class FlashloanExecutor {
     // Calculate profit
     const profit = outputAmount - repayAmount;
     
-    // Check minimum profit threshold (0.1% of loan amount)
-    const minProfit = Math.floor(loanAmount * 0.001);
+    // Check minimum profit threshold (0.1% of loan amount by default)
+    // TODO: Make this configurable via constructor or environment variable
+    const minProfitThreshold = 0.001; // 0.1%
+    const minProfit = Math.floor(loanAmount * minProfitThreshold);
     if (profit < minProfit) {
       return {
         profitable: false,
         profit,
-        reason: `Profit ${profit} below minimum threshold ${minProfit}`,
+        reason: `Profit ${profit} below minimum threshold ${minProfit} (${minProfitThreshold * 100}%)`,
       };
     }
     
@@ -321,19 +326,23 @@ export class FlashloanExecutor {
         })
       );
 
-      // Note: In production, you would add:
-      // 1. Flash loan borrow instruction from provider
-      // 2. Jupiter swap instructions
-      // 3. Flash loan repay instruction
+      // IMPORTANT: Production implementation requires provider-specific SDK integration
+      // Each provider has unique program interfaces for borrow/repay operations:
       // 
-      // This requires provider-specific SDK integration
-      // Example structure:
-      // transaction.add(...borrowInstructions);
-      // transaction.add(...swapInstructions);
-      // transaction.add(...repayInstructions);
+      // Example structure (pseudo-code):
+      // 1. const borrowIx = await provider.createBorrowInstruction(amount, tokenMint);
+      // 2. const swapIxs = await jupiter.getSwapInstructions(quote);
+      // 3. const repayIx = await provider.createRepayInstruction(amount + fee, tokenMint);
+      // 
+      // transaction.add(borrowIx);
+      // transaction.add(...swapIxs);
+      // transaction.add(repayIx);
+      //
+      // This creates an atomic bundle that must all succeed or all fail
 
-      console.log('[FlashloanExecutor] Transaction structure prepared');
-      console.log('  Note: Provider-specific borrow/repay instructions require SDK integration');
+      console.log('[FlashloanExecutor] Transaction structure prepared (simulation mode)');
+      console.warn('[FlashloanExecutor] WARNING: Actual borrow/repay instructions not implemented');
+      console.warn('[FlashloanExecutor] Provider SDK integration required for production use');
 
       // Get recent blockhash
       const { blockhash } = await this.connection.getLatestBlockhash();

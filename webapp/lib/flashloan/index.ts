@@ -19,6 +19,8 @@
  * const executor = new FlashloanExecutor(connection);
  * const result = await executor.executeArbitrageWithFlashloan(opportunity, userPublicKey);
  * ```
+ * 
+ * For more examples, see examples.ts or the README.md file.
  */
 
 export {
@@ -35,3 +37,5 @@ export {
   getProvidersForAmount,
   selectBestProvider,
 } from './providers';
+
+export { examples } from './examples';

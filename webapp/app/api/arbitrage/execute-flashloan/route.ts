@@ -126,14 +126,21 @@ export async function POST(request: NextRequest) {
     console.log(`   Profit: ${result.profit}`);
     console.log(`   Provider: ${result.provider}`);
 
-    return NextResponse.json({
+    // Return response (omit RPC endpoint in production for security)
+    const response: any = {
       success: true,
       signature: result.signature,
       profit: result.profit,
       provider: result.provider,
-      rpcEndpoint: resilientConnection.getCurrentEndpoint(),
       timestamp: Date.now(),
-    });
+    };
+    
+    // Only include RPC endpoint in development
+    if (process.env.NODE_ENV === 'development') {
+      response.rpcEndpoint = resilientConnection.getCurrentEndpoint();
+    }
+    
+    return NextResponse.json(response);
   } catch (error) {
     console.error('❌ Flashloan arbitrage error:', error);
     
