@@ -191,13 +191,18 @@ export class TransactionBuilder {
           transaction.sign(...signers);
 
           // Send transaction
+          // Note: maxRetries is set to 0 because we implement our own retry logic with:
+          // 1. Automatic endpoint switching on failure
+          // 2. Exponential backoff between retries
+          // 3. Blockhash refresh when needed
+          // This provides better error handling than the default retry mechanism
           const signature = await this.connection.sendTransaction(
             transaction,
             signers,
             {
               skipPreflight,
               preflightCommitment: commitment,
-              maxRetries: 0, // We handle retries ourselves
+              maxRetries: 0, // Custom retry logic in outer loop
             } as SendOptions
           );
 

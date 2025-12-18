@@ -1,4 +1,15 @@
-import { Connection, ConnectionConfig, Commitment } from '@solana/web3.js';
+import { 
+  Connection, 
+  ConnectionConfig, 
+  Commitment,
+  Transaction,
+  VersionedTransaction,
+  PublicKey,
+  Keypair,
+  SendOptions,
+  TransactionSignature,
+  SimulateTransactionConfig,
+} from '@solana/web3.js';
 
 export interface RpcEndpoint {
   url: string;
@@ -254,14 +265,23 @@ export class ResilientSolanaConnection {
 
   /**
    * Send transaction with retry
+   * Supports both legacy Transaction and VersionedTransaction
    */
   async sendTransaction(
-    transaction: any,
-    signers?: any[],
-    options?: any
-  ) {
+    transaction: Transaction | VersionedTransaction,
+    signers?: Keypair[],
+    options?: SendOptions
+  ): Promise<TransactionSignature> {
     return this.executeWithRetry(
-      (connection) => connection.sendTransaction(transaction, signers || [], options),
+      async (connection) => {
+        if (transaction instanceof VersionedTransaction) {
+          // VersionedTransaction - no signers array needed
+          return await connection.sendTransaction(transaction, options);
+        } else {
+          // Legacy Transaction - requires signers array
+          return await connection.sendTransaction(transaction, signers || [], options);
+        }
+      },
       'sendTransaction'
     );
   }
@@ -270,11 +290,17 @@ export class ResilientSolanaConnection {
    * Confirm transaction with retry
    */
   async confirmTransaction(
-    signature: any,
+    signature: TransactionSignature | { signature: TransactionSignature; blockhash: string; lastValidBlockHeight: number },
     commitment?: Commitment
   ) {
     return this.executeWithRetry(
-      (connection) => connection.confirmTransaction(signature, commitment || this.commitment),
+      (connection) => {
+        if (typeof signature === 'string') {
+          return connection.confirmTransaction(signature, commitment || this.commitment);
+        } else {
+          return connection.confirmTransaction(signature, commitment || this.commitment);
+        }
+      },
       'confirmTransaction'
     );
   }
@@ -283,11 +309,11 @@ export class ResilientSolanaConnection {
    * Get transaction with retry
    */
   async getTransaction(
-    signature: string,
-    options?: any
+    signature: TransactionSignature,
+    options?: { commitment?: Commitment; maxSupportedTransactionVersion?: number }
   ) {
     return this.executeWithRetry(
-      (connection) => connection.getTransaction(signature, options),
+      (connection) => connection.getTransaction(signature, options as any),
       'getTransaction'
     );
   }
@@ -295,7 +321,7 @@ export class ResilientSolanaConnection {
   /**
    * Get balance with retry
    */
-  async getBalance(publicKey: any, commitment?: Commitment) {
+  async getBalance(publicKey: PublicKey, commitment?: Commitment) {
     return this.executeWithRetry(
       (connection) => connection.getBalance(publicKey, commitment || this.commitment),
       'getBalance'
@@ -306,11 +332,17 @@ export class ResilientSolanaConnection {
    * Simulate transaction with retry
    */
   async simulateTransaction(
-    transaction: any,
-    options?: any
+    transaction: Transaction | VersionedTransaction,
+    options?: SimulateTransactionConfig
   ) {
     return this.executeWithRetry(
-      (connection) => connection.simulateTransaction(transaction, options),
+      (connection) => {
+        if (transaction instanceof VersionedTransaction) {
+          return connection.simulateTransaction(transaction, options);
+        } else {
+          return connection.simulateTransaction(transaction as Transaction);
+        }
+      },
       'simulateTransaction'
     );
   }

@@ -54,13 +54,20 @@ export async function POST(request: NextRequest) {
         // Handle legacy transaction
         const transaction = Transaction.from(txBuffer);
         
-        // Note: For server-side execution, we need the keypair to sign
-        // In a real implementation, you'd retrieve this securely from environment or key management
-        // For now, we'll return an error as client should sign before sending
+        // SECURITY: Legacy transactions require server-side signing with private keys.
+        // This is a security risk as it would require storing private keys on the server.
+        // Best practice is to have clients sign transactions before sending to the server.
+        // 
+        // For server-side transaction execution, one of these approaches should be used:
+        // 1. Use versioned transactions (recommended)
+        // 2. Implement a secure key management service (AWS KMS, HashiCorp Vault, etc.)
+        // 3. Have clients sign before sending (most secure for user wallets)
+        //
+        // This limitation is documented in the API documentation.
         return NextResponse.json(
           { 
             success: false, 
-            error: 'Legacy transactions must be signed client-side. Use versioned transactions for server-side execution.' 
+            error: 'Legacy transactions must be signed client-side for security. Use versioned transactions for server-side execution, or sign the transaction before sending.' 
           },
           { status: 400 }
         );
