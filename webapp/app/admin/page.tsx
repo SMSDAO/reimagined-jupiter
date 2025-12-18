@@ -20,10 +20,6 @@ interface Opportunity {
   id: string;
   type: string;
   tokens: string[];
-  token: string; // Display string of tokens joined
-  entry: number;
-  target: number;
-  profit: number;
   profitPercent: number;
   profitUSD: number;
   dex: string;
@@ -121,12 +117,16 @@ export default function AdminPage() {
       // Set up opportunity callback
       scannerRef.current.onOpportunity((scannerOpp) => {
         const opportunity: Opportunity = {
-          ...scannerOpp,
-          token: scannerOpp.tokens.join('/'),
-          entry: 0,
-          target: 0,
-          profit: scannerOpp.profitPercent,
+          id: scannerOpp.id,
+          type: scannerOpp.type,
+          tokens: scannerOpp.tokens,
+          profitPercent: scannerOpp.profitPercent,
+          profitUSD: scannerOpp.profitUSD,
           dex: scannerOpp.route || scannerOpp.provider || 'Multi-DEX',
+          confidence: scannerOpp.confidence,
+          provider: scannerOpp.provider,
+          route: scannerOpp.route,
+          timestamp: scannerOpp.timestamp,
         };
 
         setOpportunities((prev) => {
@@ -152,14 +152,17 @@ export default function AdminPage() {
       return;
     }
 
-    // Show execution intent
-    alert(`Executing ${opp.type} trade for ${opp.token}...\n\nEstimated profit: ${opp.profit.toFixed(2)}%\nProfit USD: $${opp.profitUSD.toFixed(2)}\n\nNote: Real execution requires Jupiter swap integration with transaction signing.`);
+    const tokenDisplay = opp.tokens.join('/');
     
-    // Update bot status with real profit from opportunity
+    // Show execution intent
+    alert(`Executing ${opp.type} trade for ${tokenDisplay}...\n\nEstimated profit: ${opp.profitPercent.toFixed(2)}%\nProfit USD: $${opp.profitUSD.toFixed(2)}\n\nNote: This is a simulated execution for demonstration. Real execution requires Jupiter swap integration with transaction signing.`);
+    
+    // Update bot status - note these are simulated execution stats
+    // In production, these would only update after confirmed on-chain transactions
     setBotStatus(prev => ({
       ...prev,
       tradesExecuted: prev.tradesExecuted + 1,
-      profitToday: prev.profitToday + opp.profitUSD,
+      profitToday: prev.profitToday + opp.profitUSD, // Simulated profit
     }));
 
     // Remove executed opportunity
@@ -439,27 +442,25 @@ export default function AdminPage() {
                       <span className="px-3 py-1 rounded-full text-xs font-bold bg-blue-600 text-white">
                         {opp.type}
                       </span>
-                      <span className="text-white font-bold">{opp.token}</span>
+                      <span className="text-white font-bold">{opp.tokens.join('/')}</span>
                       <span className="text-gray-400 text-sm">{opp.dex}</span>
                     </div>
                     <div className="flex gap-4 text-sm">
-                      {opp.entry > 0 && (
-                        <span className="text-gray-300">
-                          Entry: <span className="text-white">${opp.entry.toFixed(4)}</span>
-                        </span>
-                      )}
-                      {opp.target > 0 && (
-                        <span className="text-gray-300">
-                          Target: <span className="text-white">${opp.target.toFixed(4)}</span>
-                        </span>
-                      )}
                       <span className="text-gray-300">
-                        Confidence: <span className="text-green-400">{opp.confidence}%</span>
+                        Profit USD: <span className="text-white">${opp.profitUSD.toFixed(2)}</span>
                       </span>
+                      <span className="text-gray-300">
+                        Confidence: <span className="text-green-400">{opp.confidence.toFixed(0)}%</span>
+                      </span>
+                      {opp.provider && (
+                        <span className="text-gray-300">
+                          Provider: <span className="text-purple-400">{opp.provider}</span>
+                        </span>
+                      )}
                     </div>
                   </div>
                   <div className="text-right mr-6">
-                    <div className="text-2xl font-bold text-green-400">+{opp.profit}%</div>
+                    <div className="text-2xl font-bold text-green-400">+{opp.profitPercent.toFixed(2)}%</div>
                   </div>
                   <button
                     onClick={() => executeOpportunity(opp)}
