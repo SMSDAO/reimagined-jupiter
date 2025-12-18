@@ -44,7 +44,7 @@ export class JupiterPriceService {
   private cache = new Map<string, CacheEntry>();
   private cacheDuration = 30000; // 30 seconds
   private subscriptions = new Map<string, PriceSubscription[]>();
-  private wsConnections = new Map<string, WebSocket>();
+  private activeSubscriptionTokens = new Set<string>();
   private globalPollingInterval: NodeJS.Timeout | null = null;
   private pollingIntervalMs = 5000; // 5 seconds
 
@@ -188,9 +188,10 @@ export class JupiterPriceService {
     const subscription: PriceSubscription = { callback, tokenId };
     this.subscriptions.get(tokenId)!.push(subscription);
 
-    // Initialize WebSocket connection if needed
-    if (!this.wsConnections.has(tokenId)) {
-      this.initializeWebSocket(tokenId);
+    // Initialize polling if needed
+    if (!this.activeSubscriptionTokens.has(tokenId)) {
+      this.activeSubscriptionTokens.add(tokenId);
+      this.startGlobalPolling();
     }
 
     // Return unsubscribe function
@@ -202,10 +203,15 @@ export class JupiterPriceService {
           subs.splice(index, 1);
         }
 
-        // Close WebSocket if no more subscriptions
+        // Remove token from active subscriptions if no more subscribers
         if (subs.length === 0) {
-          this.closeWebSocket(tokenId);
+          this.activeSubscriptionTokens.delete(tokenId);
           this.subscriptions.delete(tokenId);
+          
+          // Stop polling if no more subscriptions
+          if (this.activeSubscriptionTokens.size === 0) {
+            this.stopGlobalPolling();
+          }
         }
       }
     };
@@ -252,11 +258,11 @@ export class JupiterPriceService {
   }
 
   /**
-   * Close all WebSocket connections
+   * Close all subscriptions and stop polling
    */
   closeAllConnections(): void {
     this.stopGlobalPolling();
-    this.wsConnections.clear();
+    this.activeSubscriptionTokens.clear();
     this.subscriptions.clear();
   }
 
@@ -280,19 +286,6 @@ export class JupiterPriceService {
       data,
       timestamp: Date.now(),
     });
-  }
-
-  private initializeWebSocket(tokenId: string): void {
-    try {
-      // Mark this token as having an active connection
-      const pseudoWs = { close: () => {} } as WebSocket;
-      this.wsConnections.set(tokenId, pseudoWs);
-      
-      // Start global polling if not already running
-      this.startGlobalPolling();
-    } catch (error) {
-      console.error(`[JupiterPrice] Error initializing WebSocket for ${tokenId}:`, error);
-    }
   }
 
   private startGlobalPolling(): void {
@@ -340,14 +333,6 @@ export class JupiterPriceService {
     }
   }
 
-  private closeWebSocket(tokenId: string): void {
-    this.wsConnections.delete(tokenId);
-    
-    // Stop global polling if no more subscriptions
-    if (this.subscriptions.size === 0) {
-      this.stopGlobalPolling();
-    }
-  }
 }
 
 // Singleton instance
