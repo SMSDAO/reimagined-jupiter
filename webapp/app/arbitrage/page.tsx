@@ -110,7 +110,23 @@ export default function ArbitragePage() {
     }
 
     try {
-      // Save trade to history (mock execution)
+      // Note: This is a simulated execution for demonstration purposes.
+      // Real arbitrage execution would require:
+      // 1. Flash loan initiation (Marginfi/Solend/Kamino)
+      // 2. DEX swap execution via Jupiter aggregator
+      // 3. Flash loan repayment in atomic transaction
+      // 4. MEV protection via Jito bundles
+      
+      console.log('[ArbitragePage] Simulating execution for opportunity:', {
+        type: opp.type,
+        tokens: opp.tokens,
+        profitPercent: opp.profitPercent,
+        profitUSD: opp.profitUSD,
+        provider: opp.provider,
+        route: opp.route,
+      });
+
+      // Save trade to history (simulated execution)
       // Date.now() is safe here - this is an async event handler, not a render function
       // eslint-disable-next-line react-hooks/purity
       const now = Date.now(); // Capture timestamp once
@@ -118,8 +134,8 @@ export default function ArbitragePage() {
         id: `trade-${now}`,
         type: opp.type,
         tokens: opp.tokens,
-        inputAmount: 100, // Mock input amount
-        outputAmount: 100 + opp.profitUSD, // Mock output
+        inputAmount: 100, // Simulated input amount
+        outputAmount: 100 + opp.profitUSD, // Simulated output
         profit: opp.profitUSD,
         profitPercent: opp.profitPercent,
         timestamp: now,

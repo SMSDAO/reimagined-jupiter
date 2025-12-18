@@ -1,9 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useWallet, useConnection } from '@solana/wallet-adapter-react';
 import { PublicKey } from '@solana/web3.js';
 import { motion } from 'framer-motion';
+import { ArbitrageScanner } from '@/lib/arbitrage-scanner';
+import { JupiterPriceAPI, getTokenSymbol } from '@/lib/api-client';
 
 interface BotStatus {
   running: boolean;
@@ -13,15 +15,22 @@ interface BotStatus {
   successRate: number;
 }
 
+// Opportunity type for admin panel display
 interface Opportunity {
   id: string;
   type: string;
-  token: string;
+  tokens: string[];
+  token: string; // Display string of tokens joined
   entry: number;
   target: number;
   profit: number;
+  profitPercent: number;
+  profitUSD: number;
   dex: string;
   confidence: number;
+  provider?: string;
+  route?: string;
+  timestamp: number;
 }
 
 interface WalletScore {
@@ -35,6 +44,7 @@ interface WalletScore {
 export default function AdminPage() {
   const { publicKey } = useWallet();
   const { connection } = useConnection();
+  const scannerRef = useRef<ArbitrageScanner | null>(null);
   
   const [botStatus, setBotStatus] = useState<BotStatus>({
     running: false,
@@ -67,61 +77,73 @@ export default function AdminPage() {
     }
   }, [botStatus.running]);
 
-  const toggleBot = () => {
-    setBotStatus(prev => ({ ...prev, running: !prev.running }));
+  // Cleanup scanner on unmount
+  useEffect(() => {
+    return () => {
+      if (scannerRef.current) {
+        scannerRef.current.stopScanning();
+      }
+    };
+  }, []);
+
+  const toggleBot = async () => {
+    if (!publicKey) {
+      alert('Please connect your wallet to control the bot');
+      return;
+    }
+
+    const newRunning = !botStatus.running;
+    setBotStatus(prev => ({ ...prev, running: newRunning }));
     
-    if (!botStatus.running) {
+    if (newRunning) {
       // Start scanning for opportunities
-      scanOpportunities();
+      await scanOpportunities();
+    } else {
+      // Stop scanning
+      if (scannerRef.current) {
+        scannerRef.current.stopScanning();
+        scannerRef.current = null;
+      }
     }
   };
 
-  const scanOpportunities = () => {
-    // Mock opportunities
-    const mockOpportunities: Opportunity[] = [
-      {
-        id: '1',
-        type: 'Arbitrage',
-        token: 'SOL/USDC',
-        entry: 150.23,
-        target: 151.87,
-        profit: 1.09,
-        dex: 'Raydium → Orca',
-        confidence: 92,
-      },
-      {
-        id: '2',
-        type: 'Snipe',
-        token: 'BONK',
-        entry: 0.0000234,
-        target: 0.0000289,
-        profit: 23.5,
-        dex: 'Pump.fun',
-        confidence: 78,
-      },
-      {
-        id: '3',
-        type: 'Flash Loan',
-        token: 'JUP/USDC',
-        entry: 1.23,
-        target: 1.28,
-        profit: 4.06,
-        dex: 'Jupiter',
-        confidence: 88,
-      },
-      {
-        id: '4',
-        type: 'Triangular',
-        token: 'SOL→USDC→USDT→SOL',
-        entry: 0,
-        target: 0,
-        profit: 0.73,
-        dex: 'Multi-DEX',
-        confidence: 85,
-      },
-    ];
+  const scanOpportunities = async () => {
+    if (!publicKey) {
+      alert('Please connect your wallet to scan for opportunities');
+      return;
+    }
 
-    setOpportunities(mockOpportunities);
+    try {
+      // Initialize scanner with RPC URL
+      const rpcUrl = process.env.NEXT_PUBLIC_RPC_URL || 'https://api.mainnet-beta.solana.com';
+      scannerRef.current = new ArbitrageScanner(rpcUrl);
+
+      // Set up opportunity callback
+      scannerRef.current.onOpportunity((scannerOpp) => {
+        const opportunity: Opportunity = {
+          ...scannerOpp,
+          token: scannerOpp.tokens.join('/'),
+          entry: 0,
+          target: 0,
+          profit: scannerOpp.profitPercent,
+          dex: scannerOpp.route || scannerOpp.provider || 'Multi-DEX',
+        };
+
+        setOpportunities((prev) => {
+          // Keep only last 20 opportunities
+          const updated = [opportunity, ...prev].slice(0, 20);
+          return updated;
+        });
+      });
+
+      // Start scanning with 0.5% min profit
+      await scannerRef.current.startScanning(0.5);
+      console.log('[AdminPage] Scanner started successfully');
+    } catch (error) {
+      console.error('[AdminPage] Error starting scanner:', error);
+      alert('Failed to start scanner. Check console for details.');
+      setBotStatus(prev => ({ ...prev, running: false }));
+    }
   };
 
   const executeOpportunity = async (opp: Opportunity) => {
@@ -130,13 +152,14 @@ export default function AdminPage() {
       return;
     }
 
-    alert(`Executing ${opp.type} trade for ${opp.token}...\nEstimated profit: ${opp.profit}%`);
+    // Show execution intent
+    alert(`Executing ${opp.type} trade for ${opp.token}...\n\nEstimated profit: ${opp.profit.toFixed(2)}%\nProfit USD: $${opp.profitUSD.toFixed(2)}\n\nNote: Real execution requires Jupiter swap integration with transaction signing.`);
     
-    // Update bot status
+    // Update bot status with real profit from opportunity
     setBotStatus(prev => ({
       ...prev,
       tradesExecuted: prev.tradesExecuted + 1,
-      profitToday: prev.profitToday + (opp.profit * 100), // Mock profit
+      profitToday: prev.profitToday + opp.profitUSD,
     }));
 
     // Remove executed opportunity
@@ -230,28 +253,43 @@ export default function AdminPage() {
         programId: new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'),
       });
 
-      // Mock Pyth price data
-      const mockPrices: Record<string, number> = {
-        SOL: 150.23,
-        USDC: 1.0,
-        USDT: 1.0,
-        JUP: 1.28,
-        BONK: 0.0000234,
-      };
+      // Collect all unique mints
+      const mints = tokenAccounts.value.map(acc => acc.account.data.parsed.info.mint);
+      
+      // Fetch real prices from Jupiter API for all mints
+      let priceData: Record<string, number> = {};
+      if (mints.length > 0) {
+        try {
+          const priceResponse = await JupiterPriceAPI.getPrices(mints);
+          priceData = Object.fromEntries(
+            Object.entries(priceResponse.data).map(([mint, data]) => [mint, data.price])
+          );
+        } catch (error) {
+          console.error('Error fetching prices:', error);
+          alert('Warning: Could not fetch token prices. Values may be inaccurate.');
+        }
+      }
 
       const holdings = tokenAccounts.value.map(acc => {
         const balance = acc.account.data.parsed.info.tokenAmount.uiAmount || 0;
         const mint = acc.account.data.parsed.info.mint;
         
-        // Mock token symbol and price
+        // Get real token symbol and price
+        const symbol = getTokenSymbol(mint);
+        const price = priceData[mint] || 0;
+        const value = balance * price;
+        
         return {
-          symbol: 'TOKEN',
+          symbol,
           mint,
           balance,
-          price: mockPrices.SOL || 1,
-          value: balance * (mockPrices.SOL || 1),
+          price,
+          value,
         };
       });
+
+      // Sort by value descending
+      holdings.sort((a, b) => b.value - a.value);
 
       const totalValue = holdings.reduce((sum, h) => sum + h.value, 0);
 
