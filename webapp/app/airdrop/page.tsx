@@ -68,79 +68,172 @@ export default function AirdropPage() {
     
     setLoading(true);
     try {
-      // Fetch wallet score
+      // Fetch real wallet analysis and airdrop data from API
+      const response = await fetch(`/api/wallet-analysis/${publicKey.toString()}`);
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch wallet analysis');
+      }
+      
+      const analysis = await response.json();
+      
+      // Calculate basic metrics from Solana
       const balance = await connection.getBalance(publicKey);
       const signatures = await connection.getSignaturesForAddress(publicKey, { limit: 1000 });
       
-      const mockScore: WalletScore = {
+      // Build wallet score from API data
+      const score: WalletScore = {
         address: publicKey.toString(),
-        totalScore: 75,
-        tier: 'ACTIVE',
+        totalScore: analysis.trust_score || 0,
+        tier: getTierFromScore(analysis.trust_score || 0),
         balance: balance / 1e9,
         txCount: signatures.length,
-        nftCount: 12,
-        socialIntelligence: {
+        nftCount: analysis.nft_mint_count + analysis.nft_sale_count || 0,
+      };
+      
+      // Add social intelligence if available
+      if (analysis.farcaster_fid) {
+        score.socialIntelligence = {
           farcasterScore: {
-            totalScore: 68,
+            totalScore: analysis.farcaster_score || 0,
             factors: {
-              followers: 21,
-              casts: 16,
-              powerBadge: 0,
-              verified: 10,
-              influencer: 6,
+              followers: analysis.farcaster_followers || 0,
+              casts: analysis.farcaster_casts || 0,
+              powerBadge: analysis.farcaster_power_badge ? 25 : 0,
+              verified: analysis.farcaster_verified ? 10 : 0,
+              influencer: analysis.farcaster_followers > 5000 ? 15 : 0,
             },
             profile: {
-              username: 'cryptouser',
-              displayName: 'Crypto User',
-              followerCount: 1250,
-              powerBadge: false,
+              username: analysis.farcaster_username || '',
+              displayName: analysis.farcaster_display_name || '',
+              followerCount: analysis.farcaster_followers || 0,
+              powerBadge: analysis.farcaster_power_badge || false,
             },
           },
           gmScore: {
-            totalScore: 55,
-            gmCastCount: 18,
-            averageLikes: 8.5,
-            averageRecasts: 3.2,
-            communityEngagement: 65,
-            consistency: 12,
+            totalScore: analysis.gm_score || 0,
+            gmCastCount: analysis.gm_casts_count || 0,
+            averageLikes: analysis.gm_total_likes / Math.max(analysis.gm_casts_count, 1) || 0,
+            averageRecasts: analysis.gm_total_recasts / Math.max(analysis.gm_casts_count, 1) || 0,
+            communityEngagement: analysis.gm_engagement_rate || 0,
+            consistency: analysis.gm_consistency_days || 0,
           },
           trustScore: {
-            totalScore: 73,
-            components: {
-              inverseRisk: 32,
-              farcasterScore: 20.4,
-              gmScore: 11,
-              ageBonus: 7.5,
+            totalScore: analysis.trust_score || 0,
+            components: analysis.trust_breakdown || {
+              inverseRisk: 0,
+              farcasterScore: 0,
+              gmScore: 0,
+              ageBonus: 0,
             },
           },
-          riskAdjustment: -15,
-        },
-      };
-      setWalletScore(mockScore);
+          riskAdjustment: -analysis.risk_score || 0,
+        };
+      }
+      
+      setWalletScore(score);
 
-      // Mock airdrops
-      const mockAirdrops: Airdrop[] = [
-        { protocol: 'Jupiter', amount: '100 JUP', value: '$125', claimable: true },
-        { protocol: 'Jito', amount: '50 JTO', value: '$89', claimable: true },
-        { protocol: 'Pyth', amount: '25 PYTH', value: '$45', claimable: false },
-        { protocol: 'Kamino', amount: '75 KMNO', value: '$34', claimable: true },
-        { protocol: 'Marginfi', amount: '200 MRGN', value: '$67', claimable: false },
-      ];
-      setAirdrops(mockAirdrops);
+      // Fetch real airdrop data
+      const airdropResponse = await fetch(`/api/airdrops/check/${publicKey.toString()}`);
+      
+      if (airdropResponse.ok) {
+        const airdropData = await airdropResponse.json();
+        if (airdropData.airdrops && Array.isArray(airdropData.airdrops)) {
+          setAirdrops(airdropData.airdrops);
+        }
+      } else {
+        // If API fails, show empty array instead of mock data
+        setAirdrops([]);
+      }
     } catch (error) {
       console.error('Error checking airdrops:', error);
+      setAirdrops([]);
     } finally {
       setLoading(false);
     }
   };
+  
+  const getTierFromScore = (score: number): WalletScore['tier'] => {
+    if (score >= 90) return 'WHALE';
+    if (score >= 75) return 'DEGEN';
+    if (score >= 60) return 'ACTIVE';
+    if (score >= 40) return 'CASUAL';
+    return 'NOVICE';
+  };
 
   const claimAirdrop = async (airdrop: Airdrop) => {
-    alert(`Claiming ${airdrop.amount} from ${airdrop.protocol}...`);
+    if (!publicKey) {
+      alert('Please connect your wallet first');
+      return;
+    }
+    
+    try {
+      const response = await fetch('/api/airdrops/claim', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          protocol: airdrop.protocol,
+          walletAddress: publicKey.toString(),
+        }),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to claim airdrop: ${response.statusText}`);
+      }
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        alert(`✅ Successfully claimed ${airdrop.amount} from ${airdrop.protocol}!\n\nSignature: ${result.signature}`);
+        // Refresh airdrops after claiming
+        await checkAirdrops();
+      } else {
+        alert(`❌ Failed to claim airdrop: ${result.error}`);
+      }
+    } catch (error) {
+      console.error('Error claiming airdrop:', error);
+      alert(`❌ Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   };
 
   const claimAll = async () => {
+    if (!publicKey) {
+      alert('Please connect your wallet first');
+      return;
+    }
+    
     const claimable = airdrops.filter((a) => a.claimable);
-    alert(`Claiming ${claimable.length} airdrops...`);
+    if (claimable.length === 0) {
+      alert('No claimable airdrops available');
+      return;
+    }
+    
+    try {
+      const response = await fetch('/api/airdrops/claim-all', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          walletAddress: publicKey.toString(),
+        }),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to claim airdrops: ${response.statusText}`);
+      }
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        alert(`✅ Successfully claimed ${result.claimed} out of ${claimable.length} airdrops!\n\nCheck your wallet for tokens.`);
+        // Refresh airdrops after claiming
+        await checkAirdrops();
+      } else {
+        alert(`❌ Failed to claim airdrops: ${result.error}`);
+      }
+    } catch (error) {
+      console.error('Error claiming airdrops:', error);
+      alert(`❌ Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   };
 
   useEffect(() => {

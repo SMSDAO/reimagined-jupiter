@@ -29,40 +29,34 @@ export default function ArbitragePage() {
     { name: 'Save', fee: 0.18, liquidity: '$45M' },
   ];
 
-  const startScanning = () => {
+  const startScanning = async () => {
     setScanning(true);
     
-    // Mock opportunities
-    const mockOpportunities: ArbitrageOpportunity[] = [
-      {
-        id: '1',
-        type: 'flash',
-        tokens: ['SOL', 'USDC'],
-        profitPercent: 1.2,
-        profitUSD: 243,
-        provider: 'Marginfi',
-        route: 'Raydium → Orca',
-      },
-      {
-        id: '2',
-        type: 'triangular',
-        tokens: ['SOL', 'USDC', 'USDT', 'SOL'],
-        profitPercent: 0.8,
-        profitUSD: 156,
-        route: 'Jupiter v6',
-      },
-      {
-        id: '3',
-        type: 'flash',
-        tokens: ['BONK', 'USDC'],
-        profitPercent: 2.5,
-        profitUSD: 478,
-        provider: 'Solend',
-        route: 'Meteora → Phoenix',
-      },
-    ];
-
-    setOpportunities(mockOpportunities);
+    try {
+      // Fetch real arbitrage opportunities from API
+      const response = await fetch('/api/arbitrage/scan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          minProfit: minProfit,
+          tokens: ['SOL', 'USDC', 'USDT', 'BONK', 'JUP'],
+        }),
+      });
+      
+      if (!response.ok) {
+        console.error('Failed to fetch arbitrage opportunities:', response.statusText);
+        setScanning(false);
+        return;
+      }
+      
+      const data = await response.json();
+      if (data.opportunities && Array.isArray(data.opportunities)) {
+        setOpportunities(data.opportunities);
+      }
+    } catch (error) {
+      console.error('Error scanning for arbitrage opportunities:', error);
+      setScanning(false);
+    }
   };
 
   const executeArbitrage = async (opp: ArbitrageOpportunity) => {
@@ -71,29 +65,66 @@ export default function ArbitragePage() {
       return;
     }
 
-    alert(`Executing ${opp.type} arbitrage for ${opp.profitUSD} USD profit...`);
-    // Implement actual arbitrage execution
+    try {
+      // Call API to execute arbitrage with user's wallet
+      const response = await fetch('/api/arbitrage/execute', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          opportunityId: opp.id,
+          walletAddress: publicKey.toString(),
+        }),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to execute arbitrage: ${response.statusText}`);
+      }
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        alert(`✅ Arbitrage executed successfully!\n\nSignature: ${result.signature}\nProfit: ${opp.profitUSD} USD`);
+        // Remove executed opportunity from list
+        setOpportunities(prev => prev.filter(o => o.id !== opp.id));
+      } else {
+        alert(`❌ Arbitrage execution failed: ${result.error}`);
+      }
+    } catch (error) {
+      console.error('Error executing arbitrage:', error);
+      alert(`❌ Error executing arbitrage: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   };
 
-  // Auto-update opportunities when scanning
+  // Auto-refresh opportunities when scanning
   useEffect(() => {
     if (!scanning) return;
 
-    const interval = setInterval(() => {
-      const newOpportunity: ArbitrageOpportunity = {
-        id: Date.now().toString(),
-        type: Math.random() > 0.5 ? 'flash' : 'triangular',
-        tokens: ['SOL', 'USDC', 'USDT'].slice(0, Math.floor(Math.random() * 2) + 2),
-        profitPercent: 0.5 + Math.random() * 2,
-        profitUSD: 100 + Math.random() * 400,
-        provider: ['Marginfi', 'Solend', 'Kamino', 'Mango'][Math.floor(Math.random() * 4)],
-        route: ['Raydium → Orca', 'Jupiter v6', 'Meteora → Phoenix'][Math.floor(Math.random() * 3)],
-      };
-
-      if (newOpportunity.profitPercent >= minProfit) {
-        setOpportunities(prev => [newOpportunity, ...prev.slice(0, 9)]);
+    const interval = setInterval(async () => {
+      try {
+        // Fetch updated opportunities from API
+        const response = await fetch('/api/arbitrage/scan', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            minProfit: minProfit,
+            tokens: ['SOL', 'USDC', 'USDT', 'BONK', 'JUP'],
+          }),
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          if (data.opportunities && Array.isArray(data.opportunities)) {
+            // Only add new opportunities that meet profit threshold
+            const filteredOpportunities = data.opportunities.filter(
+              (opp: ArbitrageOpportunity) => opp.profitPercent >= minProfit
+            );
+            setOpportunities(filteredOpportunities);
+          }
+        }
+      } catch (error) {
+        console.error('Error refreshing opportunities:', error);
       }
-    }, 3000);
+    }, 5000); // Refresh every 5 seconds
 
     return () => clearInterval(interval);
   }, [scanning, minProfit]);

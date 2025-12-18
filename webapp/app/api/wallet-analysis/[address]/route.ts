@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-// Mock data for demonstration - in production, this would query the database
+// Production Note: This endpoint requires backend database integration
+// Real implementation would:
+// 1. Query PostgreSQL database for cached wallet analysis
+// 2. If not cached, fetch from Solana RPC and Farcaster API
+// 3. Calculate scores using real algorithms
+// 4. Store in database and return results
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ address: string }> }
@@ -16,78 +21,80 @@ export async function GET(
       );
     }
 
-    // In production, this would:
-    // 1. Query the database for existing analysis
-    // 2. If not found, fetch from Solana RPC and Farcaster API
-    // 3. Calculate scores and store in database
-    // 4. Return the analysis
-
-    // Mock response data
-    const mockAnalysis = {
+    // Production implementation: Query database for existing analysis
+    // For now, return a message indicating real-time analysis is needed
+    
+    const analysis = {
       wallet_address: address,
       
-      // Basic metrics
-      age_days: 365,
-      first_transaction_date: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString(),
-      total_sol_transacted: 1250.5,
-      total_transactions: 523,
-      protocol_diversity: 12,
-      token_count: 24,
-      portfolio_value_usd: 15420.75,
-      current_balance_sol: 42.3,
+      // Note: This endpoint returns minimal data structure for UI compatibility
+      // Real implementation would fetch from database or calculate on-demand
+      
+      // Basic metrics - would come from Solana RPC
+      age_days: 0,
+      first_transaction_date: new Date().toISOString(),
+      total_sol_transacted: 0,
+      total_transactions: 0,
+      protocol_diversity: 0,
+      token_count: 0,
+      portfolio_value_usd: 0,
+      current_balance_sol: 0,
       
       // Activity breakdown
-      swap_count: 145,
-      lp_stake_count: 23,
-      airdrop_count: 8,
-      nft_mint_count: 5,
-      nft_sale_count: 3,
+      swap_count: 0,
+      lp_stake_count: 0,
+      airdrop_count: 0,
+      nft_mint_count: 0,
+      nft_sale_count: 0,
       
       // Risk assessment
-      risk_score: 22,
-      risk_level: 'LOW',
+      risk_score: 50,
+      risk_level: 'UNKNOWN',
       wallet_type: 'NORMAL',
       is_honeypot: false,
       is_bot: false,
       is_scam: false,
       
-      // Farcaster data (conditional - only if profile exists)
-      farcaster_fid: 12345,
-      farcaster_username: 'degentrader',
-      farcaster_display_name: 'Degen Trader 🚀',
-      farcaster_bio: 'Solana DeFi enthusiast | Building the future',
-      farcaster_followers: 1250,
-      farcaster_following: 450,
-      farcaster_casts: 2340,
-      farcaster_verified: true,
-      farcaster_power_badge: true,
-      farcaster_active_badge: true,
-      farcaster_score: 87,
+      // Farcaster data - null by default, would be fetched from Farcaster API
+      farcaster_fid: null,
+      farcaster_username: null,
+      farcaster_display_name: null,
+      farcaster_bio: null,
+      farcaster_followers: 0,
+      farcaster_following: 0,
+      farcaster_casts: 0,
+      farcaster_verified: false,
+      farcaster_power_badge: false,
+      farcaster_active_badge: false,
+      farcaster_score: 0,
       
       // GM Score
-      gm_casts_count: 180,
-      gm_total_likes: 2450,
-      gm_total_recasts: 890,
-      gm_engagement_rate: 18.5,
-      gm_consistency_days: 120,
-      gm_score: 75,
+      gm_casts_count: 0,
+      gm_total_likes: 0,
+      gm_total_recasts: 0,
+      gm_engagement_rate: 0,
+      gm_consistency_days: 0,
+      gm_score: 0,
       
       // Trust Score
-      trust_score: 82,
+      trust_score: 0,
       trust_breakdown: {
-        inverse_risk: 31.2,
-        farcaster: 26.1,
-        gm: 15.0,
-        age_bonus: 9.7
+        inverse_risk: 0,
+        farcaster: 0,
+        gm: 0,
+        age_bonus: 0
       },
-      social_verification_bonus: 15,
+      social_verification_bonus: 0,
       
       // Metadata
       last_updated: new Date().toISOString(),
-      analysis_version: 'V2.0'
+      analysis_version: 'V2.0',
+      
+      // Note for frontend
+      _note: 'Real-time wallet analysis requires backend database integration. This is a placeholder response.'
     };
 
-    return NextResponse.json(mockAnalysis);
+    return NextResponse.json(analysis);
 
   } catch (error) {
     console.error('Error analyzing wallet:', error);

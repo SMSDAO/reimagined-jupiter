@@ -76,52 +76,29 @@ export default function AdminPage() {
     }
   };
 
-  const scanOpportunities = () => {
-    // Mock opportunities
-    const mockOpportunities: Opportunity[] = [
-      {
-        id: '1',
-        type: 'Arbitrage',
-        token: 'SOL/USDC',
-        entry: 150.23,
-        target: 151.87,
-        profit: 1.09,
-        dex: 'Raydium → Orca',
-        confidence: 92,
-      },
-      {
-        id: '2',
-        type: 'Snipe',
-        token: 'BONK',
-        entry: 0.0000234,
-        target: 0.0000289,
-        profit: 23.5,
-        dex: 'Pump.fun',
-        confidence: 78,
-      },
-      {
-        id: '3',
-        type: 'Flash Loan',
-        token: 'JUP/USDC',
-        entry: 1.23,
-        target: 1.28,
-        profit: 4.06,
-        dex: 'Jupiter',
-        confidence: 88,
-      },
-      {
-        id: '4',
-        type: 'Triangular',
-        token: 'SOL→USDC→USDT→SOL',
-        entry: 0,
-        target: 0,
-        profit: 0.73,
-        dex: 'Multi-DEX',
-        confidence: 85,
-      },
-    ];
-
-    setOpportunities(mockOpportunities);
+  const scanOpportunities = async () => {
+    try {
+      // Fetch real opportunities from API
+      const response = await fetch('/api/admin/scan-opportunities', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          types: ['arbitrage', 'snipe', 'flash-loan', 'triangular'],
+        }),
+      });
+      
+      if (!response.ok) {
+        console.error('Failed to scan opportunities:', response.statusText);
+        return;
+      }
+      
+      const data = await response.json();
+      if (data.opportunities && Array.isArray(data.opportunities)) {
+        setOpportunities(data.opportunities);
+      }
+    } catch (error) {
+      console.error('Error scanning opportunities:', error);
+    }
   };
 
   const executeOpportunity = async (opp: Opportunity) => {
@@ -130,17 +107,41 @@ export default function AdminPage() {
       return;
     }
 
-    alert(`Executing ${opp.type} trade for ${opp.token}...\nEstimated profit: ${opp.profit}%`);
-    
-    // Update bot status
-    setBotStatus(prev => ({
-      ...prev,
-      tradesExecuted: prev.tradesExecuted + 1,
-      profitToday: prev.profitToday + (opp.profit * 100), // Mock profit
-    }));
+    try {
+      const response = await fetch('/api/admin/execute-opportunity', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          opportunityId: opp.id,
+          walletAddress: publicKey.toString(),
+        }),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to execute opportunity: ${response.statusText}`);
+      }
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        alert(`✅ ${opp.type} trade executed successfully!\n\nSignature: ${result.signature}\nProfit: ${opp.profit}%`);
+        
+        // Update bot status
+        setBotStatus(prev => ({
+          ...prev,
+          tradesExecuted: prev.tradesExecuted + 1,
+          profitToday: prev.profitToday + (result.profit || opp.profit * 100),
+        }));
 
-    // Remove executed opportunity
-    setOpportunities(prev => prev.filter(o => o.id !== opp.id));
+        // Remove executed opportunity
+        setOpportunities(prev => prev.filter(o => o.id !== opp.id));
+      } else {
+        alert(`❌ Failed to execute trade: ${result.error}`);
+      }
+    } catch (error) {
+      console.error('Error executing opportunity:', error);
+      alert(`❌ Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   };
 
   const calculateWalletScore = async () => {
@@ -230,28 +231,45 @@ export default function AdminPage() {
         programId: new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'),
       });
 
-      // Mock Pyth price data
-      const mockPrices: Record<string, number> = {
-        SOL: 150.23,
-        USDC: 1.0,
-        USDT: 1.0,
-        JUP: 1.28,
-        BONK: 0.0000234,
-      };
+      // Fetch real prices from Jupiter Price API
+      const mintAddresses = tokenAccounts.value.map(
+        acc => acc.account.data.parsed.info.mint
+      );
+      
+      const priceResponse = await fetch(
+        `https://price.jup.ag/v4/price?ids=${mintAddresses.join(',')}`
+      );
+      
+      const priceData = await priceResponse.json();
 
-      const holdings = tokenAccounts.value.map(acc => {
-        const balance = acc.account.data.parsed.info.tokenAmount.uiAmount || 0;
-        const mint = acc.account.data.parsed.info.mint;
-        
-        // Mock token symbol and price
-        return {
-          symbol: 'TOKEN',
-          mint,
-          balance,
-          price: mockPrices.SOL || 1,
-          value: balance * (mockPrices.SOL || 1),
-        };
-      });
+      const holdings = await Promise.all(
+        tokenAccounts.value.map(async (acc) => {
+          const balance = acc.account.data.parsed.info.tokenAmount.uiAmount || 0;
+          const mint = acc.account.data.parsed.info.mint;
+          
+          // Get real price from Jupiter
+          const price = priceData.data?.[mint]?.price || 0;
+          
+          // Fetch token metadata to get symbol
+          let symbol = 'UNKNOWN';
+          try {
+            const tokenListResponse = await fetch('https://token.jup.ag/all');
+            const tokenList = await tokenListResponse.json();
+            const token = tokenList.find((t: { address: string }) => t.address === mint);
+            symbol = token?.symbol || mint.slice(0, 4);
+          } catch {
+            symbol = mint.slice(0, 4);
+          }
+          
+          return {
+            symbol,
+            mint,
+            balance,
+            price,
+            value: balance * price,
+          };
+        })
+      );
 
       const totalValue = holdings.reduce((sum, h) => sum + h.value, 0);
 

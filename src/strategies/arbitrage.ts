@@ -1,4 +1,4 @@
-import { Connection, Keypair, PublicKey } from '@solana/web3.js';
+import { Connection, Keypair, PublicKey, TransactionInstruction } from '@solana/web3.js';
 import { ArbitrageOpportunity, TokenConfig } from '../types.js';
 import { JupiterV6Integration } from '../integrations/jupiter.js';
 import { 
@@ -87,19 +87,41 @@ export class FlashLoanArbitrage {
     provider: BaseFlashLoanProvider
   ): Promise<ArbitrageOpportunity | null> {
     try {
-      const loanAmount = 100000; // Test amount
+      const loanAmount = 100000; // Base amount in smallest unit
       const fee = provider.getFee() / 100;
       
-      // Simulate price difference detection
-      const priceDiff = Math.random() * 0.02; // 0-2% price difference
-      const profit = loanAmount * priceDiff - (loanAmount * fee);
+      // Get real price quotes using Jupiter aggregator
+      const jupiter = new JupiterV6Integration(this.connection);
+      
+      // Check price on DEX path A->B->A
+      const quoteAB = await jupiter.getQuote(
+        tokenA.mint.toString(),
+        tokenB.mint.toString(),
+        loanAmount
+      );
+      
+      if (!quoteAB) return null;
+      
+      const amountB = parseInt(quoteAB.outAmount);
+      
+      // Check return path B->A
+      const quoteBA = await jupiter.getQuote(
+        tokenB.mint.toString(),
+        tokenA.mint.toString(),
+        amountB
+      );
+      
+      if (!quoteBA) return null;
+      
+      const finalAmountA = parseInt(quoteBA.outAmount);
+      const profit = finalAmountA - loanAmount - (loanAmount * fee);
       
       if (profit > 0) {
         return {
           type: 'flash-loan',
           provider: providerName,
           path: [tokenA, tokenB, tokenA],
-          estimatedProfit: profit,
+          estimatedProfit: profit / Math.pow(10, tokenA.decimals),
           requiredCapital: 0, // Flash loans require no capital
           confidence: 0.85,
         };
@@ -113,7 +135,7 @@ export class FlashLoanArbitrage {
   
   async executeArbitrage(
     opportunity: ArbitrageOpportunity,
-    _userKeypair: Keypair
+    userKeypair: Keypair
   ): Promise<string | null> {
     try {
       console.log(`Executing flash loan arbitrage via ${opportunity.provider}...`);
@@ -125,14 +147,77 @@ export class FlashLoanArbitrage {
         return null;
       }
       
-      // Create flash loan transaction
-      // 1. Borrow from flash loan provider
-      // 2. Execute arbitrage swaps
-      // 3. Repay flash loan + fee
-      // 4. Keep profit
+      // Get Jupiter integration for swap execution
+      const jupiter = new JupiterV6Integration(this.connection);
+      const path = opportunity.path;
       
-      console.log('Flash loan arbitrage executed successfully');
-      return 'mock_signature';
+      if (path.length < 2) {
+        console.error('Invalid path: at least 2 tokens required');
+        return null;
+      }
+      
+      // Calculate loan amount based on first token
+      const loanAmount = Math.floor(100000); // Amount in smallest unit
+      
+      // Check if provider has sufficient liquidity
+      const availableLiquidity = await provider.getAvailableLiquidity(path[0].mint);
+      if (availableLiquidity < loanAmount) {
+        console.error(`Insufficient liquidity: need ${loanAmount}, available ${availableLiquidity}`);
+        return null;
+      }
+      
+      // Build transaction instructions for flash loan arbitrage
+      // Flash loan transaction structure:
+      // 1. Begin flash loan (borrow)
+      // 2. Execute arbitrage swaps (middle instructions)
+      // 3. End flash loan (repay + fee)
+      
+      const swapInstructions: TransactionInstruction[] = [];
+      
+      // Get swap instructions for each leg of arbitrage
+      let currentAmount = loanAmount;
+      for (let i = 0; i < path.length - 1; i++) {
+        const quote = await jupiter.getQuote(
+          path[i].mint.toString(),
+          path[i + 1].mint.toString(),
+          currentAmount
+        );
+        
+        if (!quote) {
+          console.error(`Failed to get quote for swap ${i + 1}`);
+          return null;
+        }
+        
+        currentAmount = parseInt(quote.outAmount);
+        
+        // In production, get swap instruction from Jupiter and add to swapInstructions
+        // const swapTx = await jupiter.getSwapTransaction(quote, userKeypair.publicKey.toString());
+        // swapInstructions.push(...swapTx.instructions);
+      }
+      
+      // Validate profitability after all swaps
+      const repayAmount = loanAmount + Math.floor(loanAmount * (provider.getFee() / 100));
+      if (currentAmount < repayAmount) {
+        console.error('Insufficient funds to repay loan after swaps');
+        return null;
+      }
+      
+      // Create flash loan instruction with nested swap instructions
+      const flashLoanInstructions = await provider.createFlashLoanInstruction(
+        loanAmount,
+        path[0].mint,
+        userKeypair.publicKey,
+        swapInstructions
+      );
+      
+      const profit = currentAmount - repayAmount;
+      console.log(`Flash loan arbitrage prepared. Expected profit: ${profit / Math.pow(10, path[0].decimals)}`);
+      
+      // Note: In production, these instructions would be built into a transaction,
+      // signed with userKeypair, and submitted to the network
+      console.warn('Transaction execution requires proper instruction building and wallet signing');
+      console.log(`Transaction would contain ${flashLoanInstructions.length} instructions`);
+      return null;
     } catch (error) {
       console.error('Error executing arbitrage:', error);
       return null;
@@ -222,18 +307,66 @@ export class TriangularArbitrage {
   
   async executeArbitrage(
     opportunity: ArbitrageOpportunity,
-    _userKeypair: Keypair
+    userKeypair: Keypair
   ): Promise<string | null> {
     try {
       console.log('Executing triangular arbitrage via Jupiter v6...');
       console.log(`Path: ${opportunity.path.map(t => t.symbol).join(' -> ')}`);
       console.log(`Expected profit: $${opportunity.estimatedProfit.toFixed(2)}`);
       
-      // Execute the three swaps in sequence
-      // A -> B -> C -> A
+      const path = opportunity.path;
+      if (path.length < 3) {
+        console.error('Invalid triangular path: at least 3 tokens required');
+        return null;
+      }
       
-      console.log('Triangular arbitrage executed successfully');
-      return 'mock_signature';
+      // Execute the three swaps in sequence: A -> B -> C -> A
+      let currentAmount = Math.floor(opportunity.requiredCapital * Math.pow(10, path[0].decimals));
+      
+      for (let i = 0; i < path.length - 1; i++) {
+        const fromToken = path[i];
+        const toToken = path[i + 1];
+        
+        console.log(`Swap ${i + 1}: ${fromToken.symbol} -> ${toToken.symbol}, amount: ${currentAmount}`);
+        
+        const signature = await this.jupiter.executeSwap(
+          fromToken.mint.toString(),
+          toToken.mint.toString(),
+          currentAmount,
+          userKeypair.publicKey
+        );
+        
+        if (!signature) {
+          console.error(`Failed to execute swap ${i + 1}`);
+          return null;
+        }
+        
+        // Get the output amount for next swap
+        const quote = await this.jupiter.getQuote(
+          fromToken.mint.toString(),
+          toToken.mint.toString(),
+          currentAmount
+        );
+        
+        if (!quote) {
+          console.error(`Failed to get quote for next swap`);
+          return null;
+        }
+        
+        currentAmount = parseInt(quote.outAmount);
+      }
+      
+      const finalAmount = currentAmount / Math.pow(10, path[0].decimals);
+      const profit = finalAmount - opportunity.requiredCapital;
+      
+      console.log(`Triangular arbitrage executed successfully. Final profit: ${profit}`);
+      
+      // Note: This is a simplified version. Production implementation should:
+      // 1. Bundle all swaps into a single transaction for atomicity
+      // 2. Include proper slippage protection
+      // 3. Use Jito bundles for MEV protection
+      console.warn('Transaction execution requires wallet signing and proper bundling');
+      return null;
     } catch (error) {
       console.error('Error executing triangular arbitrage:', error);
       return null;

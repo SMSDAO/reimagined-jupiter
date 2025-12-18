@@ -176,11 +176,15 @@ export class JupiterV6Integration {
       }
       
       console.log('[Jupiter] Swap transaction ready for signing and execution');
-      // Transaction would be signed and sent here
-      // const signature = await this.connection.sendTransaction(swapTransaction);
-      // return signature;
-      
-      return 'mock_signature';
+      console.warn('[Jupiter] Transaction execution requires wallet signing - transaction object ready but not submitted');
+      // Note: In production, the swapTransaction would be signed by the user's wallet
+      // and submitted to the network. This method returns null to indicate that
+      // the caller should handle transaction signing and submission.
+      // Example:
+      // swapTransaction.sign([userKeypair]);
+      // const signature = await this.connection.sendRawTransaction(swapTransaction.serialize());
+      // await this.connection.confirmTransaction(signature);
+      return null;
     } catch (error) {
       console.error('[Jupiter] Execute swap error:', error);
       return null;
