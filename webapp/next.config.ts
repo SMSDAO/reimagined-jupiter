@@ -6,6 +6,26 @@ const nextConfig: NextConfig = {
   },
   // Optimize for production
   reactStrictMode: true,
+  
+  // Optimize package imports
+  experimental: {
+    optimizePackageImports: ['@solana/web3.js', 'framer-motion'],
+  },
+  
+  // Cache control headers for API routes
+  async headers() {
+    return [
+      {
+        source: '/api/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'no-store, must-revalidate',
+          },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;

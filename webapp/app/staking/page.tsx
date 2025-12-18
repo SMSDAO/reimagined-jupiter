@@ -232,6 +232,11 @@ export default function StakingPage() {
           💰 10% of staking rewards go to dev wallet: monads.solana
         </div>
       </motion.div>
+      
+      {/* RPC Health Indicator */}
+      <RPCHealthIndicator />
     </div>
   );
 }
+
+import RPCHealthIndicator from '@/components/RPCHealthIndicator';

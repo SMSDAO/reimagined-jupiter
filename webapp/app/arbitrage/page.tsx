@@ -302,6 +302,11 @@ export default function ArbitragePage() {
           💰 10% of profits go to dev wallet: monads.solana
         </div>
       </motion.div>
+      
+      {/* RPC Health Indicator */}
+      <RPCHealthIndicator />
     </div>
   );
 }
+
+import RPCHealthIndicator from '@/components/RPCHealthIndicator';

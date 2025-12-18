@@ -279,6 +279,11 @@ export default function SwapPage() {
           ))}
         </div>
       </motion.div>
+      
+      {/* RPC Health Indicator */}
+      <RPCHealthIndicator />
     </div>
   );
 }
+
+import RPCHealthIndicator from '@/components/RPCHealthIndicator';
