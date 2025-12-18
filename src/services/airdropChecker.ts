@@ -154,17 +154,120 @@ export class AirdropChecker {
   }
   
   private async checkPythAirdrop(): Promise<AirdropInfo | null> {
-    // Placeholder for Pyth airdrop check
+    try {
+      console.log('[AirdropChecker] Checking Pyth airdrop eligibility...');
+      
+      // Pyth Network uses a merkle tree distribution system
+      // Check if wallet is eligible via their API
+      const response = await axios.get(
+        `https://airdrop-api.pyth.network/allocation/${this.userPublicKey.toString()}`,
+        { timeout: 5000 }
+      );
+      
+      if (response.data && response.data.amount) {
+        console.log(`[AirdropChecker] Pyth airdrop found: ${response.data.amount}`);
+        return {
+          protocol: 'Pyth',
+          tokenMint: 'HZ1JovNiVvGrGNiiYvEozEVgZ58xaU3RKwX8eACQBCt3',
+          amount: response.data.amount,
+          claimable: true,
+          claimed: false,
+        };
+      }
+      
+      console.log('[AirdropChecker] No Pyth airdrop available');
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        if (error.response?.status === 404) {
+          console.log('[AirdropChecker] No Pyth airdrop found (404)');
+        } else {
+          console.error('[AirdropChecker] Pyth airdrop check failed:', {
+            status: error.response?.status,
+            message: error.message,
+          });
+        }
+      } else {
+        console.error('[AirdropChecker] Unexpected Pyth airdrop check error:', error);
+      }
+    }
     return null;
   }
   
   private async checkKaminoAirdrop(): Promise<AirdropInfo | null> {
-    // Placeholder for Kamino airdrop check
+    try {
+      console.log('[AirdropChecker] Checking Kamino airdrop eligibility...');
+      
+      // Kamino Finance airdrop check via their API
+      const response = await axios.get(
+        `https://api.kamino.finance/airdrop/${this.userPublicKey.toString()}`,
+        { timeout: 5000 }
+      );
+      
+      if (response.data && response.data.allocation) {
+        console.log(`[AirdropChecker] Kamino airdrop found: ${response.data.allocation}`);
+        return {
+          protocol: 'Kamino',
+          tokenMint: 'KMNo3nJsBXfcpJTVhZcXLW7RmTwTt4GVFE7suUBo9sS',
+          amount: response.data.allocation,
+          claimable: true,
+          claimed: false,
+        };
+      }
+      
+      console.log('[AirdropChecker] No Kamino airdrop available');
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        if (error.response?.status === 404) {
+          console.log('[AirdropChecker] No Kamino airdrop found (404)');
+        } else {
+          console.error('[AirdropChecker] Kamino airdrop check failed:', {
+            status: error.response?.status,
+            message: error.message,
+          });
+        }
+      } else {
+        console.error('[AirdropChecker] Unexpected Kamino airdrop check error:', error);
+      }
+    }
     return null;
   }
   
   private async checkMarginfiAirdrop(): Promise<AirdropInfo | null> {
-    // Placeholder for Marginfi airdrop check
+    try {
+      console.log('[AirdropChecker] Checking Marginfi airdrop eligibility...');
+      
+      // Marginfi airdrop check via their API
+      const response = await axios.get(
+        `https://api.marginfi.com/airdrop/${this.userPublicKey.toString()}`,
+        { timeout: 5000 }
+      );
+      
+      if (response.data && response.data.amount) {
+        console.log(`[AirdropChecker] Marginfi airdrop found: ${response.data.amount}`);
+        return {
+          protocol: 'Marginfi',
+          tokenMint: 'MRGNVbWdbHSqXVVPNXzZmJmr3LvGRwVv9VCYDRGNxVW',
+          amount: response.data.amount,
+          claimable: true,
+          claimed: false,
+        };
+      }
+      
+      console.log('[AirdropChecker] No Marginfi airdrop available');
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        if (error.response?.status === 404) {
+          console.log('[AirdropChecker] No Marginfi airdrop found (404)');
+        } else {
+          console.error('[AirdropChecker] Marginfi airdrop check failed:', {
+            status: error.response?.status,
+            message: error.message,
+          });
+        }
+      } else {
+        console.error('[AirdropChecker] Unexpected Marginfi airdrop check error:', error);
+      }
+    }
     return null;
   }
   
