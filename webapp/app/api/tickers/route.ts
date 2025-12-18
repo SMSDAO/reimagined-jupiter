@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Connection } from '@solana/web3.js';
 import { HermesClient } from '@pythnetwork/hermes-client';
+import { getJupiterPriceService } from '@/lib/jupiter/price-service';
 
 // Pyth Network price feed IDs for Solana tokens
 const PYTH_PRICE_FEEDS: Record<string, string> = {
@@ -13,6 +13,17 @@ const PYTH_PRICE_FEEDS: Record<string, string> = {
   'BONK/USD': '72b021217ca3fe68922a19aaf990109cb9d84e9ad004b4d2025ad6f529314419',
   'JUP/USD': 'g6eRCbboSwK4tSWngn773RCMexr1APQr4uA9bGZBYfo',
   'WIF/USD': '4ca4beeca86f0d164160323817a4e42b10010a724c2217c6ee41b54cd4cc61fc',
+};
+
+// Token mint addresses for Jupiter price fetching
+const TOKEN_MINTS: Record<string, string> = {
+  'SOL': 'So11111111111111111111111111111111111111112',
+  'USDC': 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+  'USDT': 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB',
+  'BONK': 'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263',
+  'JUP': 'JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN',
+  'RAY': '4k3Dyjzvzp8eMZWUXbBCjEvwSkkk59S5iCNLY3QrkX6R',
+  'WIF': 'EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm',
 };
 
 interface TokenPrice {
@@ -89,6 +100,45 @@ async function fetchPythPrices(): Promise<TokenPrice[]> {
   }
 }
 
+async function fetchJupiterPrices(symbols?: string[]): Promise<TokenPrice[]> {
+  try {
+    const jupiterService = getJupiterPriceService();
+    
+    // Determine which tokens to fetch
+    let tokensToFetch = Object.keys(TOKEN_MINTS);
+    if (symbols && symbols.length > 0) {
+      tokensToFetch = tokensToFetch.filter(symbol => 
+        symbols.some(s => s.toUpperCase() === symbol.toUpperCase())
+      );
+    }
+    
+    const mints = tokensToFetch.map(symbol => TOKEN_MINTS[symbol]);
+    const pricesMap = await jupiterService.getBulkPrices(mints);
+    
+    const prices: TokenPrice[] = [];
+    
+    pricesMap.forEach((priceData, mint) => {
+      // Find the symbol for this mint
+      const symbol = Object.entries(TOKEN_MINTS).find(([_sym, m]) => m === mint)?.[0];
+      if (!symbol) return;
+      
+      prices.push({
+        symbol: symbol,
+        price: priceData.price,
+        confidence: 0, // Jupiter doesn't provide confidence intervals
+        exponent: 0,
+        publishTime: Date.now(),
+        source: 'jupiter',
+      });
+    });
+    
+    return prices;
+  } catch (error) {
+    console.error('[API] Error fetching Jupiter prices:', error);
+    return [];
+  }
+}
+
 function getSymbolFromPriceId(priceId: string): string | null {
   for (const [symbol, id] of Object.entries(PYTH_PRICE_FEEDS)) {
     if (id === priceId) {
@@ -115,13 +165,11 @@ async function checkProviderStatus(): Promise<Record<string, boolean>> {
     status.pyth = false;
   }
 
-  // Check other providers (simplified for now)
+  // Check Jupiter using our price service
   try {
-    // Test with actual price endpoint since Jupiter v6 uses different API structure
-    const response = await fetch('https://price.jup.ag/v6/price?ids=So11111111111111111111111111111111111111112', {
-      signal: AbortSignal.timeout(3000),
-    });
-    status.jupiter = response.ok;
+    const jupiterService = getJupiterPriceService();
+    const solPrice = await jupiterService.getTokenPrice(TOKEN_MINTS['SOL']);
+    status.jupiter = solPrice !== null;
   } catch {
     status.jupiter = false;
   }
@@ -135,7 +183,27 @@ export async function GET(request: NextRequest) {
     const symbols = searchParams.get('symbols')?.split(',');
 
     // Fetch prices from Pyth
-    let prices = await fetchPythPrices();
+    const pythPrices = await fetchPythPrices();
+
+    // Fetch prices from Jupiter as backup/supplement
+    const jupiterPrices = await fetchJupiterPrices(symbols || undefined);
+
+    // Combine prices, preferring Pyth but including Jupiter for tokens not in Pyth
+    const pricesMap = new Map<string, TokenPrice>();
+    
+    // Add Pyth prices first (higher priority)
+    pythPrices.forEach(price => {
+      pricesMap.set(price.symbol, price);
+    });
+    
+    // Add Jupiter prices for missing tokens
+    jupiterPrices.forEach(price => {
+      if (!pricesMap.has(price.symbol)) {
+        pricesMap.set(price.symbol, price);
+      }
+    });
+    
+    let prices = Array.from(pricesMap.values());
 
     // Filter by requested symbols if provided
     if (symbols && symbols.length > 0) {
