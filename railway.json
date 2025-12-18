@@ -1,0 +1,58 @@
+{
+  "$schema": "https://railway.app/railway.schema.json",
+  "build": {
+    "builder": "NIXPACKS",
+    "buildCommand": "npm install && npm run build"
+  },
+  "deploy": {
+    "startCommand": "npm run start:railway",
+    "restartPolicyType": "ALWAYS",
+    "restartPolicyMaxRetries": 10,
+    "healthcheckPath": "/api/health",
+    "healthcheckTimeout": 30,
+    "numReplicas": 1,
+    "sleepApplication": false
+  },
+  "environmentVariables": {
+    "SOLANA_RPC_URL": {
+      "description": "Solana RPC URL (Helius, QuickNode, or Triton recommended)",
+      "required": true
+    },
+    "WALLET_PRIVATE_KEY": {
+      "description": "Wallet private key in base58 format",
+      "required": true
+    },
+    "MINIMUM_PROFIT_SOL": {
+      "description": "Minimum profit threshold in SOL",
+      "default": "0.01"
+    },
+    "ADMIN_USERNAME": {
+      "description": "Admin panel username",
+      "required": true
+    },
+    "ADMIN_PASSWORD": {
+      "description": "Admin panel password",
+      "required": true
+    },
+    "JWT_SECRET": {
+      "description": "JWT secret for authentication",
+      "required": true
+    },
+    "LOG_LEVEL": {
+      "description": "Log level (debug, info, warn, error)",
+      "default": "info"
+    },
+    "MAX_SLIPPAGE": {
+      "description": "Maximum slippage tolerance (0.01 = 1%)",
+      "default": "0.01"
+    },
+    "DEV_FEE_ENABLED": {
+      "description": "Enable dev fee (true/false)",
+      "default": "true"
+    },
+    "DEV_FEE_PERCENTAGE": {
+      "description": "Dev fee percentage (0.10 = 10%)",
+      "default": "0.10"
+    }
+  }
+}
