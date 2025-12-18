@@ -1,4 +1,4 @@
-import { Connection, Keypair, PublicKey } from '@solana/web3.js';
+import { Connection, Keypair, PublicKey, TransactionInstruction } from '@solana/web3.js';
 import { ArbitrageOpportunity, TokenConfig } from '../types.js';
 import { JupiterV6Integration } from '../integrations/jupiter.js';
 import { 
@@ -159,15 +159,22 @@ export class FlashLoanArbitrage {
       // Calculate loan amount based on first token
       const loanAmount = Math.floor(100000); // Amount in smallest unit
       
-      // Execute flash loan with arbitrage swaps
-      // 1. Borrow from flash loan provider
-      const loan = await provider.borrow(loanAmount, path[0].mint);
-      if (!loan) {
-        console.error('Failed to borrow from flash loan provider');
+      // Check if provider has sufficient liquidity
+      const availableLiquidity = await provider.getAvailableLiquidity(path[0].mint);
+      if (availableLiquidity < loanAmount) {
+        console.error(`Insufficient liquidity: need ${loanAmount}, available ${availableLiquidity}`);
         return null;
       }
       
-      // 2. Execute arbitrage swaps through Jupiter
+      // Build transaction instructions for flash loan arbitrage
+      // Flash loan transaction structure:
+      // 1. Begin flash loan (borrow)
+      // 2. Execute arbitrage swaps (middle instructions)
+      // 3. End flash loan (repay + fee)
+      
+      const swapInstructions: TransactionInstruction[] = [];
+      
+      // Get swap instructions for each leg of arbitrage
       let currentAmount = loanAmount;
       for (let i = 0; i < path.length - 1; i++) {
         const quote = await jupiter.getQuote(
@@ -182,23 +189,34 @@ export class FlashLoanArbitrage {
         }
         
         currentAmount = parseInt(quote.outAmount);
+        
+        // In production, get swap instruction from Jupiter and add to swapInstructions
+        // const swapTx = await jupiter.getSwapTransaction(quote, userKeypair.publicKey.toString());
+        // swapInstructions.push(...swapTx.instructions);
       }
       
-      // 3. Repay flash loan + fee
+      // Validate profitability after all swaps
       const repayAmount = loanAmount + Math.floor(loanAmount * (provider.getFee() / 100));
       if (currentAmount < repayAmount) {
         console.error('Insufficient funds to repay loan after swaps');
         return null;
       }
       
-      // 4. Profit is remaining after repayment
-      const profit = currentAmount - repayAmount;
-      console.log(`Flash loan arbitrage executed successfully. Profit: ${profit / Math.pow(10, path[0].decimals)}`);
+      // Create flash loan instruction with nested swap instructions
+      const flashLoanInstructions = await provider.createFlashLoanInstruction(
+        loanAmount,
+        path[0].mint,
+        userKeypair.publicKey,
+        swapInstructions
+      );
       
-      // Note: Actual transaction signing and submission would happen here
-      // This requires building a proper Solana transaction with all instructions
-      // and signing with userKeypair
-      console.warn('Transaction execution not yet implemented - requires wallet signing');
+      const profit = currentAmount - repayAmount;
+      console.log(`Flash loan arbitrage prepared. Expected profit: ${profit / Math.pow(10, path[0].decimals)}`);
+      
+      // Note: In production, these instructions would be built into a transaction,
+      // signed with userKeypair, and submitted to the network
+      console.warn('Transaction execution requires proper instruction building and wallet signing');
+      console.log(`Transaction would contain ${flashLoanInstructions.length} instructions`);
       return null;
     } catch (error) {
       console.error('Error executing arbitrage:', error);
