@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { motion } from 'framer-motion';
 import PortfolioTracker from '@/components/PortfolioTracker';
+import RPCHealthIndicator from '@/components/RPCHealthIndicator';
 
 interface StakingPool {
   name: string;
@@ -238,5 +239,3 @@ export default function StakingPage() {
     </div>
   );
 }
-
-import RPCHealthIndicator from '@/components/RPCHealthIndicator';

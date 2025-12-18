@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useConnection, useWallet } from '@solana/wallet-adapter-react';
 import { motion } from 'framer-motion';
 import { VersionedTransaction } from '@solana/web3.js';
+import RPCHealthIndicator from '@/components/RPCHealthIndicator';
 
 export default function SwapPage() {
   const { connection } = useConnection();
@@ -285,5 +286,3 @@ export default function SwapPage() {
     </div>
   );
 }
-
-import RPCHealthIndicator from '@/components/RPCHealthIndicator';

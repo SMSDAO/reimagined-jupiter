@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { motion } from 'framer-motion';
+import RPCHealthIndicator from '@/components/RPCHealthIndicator';
 
 interface ArbitrageOpportunity {
   id: string;
@@ -308,5 +309,3 @@ export default function ArbitragePage() {
     </div>
   );
 }
-
-import RPCHealthIndicator from '@/components/RPCHealthIndicator';

@@ -225,7 +225,7 @@ let rotatorInstance: RPCRotator | null = null;
  */
 export function getRPCRotator(): RPCRotator {
   if (!rotatorInstance) {
-    const endpoints = [
+    const rawEndpoints = [
       {
         url:
           process.env.NEXT_PUBLIC_HELIUS_RPC ||
@@ -247,10 +247,17 @@ export function getRPCRotator(): RPCRotator {
           'https://api.mainnet-beta.solana.com',
         name: 'Fallback',
       },
-    ].filter((endpoint, index, self) => 
-      // Remove duplicates based on URL
-      self.findIndex(e => e.url === endpoint.url) === index
-    );
+    ];
+    
+    // Remove duplicates using Set for O(n) complexity
+    const seen = new Set<string>();
+    const endpoints = rawEndpoints.filter((endpoint) => {
+      if (seen.has(endpoint.url)) {
+        return false;
+      }
+      seen.add(endpoint.url);
+      return true;
+    });
 
     rotatorInstance = new RPCRotator(endpoints);
   }

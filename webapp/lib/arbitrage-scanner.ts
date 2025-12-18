@@ -25,8 +25,12 @@ export class ArbitrageScanner {
   private scanInterval: NodeJS.Timeout | null = null;
   private onOpportunityCallback: ((opportunity: ArbitrageOpportunity) => void) | null = null;
 
+  /**
+   * @deprecated The rpcUrl parameter is no longer used. Connection is obtained via getOptimalConnection().
+   * This parameter will be removed in a future version.
+   */
   constructor(_rpcUrl?: string) {
-    // RPC URL parameter kept for backwards compatibility but not used
+    // RPC URL parameter kept for backwards compatibility
     // Connection is now obtained via getOptimalConnection()
   }
 

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 
 interface LiveSyncOptions {
   intervalMs?: number;
@@ -36,22 +36,6 @@ export function useLiveSync<T>(
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
-
-  // Memoize the fetch function to prevent infinite loops
-  const fetch = useCallback(async () => {
-    try {
-      setLoading(true);
-      const result = await fetchFn();
-      setData(result);
-      setError(null);
-      setLastUpdate(new Date());
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
-      console.error('[useLiveSync] Fetch error:', err);
-    } finally {
-      setLoading(false);
-    }
-  }, [fetchFn]);
 
   useEffect(() => {
     if (!enabled) {
