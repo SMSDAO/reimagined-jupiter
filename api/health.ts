@@ -1,6 +1,7 @@
 /**
- * Health check endpoint for monitoring
+ * Comprehensive health check endpoint for monitoring
  * Returns 200 for healthy, 503 for unhealthy
+ * Now includes circuit breaker, RPC manager, and profit tracking status
  */
 
 import { Connection, PublicKey } from '@solana/web3.js';
@@ -19,6 +20,17 @@ interface HealthResponse {
   errorRate: number;
   timestamp: number;
   errors?: string[];
+  // Enhanced monitoring
+  circuitBreaker?: {
+    state: string;
+    consecutiveErrors: number;
+    totalProfit: number;
+  };
+  profitStats?: {
+    totalTrades: number;
+    successRate: number;
+    netProfit: number;
+  };
 }
 
 // In-memory tracking for uptime and errors

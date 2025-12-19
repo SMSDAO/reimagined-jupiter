@@ -3,6 +3,8 @@
  * Provides JSON formatted logs with different levels and specialized loggers
  */
 
+import { sanitizeForLogging } from './secret-manager.js';
+
 type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
 interface LogEntry {
@@ -99,19 +101,25 @@ function output(entry: LogEntry): void {
     return;
   }
   
+  // Sanitize metadata to mask secrets
+  const sanitizedEntry = {
+    ...entry,
+    metadata: entry.metadata ? sanitizeForLogging(entry.metadata) : undefined,
+  };
+  
   const isDevelopment = process.env.NODE_ENV === 'development';
   
   if (isDevelopment) {
     // Color-coded console output in development
     const color = getColorCode(entry.level);
-    const timestamp = new Date(entry.timestamp).toLocaleTimeString();
-    const metadataStr = entry.metadata ? ` ${JSON.stringify(entry.metadata)}` : '';
+    const timestamp = new Date(sanitizedEntry.timestamp).toLocaleTimeString();
+    const metadataStr = sanitizedEntry.metadata ? ` ${JSON.stringify(sanitizedEntry.metadata)}` : '';
     console.log(
       `${color}[${entry.level.toUpperCase()}]${RESET_COLOR} ${timestamp} - ${entry.message}${metadataStr}`
     );
   } else {
     // JSON formatted logs for production
-    console.log(formatLog(entry));
+    console.log(formatLog(sanitizedEntry));
   }
 }
 
