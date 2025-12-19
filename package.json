@@ -20,6 +20,7 @@
     "deploy:vercel": "vercel --prod",
     "deploy:railway": "bash scripts/migrate-to-railway.sh",
     "pre-deploy": "ts-node-esm scripts/pre-deploy-check.ts",
+    "validate-endpoints": "ts-node-esm scripts/validate-endpoints.ts",
     "logs": "vercel logs",
     "monitor": "ts-node-esm scripts/monitor-health.ts",
     "cli": "ts-node-esm cli/index.ts",
