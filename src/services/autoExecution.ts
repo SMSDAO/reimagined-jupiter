@@ -167,6 +167,12 @@ export class AutoExecutionEngine {
   private analytics: AnalyticsService;
   private isRunning: boolean = false;
   
+  // Execution lock mechanism to prevent concurrent executions
+  private isExecuting: boolean = false;
+  private executionLock: Promise<void> = Promise.resolve();
+  private executedOpportunityIds: Set<string> = new Set();
+  private readonly OPPORTUNITY_EXPIRY_MS = 60000; // 1 minute
+  
   constructor(
     connection: Connection,
     userKeypair: Keypair,
@@ -293,7 +299,42 @@ export class AutoExecutionEngine {
     opportunity: ArbitrageOpportunity,
     preset: { name: string; minProfit: number; maxSlippage: number }
   ): Promise<void> {
+    // Generate unique opportunity ID
+    const opportunityId = `${opportunity.type}-${opportunity.path.map(t => t.symbol).join('-')}-${opportunity.estimatedProfit}`;
+    
+    // Check if this opportunity was recently executed (duplicate prevention)
+    if (this.executedOpportunityIds.has(opportunityId)) {
+      console.log('⚠️  Opportunity already executed recently, skipping duplicate...');
+      return;
+    }
+    
+    // Wait for any previous execution to complete (sequential execution)
+    await this.executionLock;
+    
+    // Check if another execution started while we were waiting
+    if (this.isExecuting) {
+      console.log('⚠️  Another execution in progress, queuing...');
+      await this.executionLock;
+    }
+    
+    // Create a new execution promise that will be the lock for the next execution
+    let resolveExecution: () => void;
+    this.executionLock = new Promise((resolve) => {
+      resolveExecution = resolve;
+    });
+    
+    // Mark as executing
+    this.isExecuting = true;
+    
     try {
+      // Mark opportunity as executed
+      this.executedOpportunityIds.add(opportunityId);
+      
+      // Set timeout to remove from executed set
+      setTimeout(() => {
+        this.executedOpportunityIds.delete(opportunityId);
+      }, this.OPPORTUNITY_EXPIRY_MS);
+      
       // Check MEV safety
       const isSafe = await this.mevProtection.isOpportunitySafe(opportunity);
       if (!isSafe) {
@@ -301,7 +342,7 @@ export class AutoExecutionEngine {
         return;
       }
       
-      console.log(`Executing opportunity:`);
+      console.log(`🚀 Executing opportunity (lock acquired):`);
       console.log(`  Type: ${opportunity.type}`);
       console.log(`  Provider: ${opportunity.provider || 'Jupiter'}`);
       console.log(`  Path: ${opportunity.path.map(t => t.symbol).join(' -> ')}`);
@@ -361,6 +402,11 @@ export class AutoExecutionEngine {
       }
     } catch (error) {
       console.error('Error executing opportunity:', error);
+    } finally {
+      // Release execution lock
+      this.isExecuting = false;
+      resolveExecution!();
+      console.log('🔓 Execution lock released');
     }
   }
   
