@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useWallet, useConnection } from '@solana/wallet-adapter-react';
 import { Transaction, SystemProgram, LAMPORTS_PER_SOL } from '@solana/web3.js';
 import { motion } from 'framer-motion';
+import { EnvironmentInfo } from '@/components/environment-info';
 
 interface APIProvider {
   id: string;
@@ -148,6 +149,11 @@ export default function SettingsPage() {
         <p className="text-gray-300 mb-8">
           Configure API providers, nodes, and preferences
         </p>
+
+        {/* Environment Configuration */}
+        <div className="mb-8">
+          <EnvironmentInfo />
+        </div>
 
         {/* API Rotation Settings */}
         <div className="bg-white/10 backdrop-blur-md rounded-xl p-6 mb-8">

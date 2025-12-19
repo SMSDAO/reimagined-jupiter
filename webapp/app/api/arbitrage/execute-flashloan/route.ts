@@ -128,7 +128,14 @@ export async function POST(request: NextRequest) {
     console.log(`   Provider: ${result.provider}`);
 
     // Return response (omit RPC endpoint in production for security)
-    const response: any = {
+    const response: {
+      success: boolean;
+      signature: string | undefined;
+      profit: number | undefined;
+      provider: string | undefined;
+      timestamp: number;
+      rpcEndpoint?: string;
+    } = {
       success: true,
       signature: result.signature,
       profit: result.profit,
