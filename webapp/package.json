@@ -2,6 +2,19 @@
   "name": "webapp",
   "version": "0.1.0",
   "private": true,
+  "overrides": {
+    "qrcode.react": {
+      "react": "$react",
+      "react-dom": "$react-dom"
+    },
+    "react-qr-reader": {
+      "react": "$react",
+      "react-dom": "$react-dom"
+    },
+    "use-sync-external-store": {
+      "react": "$react"
+    }
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",

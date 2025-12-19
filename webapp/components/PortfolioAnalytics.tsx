@@ -1,13 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useWallet, useConnection } from '@solana/wallet-adapter-react';
+import { useWallet } from '@solana/wallet-adapter-react';
 import { motion } from 'framer-motion';
 import { getTradeStats } from '@/lib/storage';
+import { getOptimalConnection } from '@/lib/rpc-rotator';
 
 export default function PortfolioAnalytics() {
   const { publicKey } = useWallet();
-  const { connection } = useConnection();
   const [balance, setBalance] = useState(0);
   const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState({
@@ -38,6 +38,7 @@ export default function PortfolioAnalytics() {
 
       setLoading(true);
       try {
+        const connection = await getOptimalConnection();
         const bal = await connection.getBalance(publicKey);
         setBalance(bal / 1e9); // Convert lamports to SOL
       } catch (error) {
@@ -48,7 +49,11 @@ export default function PortfolioAnalytics() {
     };
 
     fetchBalance();
-  }, [publicKey, connection]);
+    
+    // Refresh balance every 10 seconds
+    const interval = setInterval(fetchBalance, 10000);
+    return () => clearInterval(interval);
+  }, [publicKey]);
 
   if (!publicKey) {
     return (

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { motion } from 'framer-motion';
+import RPCHealthIndicator from '@/components/RPCHealthIndicator';
 
 interface ArbitrageOpportunity {
   id: string;
@@ -302,6 +303,9 @@ export default function ArbitragePage() {
           💰 10% of profits go to dev wallet: monads.solana
         </div>
       </motion.div>
+      
+      {/* RPC Health Indicator */}
+      <RPCHealthIndicator />
     </div>
   );
 }

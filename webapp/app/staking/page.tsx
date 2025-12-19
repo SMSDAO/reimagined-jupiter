@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { motion } from 'framer-motion';
 import PortfolioTracker from '@/components/PortfolioTracker';
+import RPCHealthIndicator from '@/components/RPCHealthIndicator';
 
 interface StakingPool {
   name: string;
@@ -232,6 +233,9 @@ export default function StakingPage() {
           💰 10% of staking rewards go to dev wallet: monads.solana
         </div>
       </motion.div>
+      
+      {/* RPC Health Indicator */}
+      <RPCHealthIndicator />
     </div>
   );
 }

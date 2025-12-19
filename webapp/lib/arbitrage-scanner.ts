@@ -1,4 +1,5 @@
 import { Connection } from '@solana/web3.js';
+import { getOptimalConnection } from './rpc-rotator';
 
 export interface ArbitrageOpportunity {
   id: string;
@@ -20,13 +21,21 @@ interface PriceData {
 }
 
 export class ArbitrageScanner {
-  private connection: Connection;
   private priceCache: PriceData = {};
   private scanInterval: NodeJS.Timeout | null = null;
   private onOpportunityCallback: ((opportunity: ArbitrageOpportunity) => void) | null = null;
 
-  constructor(rpcUrl: string) {
-    this.connection = new Connection(rpcUrl, 'confirmed');
+  /**
+   * @deprecated The rpcUrl parameter is no longer used. Connection is obtained via getOptimalConnection().
+   * This parameter will be removed in a future version.
+   */
+  constructor(_rpcUrl?: string) {
+    // RPC URL parameter kept for backwards compatibility
+    // Connection is now obtained via getOptimalConnection()
+  }
+
+  private async getConnection(): Promise<Connection> {
+    return getOptimalConnection();
   }
 
   async startScanning(minProfitPercent: number = 0.5): Promise<void> {
