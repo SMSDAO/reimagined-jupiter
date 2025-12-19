@@ -24,6 +24,8 @@ export class RealTimeArbitrageScanner {
   private scanIntervalId: NodeJS.Timeout | null;
   private opportunityCallbacks: OpportunityCallback[];
   private tokenPairs: Array<{ tokenA: TokenConfig; tokenB: TokenConfig; tokenC: TokenConfig }>;
+  private intervals: Set<NodeJS.Timeout>;
+  private isCleanedUp: boolean = false;
 
   constructor(
     connection: Connection,
@@ -45,6 +47,10 @@ export class RealTimeArbitrageScanner {
     this.scanIntervalId = null;
     this.opportunityCallbacks = [];
     this.tokenPairs = [];
+    this.intervals = new Set();
+    
+    // Register cleanup handlers for process termination
+    this.registerCleanupHandlers();
   }
 
   /**
@@ -108,6 +114,11 @@ export class RealTimeArbitrageScanner {
         await this.performScan();
       }
     }, this.scannerConfig.pollingIntervalMs);
+    
+    // Track the interval for cleanup
+    if (this.scanIntervalId) {
+      this.intervals.add(this.scanIntervalId);
+    }
   }
 
   /**
@@ -364,5 +375,86 @@ export class RealTimeArbitrageScanner {
    */
   getTokenPairCount(): number {
     return this.tokenPairs.length;
+  }
+  
+  /**
+   * Register cleanup handlers for graceful shutdown
+   * Prevents memory leaks by cleaning up intervals on process termination
+   */
+  private registerCleanupHandlers(): void {
+    // Handle SIGINT (Ctrl+C)
+    process.on('SIGINT', () => {
+      if (!this.isCleanedUp) {
+        console.log('\n[Scanner] Received SIGINT, cleaning up...');
+        this.cleanup();
+        process.exit(0);
+      }
+    });
+    
+    // Handle SIGTERM (kill command)
+    process.on('SIGTERM', () => {
+      if (!this.isCleanedUp) {
+        console.log('\n[Scanner] Received SIGTERM, cleaning up...');
+        this.cleanup();
+        process.exit(0);
+      }
+    });
+    
+    // Handle uncaught exceptions
+    process.on('uncaughtException', (error) => {
+      console.error('[Scanner] Uncaught exception:', error);
+      this.cleanup();
+      process.exit(1);
+    });
+    
+    // Handle unhandled promise rejections
+    process.on('unhandledRejection', (reason, promise) => {
+      console.error('[Scanner] Unhandled rejection at:', promise, 'reason:', reason);
+      this.cleanup();
+      process.exit(1);
+    });
+  }
+  
+  /**
+   * Cleanup all resources
+   * Clears all intervals and connections to prevent memory leaks
+   */
+  cleanup(): void {
+    if (this.isCleanedUp) {
+      return;
+    }
+    
+    console.log('[Scanner] Cleaning up resources...');
+    
+    // Stop scanning
+    if (this.isScanning) {
+      this.stopScanning();
+    }
+    
+    // Clear all tracked intervals
+    this.intervals.forEach(interval => {
+      clearInterval(interval);
+    });
+    this.intervals.clear();
+    
+    // Clear scan interval if it exists
+    if (this.scanIntervalId) {
+      clearInterval(this.scanIntervalId);
+      this.scanIntervalId = null;
+    }
+    
+    // Clear callbacks
+    this.opportunityCallbacks = [];
+    
+    this.isCleanedUp = true;
+    console.log('[Scanner] Cleanup complete');
+  }
+  
+  /**
+   * Destroy scanner instance
+   * Public method to manually trigger cleanup
+   */
+  destroy(): void {
+    this.cleanup();
   }
 }
