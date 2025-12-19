@@ -36,7 +36,7 @@ const customFormat = winston.format.combine(
   winston.format.errors({ stack: true }),
   winston.format.metadata({ fillExcept: ['message', 'level', 'timestamp', 'label'] }),
   winston.format.printf(({ level, message, timestamp, metadata }) => {
-    const meta = metadata as Record<string, any>;
+    const meta = metadata as Record<string, unknown>;
     const requestId = meta.requestId ? `[${meta.requestId}]` : '';
     const context = meta.context ? `[${meta.context}]` : '';
     const metaStr = Object.keys(meta).length > 0 && !meta.requestId && !meta.context
