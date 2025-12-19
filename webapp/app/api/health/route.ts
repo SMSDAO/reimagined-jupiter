@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createResilientConnection } from '@/lib/solana/connection';
+import { API_ENDPOINTS } from '@/lib/config/api-endpoints';
 
 interface HealthResponse {
   status: 'healthy' | 'degraded' | 'unhealthy';
@@ -47,9 +48,8 @@ export async function GET(_request: NextRequest) {
 
   // Check Jupiter API availability
   let jupiterApiStatus: 'online' | 'offline' = 'online';
-  const jupiterApiUrl = process.env.NEXT_PUBLIC_JUPITER_API_URL || 'https://quote-api.jup.ag';
   try {
-    const jupiterResponse = await fetch(`${jupiterApiUrl}/v6/health`, {
+    const jupiterResponse = await fetch(`${API_ENDPOINTS.JUPITER_QUOTE}/health`, {
       signal: AbortSignal.timeout(5000),
     });
 

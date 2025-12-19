@@ -3,6 +3,8 @@
  * Centralizes all API calls with proper error handling and type safety
  */
 
+import { API_ENDPOINTS } from './config/api-endpoints';
+
 export interface TokenPrice {
   mint: string;
   price: number;
@@ -29,7 +31,7 @@ export interface AirdropEligibility {
  * Jupiter Price API Client
  */
 export class JupiterPriceAPI {
-  private static readonly BASE_URL = 'https://price.jup.ag/v6';
+  private static readonly BASE_URL = API_ENDPOINTS.JUPITER_PRICE;
 
   /**
    * Fetch prices for multiple token mints
@@ -65,7 +67,7 @@ export class JupiterPriceAPI {
  * Jupiter Quote API Client
  */
 export class JupiterQuoteAPI {
-  private static readonly BASE_URL = 'https://quote-api.jup.ag/v6';
+  private static readonly BASE_URL = API_ENDPOINTS.JUPITER_QUOTE;
 
   /**
    * Get quote for a swap
@@ -92,7 +94,7 @@ export class JupiterQuoteAPI {
  * Jupiter Airdrop API Client
  */
 export class JupiterAirdropAPI {
-  private static readonly BASE_URL = 'https://worker.jup.ag';
+  private static readonly BASE_URL = API_ENDPOINTS.JUPITER_WORKER;
 
   /**
    * Check Jupiter airdrop eligibility for a wallet
@@ -127,7 +129,7 @@ export class JupiterAirdropAPI {
  * Jito Airdrop API Client
  */
 export class JitoAirdropAPI {
-  private static readonly BASE_URL = 'https://kek.jito.network/api/v1';
+  private static readonly BASE_URL = API_ENDPOINTS.JITO_API;
 
   /**
    * Check Jito airdrop allocation for a wallet

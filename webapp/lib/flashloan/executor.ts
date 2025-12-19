@@ -9,6 +9,7 @@ import {
   TransactionMessage,
 } from '@solana/web3.js';
 import { FlashloanProvider, selectBestProvider, getProviderByName } from './providers';
+import { API_ENDPOINTS } from '../config/api-endpoints';
 
 /**
  * Arbitrage Opportunity Interface
@@ -43,7 +44,7 @@ export class FlashloanExecutor {
   private connection: Connection;
   private jupiterApiUrl: string;
 
-  constructor(connection: Connection, jupiterApiUrl: string = 'https://quote-api.jup.ag/v6') {
+  constructor(connection: Connection, jupiterApiUrl: string = API_ENDPOINTS.JUPITER_QUOTE) {
     this.connection = connection;
     this.jupiterApiUrl = jupiterApiUrl;
   }

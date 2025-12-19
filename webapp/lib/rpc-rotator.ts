@@ -1,4 +1,5 @@
 import { Connection } from '@solana/web3.js';
+import { getRPCEndpoints } from './config/api-endpoints';
 
 export interface RPCEndpoint {
   url: string;
@@ -225,38 +226,15 @@ let rotatorInstance: RPCRotator | null = null;
  */
 export function getRPCRotator(): RPCRotator {
   if (!rotatorInstance) {
-    const rawEndpoints = [
-      {
-        url:
-          process.env.NEXT_PUBLIC_HELIUS_RPC ||
-          process.env.NEXT_PUBLIC_QUICKNODE_RPC ||
-          process.env.NEXT_PUBLIC_RPC_URL ||
-          'https://api.mainnet-beta.solana.com',
-        name: 'Primary',
-      },
-      {
-        url:
-          process.env.NEXT_PUBLIC_QUICKNODE_RPC ||
-          process.env.NEXT_PUBLIC_RPC_URL ||
-          'https://api.mainnet-beta.solana.com',
-        name: 'Secondary',
-      },
-      {
-        url:
-          process.env.NEXT_PUBLIC_SOLANA_RPC_PRIMARY ||
-          'https://api.mainnet-beta.solana.com',
-        name: 'Fallback',
-      },
-    ];
+    const rpcUrls = getRPCEndpoints();
     
-    // Remove duplicates using Set for O(n) complexity
-    const seen = new Set<string>();
-    const endpoints = rawEndpoints.filter((endpoint) => {
-      if (seen.has(endpoint.url)) {
-        return false;
-      }
-      seen.add(endpoint.url);
-      return true;
+    // Create endpoint objects with names
+    const endpoints = rpcUrls.map((url, index) => {
+      const names = ['Primary', 'Secondary', 'Fallback', 'Alternative 1', 'Alternative 2'];
+      return {
+        url,
+        name: names[index] || `Endpoint ${index + 1}`,
+      };
     });
 
     rotatorInstance = new RPCRotator(endpoints);

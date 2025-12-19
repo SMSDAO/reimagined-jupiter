@@ -3,6 +3,7 @@ import { PublicKey } from '@solana/web3.js';
 import { createResilientConnection } from '@/lib/solana/connection';
 import { FlashloanExecutor, ArbitrageOpportunity } from '@/lib/flashloan/executor';
 import { FLASHLOAN_PROVIDERS } from '@/lib/flashloan/providers';
+import { API_ENDPOINTS } from '@/lib/config/api-endpoints';
 
 /**
  * POST /api/arbitrage/execute-flashloan
@@ -98,7 +99,7 @@ export async function POST(request: NextRequest) {
     // Create executor
     const executor = new FlashloanExecutor(
       resilientConnection.getConnection(),
-      process.env.NEXT_PUBLIC_JUPITER_API_URL || 'https://quote-api.jup.ag/v6'
+      API_ENDPOINTS.JUPITER_QUOTE
     );
 
     // Execute arbitrage

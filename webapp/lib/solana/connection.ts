@@ -10,6 +10,7 @@ import {
   TransactionSignature,
   SimulateTransactionConfig,
 } from '@solana/web3.js';
+import { getRPCEndpoints } from '../config/api-endpoints';
 
 export interface RpcEndpoint {
   url: string;
@@ -366,11 +367,7 @@ export class ResilientSolanaConnection {
  * Create a resilient connection from environment variables
  */
 export function createResilientConnection(config?: Partial<ResilientConnectionConfig>): ResilientSolanaConnection {
-  const defaultEndpoints = [
-    process.env.NEXT_PUBLIC_RPC_URL || process.env.QUICKNODE_RPC_URL || 'https://api.mainnet-beta.solana.com',
-    'https://api.mainnet-beta.solana.com',
-    'https://solana-api.projectserum.com',
-  ].filter((url, index, self) => url && self.indexOf(url) === index); // Remove duplicates
+  const defaultEndpoints = getRPCEndpoints();
 
   return new ResilientSolanaConnection({
     endpoints: defaultEndpoints,
