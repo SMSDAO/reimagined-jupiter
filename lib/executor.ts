@@ -12,6 +12,11 @@ import {
 } from '@solana/web3.js';
 import type { Opportunity } from './scanner.js';
 
+interface PrioritizationFee {
+  slot: number;
+  prioritizationFee: number;
+}
+
 export interface ExecutionResult {
   success: boolean;
   signature?: string;
@@ -245,7 +250,7 @@ async function calculateDynamicPriorityFee(connection: Connection): Promise<numb
     
     // Calculate median fee
     const fees = recentFees
-      .map((f: any) => f.prioritizationFee)
+      .map((f: PrioritizationFee) => f.prioritizationFee)
       .filter((f: number) => f > 0)
       .sort((a: number, b: number) => a - b);
     
