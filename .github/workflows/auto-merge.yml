@@ -88,6 +88,9 @@ jobs:
               return false;
             }
             
+            // Check for skip-deployment label
+            const skipDeployment = pr.labels.some(label => label.name === 'skip-deployment');
+            
             // Get required checks
             const { data: checks } = await github.rest.checks.listForRef({
               owner: context.repo.owner,
@@ -95,21 +98,38 @@ jobs:
               ref: pr.head.sha
             });
             
-            // Check if all required checks passed
-            const requiredChecks = ['Backend - Lint & Test', 'Webapp - Lint & Build', 'Security Scan'];
-            const checkStatuses = {};
+            // Define required checks
+            const requiredChecks = [
+              'Backend - Lint & Test (Node 18)',
+              'Backend - Lint & Test (Node 20)',
+              'Backend - Lint & Test (Node 22)',
+              'Webapp - Lint & Build (Node 18)',
+              'Webapp - Lint & Build (Node 20)',
+              'Webapp - Lint & Build (Node 22)',
+              'Security Scan',
+              'CI Summary & PR Comment'
+            ];
             
+            // Add deployment checks if not skipped
+            if (!skipDeployment) {
+              requiredChecks.push('Vercel Preview Deployment', 'Railway Preview Deployment');
+            }
+            
+            const checkStatuses = {};
             for (const check of checks.check_runs) {
               checkStatuses[check.name] = check.conclusion;
             }
             
-            console.log('Check statuses:', checkStatuses);
+            console.log('Check statuses:', JSON.stringify(checkStatuses, null, 2));
             
             let allChecksPassed = true;
+            const failedChecks = [];
+            
             for (const requiredCheck of requiredChecks) {
               if (!checkStatuses[requiredCheck] || checkStatuses[requiredCheck] !== 'success') {
-                console.log(`Required check "${requiredCheck}" has not passed`);
+                console.log(`Required check "${requiredCheck}" has not passed (status: ${checkStatuses[requiredCheck] || 'not found'})`);
                 allChecksPassed = false;
+                failedChecks.push(requiredCheck);
               }
             }
             
@@ -139,7 +159,7 @@ jobs:
             }
             
             if (!allChecksPassed) {
-              core.setFailed('Not all required checks have passed');
+              core.setFailed(`Not all required checks have passed. Failed: ${failedChecks.join(', ')}`);
               return false;
             }
             
@@ -179,13 +199,23 @@ jobs:
               repo: context.repo.repo,
               issue_number: prNumber,
               body: '⚠️ Auto-merge failed. Please check the requirements:\n\n' +
-                    '- ✅ All required CI checks must pass (Backend, Webapp, Security)\n' +
+                    '### 📋 Required Checks\n' +
+                    '- ✅ All backend tests must pass (Node 18, 20, 22)\n' +
+                    '- ✅ All webapp builds must pass (Node 18, 20, 22)\n' +
+                    '- ✅ Linting must pass with no warnings (ESLint --max-warnings=0)\n' +
+                    '- ✅ TypeScript validation must pass (tsc --noEmit)\n' +
+                    '- ✅ Security scan must complete\n' +
+                    '- ✅ Test coverage ≥ 90% (if tests modified)\n' +
+                    '- ✅ Deployment previews must succeed (unless skip-deployment label)\n\n' +
+                    '### 👥 Review Requirements\n' +
                     '- ✅ At least 1 approval required (except for Dependabot PRs)\n' +
                     '- ✅ No changes requested\n' +
-                    '- ✅ PR must not be in draft state\n' +
-                    '- ✅ Security scan must pass\n\n' +
-                    '**Labels:**\n' +
+                    '- ✅ PR must not be in draft state\n\n' +
+                    '### 🏷️ Labels\n' +
                     '- Add `auto-merge` label to enable auto-merge\n' +
                     '- Add `skip-deployment` label to skip deployment checks\n\n' +
-                    'You can retry auto-merge once all conditions are met.'
+                    '**Note**: You can retry auto-merge once all conditions are met.\n\n' +
+                    '---\n' +
+                    'Run details: ' + context.serverUrl + '/' + context.repo.owner + '/' + context.repo.repo + '/actions/runs/' + context.runId
             });
+

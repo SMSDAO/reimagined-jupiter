@@ -1,0 +1,308 @@
+name: Preview Deployments
+
+on:
+  pull_request:
+    branches:
+      - main
+      - develop
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  deployments: write
+  pull-requests: write
+
+concurrency:
+  group: preview-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  vercel-preview:
+    name: Vercel Preview Deployment
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    if: "!contains(github.event.pull_request.labels.*.name, 'skip-deployment')"
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          
+      - name: Validate environment variables
+        run: |
+          echo "🔍 Validating environment configuration..."
+          MISSING_VARS=""
+          
+          if [ -z "${{ secrets.VERCEL_TOKEN }}" ]; then
+            MISSING_VARS="$MISSING_VARS VERCEL_TOKEN"
+          fi
+          
+          if [ -z "${{ secrets.VERCEL_ORG_ID }}" ]; then
+            MISSING_VARS="$MISSING_VARS VERCEL_ORG_ID"
+          fi
+          
+          if [ -z "${{ secrets.VERCEL_PROJECT_ID }}" ]; then
+            MISSING_VARS="$MISSING_VARS VERCEL_PROJECT_ID"
+          fi
+          
+          if [ -n "$MISSING_VARS" ]; then
+            echo "❌ Missing required secrets:$MISSING_VARS"
+            echo "::warning::Skipping Vercel preview deployment due to missing secrets"
+            exit 0
+          fi
+          
+          echo "✅ All required secrets configured"
+          echo "has_secrets=true" >> $GITHUB_OUTPUT
+        id: validate
+          
+      - name: Install Vercel CLI
+        if: steps.validate.outputs.has_secrets == 'true'
+        run: npm install --global vercel@latest
+        
+      - name: Pull Vercel Environment Information
+        if: steps.validate.outputs.has_secrets == 'true'
+        run: vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          
+      - name: Build Project Artifacts
+        if: steps.validate.outputs.has_secrets == 'true'
+        run: vercel build --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          NEXT_PUBLIC_RPC_URL: ${{ secrets.NEXT_PUBLIC_RPC_URL || 'https://api.mainnet-beta.solana.com' }}
+          
+      - name: Deploy Preview to Vercel
+        if: steps.validate.outputs.has_secrets == 'true'
+        id: deploy
+        run: |
+          url=$(vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }})
+          echo "url=$url" >> $GITHUB_OUTPUT
+          echo "Deployed preview to: $url"
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          
+      - name: Create deployment record
+        if: steps.validate.outputs.has_secrets == 'true' && steps.deploy.outputs.url != ''
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const deployment = await github.rest.repos.createDeployment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: context.payload.pull_request.head.sha,
+              environment: 'preview-vercel',
+              required_contexts: [],
+              auto_merge: false,
+              description: 'Preview deployment for PR #' + context.issue.number
+            });
+            
+            await github.rest.repos.createDeploymentStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              deployment_id: deployment.data.id,
+              state: 'success',
+              environment_url: '${{ steps.deploy.outputs.url }}',
+              description: 'Vercel preview deployment successful',
+            });
+            
+      - name: Comment Preview URL on PR
+        if: steps.validate.outputs.has_secrets == 'true' && steps.deploy.outputs.url != ''
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const url = '${{ steps.deploy.outputs.url }}';
+            const comment = `## 🚀 Vercel Preview Deployment
+            
+            Your preview deployment is ready!
+            
+            | Name | Link |
+            |------|------|
+            | 🔗 Preview URL | [${url}](${url}) |
+            | 🏥 Health Check | [${url}/api/health](${url}/api/health) |
+            | 📊 Commit | ${context.payload.pull_request.head.sha.substring(0, 7)} |
+            
+            ---
+            
+            <details>
+            <summary>📋 Preview Deployment Details</summary>
+            
+            - **Environment**: Preview (Vercel)
+            - **Branch**: ${context.payload.pull_request.head.ref}
+            - **Deployed at**: ${new Date().toISOString()}
+            - **Workflow Run**: [View Logs](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})
+            
+            </details>
+            `;
+            
+            // Find existing preview comment or create new one
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            
+            const previewComment = comments.find(c => 
+              c.user.type === 'Bot' && 
+              c.body.includes('🚀 Vercel Preview Deployment')
+            );
+            
+            if (previewComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: previewComment.id,
+                body: comment
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: comment
+              });
+            }
+
+  railway-preview:
+    name: Railway Preview Deployment
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    if: "!contains(github.event.pull_request.labels.*.name, 'skip-deployment')"
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          
+      - name: Validate Railway secrets
+        id: validate
+        run: |
+          if [ -z "${{ secrets.RAILWAY_TOKEN }}" ] || [ -z "${{ secrets.RAILWAY_PROJECT_ID }}" ]; then
+            echo "⚠️ Railway secrets not configured, skipping deployment"
+            echo "has_secrets=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          echo "✅ Railway secrets configured"
+          echo "has_secrets=true" >> $GITHUB_OUTPUT
+          
+      - name: Install dependencies
+        if: steps.validate.outputs.has_secrets == 'true'
+        run: npm ci
+        
+      - name: Build project
+        if: steps.validate.outputs.has_secrets == 'true'
+        run: npm run build
+        
+      - name: Install Railway CLI
+        if: steps.validate.outputs.has_secrets == 'true'
+        run: |
+          curl -fsSL https://railway.app/install.sh | sh
+          echo "$HOME/.railway/bin" >> $GITHUB_PATH
+          
+      - name: Deploy to Railway
+        if: steps.validate.outputs.has_secrets == 'true'
+        id: deploy
+        run: |
+          railway link ${{ secrets.RAILWAY_PROJECT_ID }}
+          railway up --detach
+          
+          # Get deployment URL
+          DEPLOYMENT_URL=$(railway domain 2>&1 | grep -oP 'https://[^\s]+' | head -1 || echo "")
+          echo "url=$DEPLOYMENT_URL" >> $GITHUB_OUTPUT
+          
+          if [ -n "$DEPLOYMENT_URL" ]; then
+            echo "Deployed to: $DEPLOYMENT_URL"
+          else
+            echo "⚠️ Could not retrieve deployment URL"
+          fi
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          
+      - name: Comment Railway Preview URL
+        if: steps.validate.outputs.has_secrets == 'true' && steps.deploy.outputs.url != ''
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const url = '${{ steps.deploy.outputs.url }}';
+            const comment = `## 🚂 Railway Preview Deployment
+            
+            Backend preview is ready!
+            
+            | Name | Link |
+            |------|------|
+            | 🔗 API URL | [${url}](${url}) |
+            | 🏥 Health Check | [${url}/api/health](${url}/api/health) |
+            | 📊 Commit | ${context.payload.pull_request.head.sha.substring(0, 7)} |
+            
+            ---
+            
+            <details>
+            <summary>📋 Railway Deployment Details</summary>
+            
+            - **Environment**: Preview (Railway)
+            - **Branch**: ${context.payload.pull_request.head.ref}
+            - **Deployed at**: ${new Date().toISOString()}
+            
+            </details>
+            `;
+            
+            // Find existing Railway comment or create new one
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            
+            const railwayComment = comments.find(c => 
+              c.user.type === 'Bot' && 
+              c.body.includes('🚂 Railway Preview Deployment')
+            );
+            
+            if (railwayComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: railwayComment.id,
+                body: comment
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: comment
+              });
+            }
+
+  preview-summary:
+    name: Preview Deployment Summary
+    runs-on: ubuntu-latest
+    needs: [vercel-preview, railway-preview]
+    if: always()
+    
+    steps:
+      - name: Summary
+        run: |
+          echo "### Preview Deployment Summary"
+          echo "Vercel Status: ${{ needs.vercel-preview.result }}"
+          echo "Railway Status: ${{ needs.railway-preview.result }}"
+          
+          if [[ "${{ needs.vercel-preview.result }}" == "success" ]] && \
+             [[ "${{ needs.railway-preview.result }}" == "success" ]]; then
+            echo "✅ All preview deployments successful!"
+          else
+            echo "⚠️ Some preview deployments skipped or failed"
+          fi

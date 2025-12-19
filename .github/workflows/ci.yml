@@ -17,42 +17,83 @@ concurrency:
 
 jobs:
   backend-lint-and-test:
-    name: Backend - Lint & Test
+    name: Backend - Lint & Test (Node ${{ matrix.node-version }})
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [18, 20, 22]
     
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         
-      - name: Setup Node.js
+      - name: Setup Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: ${{ matrix.node-version }}
           cache: 'npm'
           
       - name: Install dependencies
         run: npm ci
         
-      - name: Run ESLint
-        run: npm run lint
+      - name: Run ESLint (strict)
+        run: npm run lint -- --max-warnings=0
+        continue-on-error: false
+        
+      - name: TypeScript Build Validation
+        run: npx tsc --noEmit
         continue-on-error: false
         
       - name: Build backend
         run: npm run build
         
       - name: Run tests
-        run: npm test || echo "No tests configured yet"
-        continue-on-error: true
+        run: npm test
+        continue-on-error: false
         env:
           NODE_ENV: test
           JEST_TIMEOUT: 30000
+        
+      - name: Run tests with coverage
+        if: matrix.node-version == 20
+        run: npm run test:coverage
+        env:
+          NODE_ENV: test
+          JEST_TIMEOUT: 30000
+        
+      - name: Upload coverage to Codecov
+        if: matrix.node-version == 20
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./coverage/lcov.info
+          flags: backend
+          name: backend-coverage
+          fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN }}
+        
+      - name: Check coverage threshold
+        if: matrix.node-version == 20
+        run: |
+          if [ -f coverage/coverage-summary.json ]; then
+            COVERAGE=$(node -e "const c = require('./coverage/coverage-summary.json'); console.log(c.total.lines.pct);")
+            echo "Coverage: ${COVERAGE}%"
+            if (( $(echo "$COVERAGE < 90" | bc -l) )); then
+              echo "❌ Coverage ${COVERAGE}% is below 90% threshold"
+              exit 1
+            else
+              echo "✅ Coverage ${COVERAGE}% meets 90% threshold"
+            fi
+          else
+            echo "⚠️ No coverage report found, skipping threshold check"
+          fi
         
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: backend-test-results
+          name: backend-test-results-node-${{ matrix.node-version }}
           path: |
             coverage/
             test-results/
@@ -60,18 +101,22 @@ jobs:
           if-no-files-found: ignore
 
   webapp-lint-and-test:
-    name: Webapp - Lint & Build
+    name: Webapp - Lint & Build (Node ${{ matrix.node-version }})
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [18, 20, 22]
     
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         
-      - name: Setup Node.js
+      - name: Setup Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: ${{ matrix.node-version }}
           cache: 'npm'
           cache-dependency-path: webapp/package-lock.json
           
@@ -79,10 +124,27 @@ jobs:
         working-directory: ./webapp
         run: npm ci
         
-      - name: Run webapp ESLint
+      - name: Run webapp ESLint (strict)
         working-directory: ./webapp
-        run: npm run lint
+        run: npm run lint -- --max-warnings=0
         continue-on-error: false
+        
+      - name: TypeScript Build Validation (webapp)
+        working-directory: ./webapp
+        run: npx tsc --noEmit
+        continue-on-error: false
+        
+      - name: Validate environment configuration
+        working-directory: ./webapp
+        run: |
+          echo "Validating required environment variables..."
+          if [ -z "$NEXT_PUBLIC_RPC_URL" ]; then
+            echo "⚠️ NEXT_PUBLIC_RPC_URL not set, using default"
+          else
+            echo "✅ NEXT_PUBLIC_RPC_URL is configured"
+          fi
+        env:
+          NEXT_PUBLIC_RPC_URL: ${{ secrets.NEXT_PUBLIC_RPC_URL || 'https://api.mainnet-beta.solana.com' }}
         
       - name: Build webapp
         working-directory: ./webapp
@@ -91,6 +153,7 @@ jobs:
           NEXT_PUBLIC_RPC_URL: ${{ secrets.NEXT_PUBLIC_RPC_URL || 'https://api.mainnet-beta.solana.com' }}
           
       - name: Upload build artifacts
+        if: matrix.node-version == 20
         uses: actions/upload-artifact@v4
         with:
           name: webapp-build
@@ -107,32 +170,200 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+        
       - name: Run npm audit (backend)
-        run: npm audit --audit-level=high || echo "Security vulnerabilities found - review required"
-        continue-on-error: true
+        run: |
+          echo "Running security audit on backend..."
+          npm audit --audit-level=high || true
+          AUDIT_EXIT_CODE=$?
+          if [ $AUDIT_EXIT_CODE -ne 0 ]; then
+            echo "⚠️ Security vulnerabilities found in backend dependencies"
+            npm audit --json > backend-audit.json || true
+          fi
         
       - name: Run npm audit (webapp)
         working-directory: ./webapp
-        run: npm audit --audit-level=high || echo "Security vulnerabilities found - review required"
-        continue-on-error: true
+        run: |
+          echo "Running security audit on webapp..."
+          npm audit --audit-level=high || true
+          AUDIT_EXIT_CODE=$?
+          if [ $AUDIT_EXIT_CODE -ne 0 ]; then
+            echo "⚠️ Security vulnerabilities found in webapp dependencies"
+            npm audit --json > webapp-audit.json || true
+          fi
+        
+      - name: Upload audit reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-audit-reports
+          path: |
+            backend-audit.json
+            webapp/webapp-audit.json
+          retention-days: 7
+          if-no-files-found: ignore
 
   ci-summary:
-    name: CI Summary
+    name: CI Summary & PR Comment
     runs-on: ubuntu-latest
     needs: [backend-lint-and-test, webapp-lint-and-test, security-scan]
     if: always()
+    permissions:
+      pull-requests: write
+      issues: write
     
     steps:
       - name: Check CI status
+        id: status
         run: |
           echo "Backend Status: ${{ needs.backend-lint-and-test.result }}"
           echo "Webapp Status: ${{ needs.webapp-lint-and-test.result }}"
           echo "Security Scan Status: ${{ needs.security-scan.result }}"
           
-          if [[ "${{ needs.backend-lint-and-test.result }}" == "failure" ]] || \
-             [[ "${{ needs.webapp-lint-and-test.result }}" == "failure" ]]; then
+          # Determine overall status
+          BACKEND_STATUS="${{ needs.backend-lint-and-test.result }}"
+          WEBAPP_STATUS="${{ needs.webapp-lint-and-test.result }}"
+          SECURITY_STATUS="${{ needs.security-scan.result }}"
+          
+          ALL_PASSED=true
+          
+          if [[ "$BACKEND_STATUS" != "success" ]]; then
+            ALL_PASSED=false
+          fi
+          
+          if [[ "$WEBAPP_STATUS" != "success" ]]; then
+            ALL_PASSED=false
+          fi
+          
+          if [[ "$SECURITY_STATUS" != "success" ]]; then
+            echo "⚠️ Security scan did not pass, but won't fail CI"
+          fi
+          
+          echo "all_passed=$ALL_PASSED" >> $GITHUB_OUTPUT
+          
+          if [[ "$ALL_PASSED" == "false" ]]; then
             echo "❌ CI checks failed!"
             exit 1
           else
             echo "✅ All CI checks passed!"
           fi
+      
+      - name: Create PR status comment
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const backendStatus = '${{ needs.backend-lint-and-test.result }}';
+            const webappStatus = '${{ needs.webapp-lint-and-test.result }}';
+            const securityStatus = '${{ needs.security-scan.result }}';
+            const allPassed = '${{ steps.status.outputs.all_passed }}' === 'true';
+            
+            const statusEmoji = (status) => {
+              if (status === 'success') return '✅';
+              if (status === 'failure') return '❌';
+              if (status === 'cancelled') return '🚫';
+              return '⚠️';
+            };
+            
+            const statusText = (status) => {
+              if (status === 'success') return 'Passed';
+              if (status === 'failure') return 'Failed';
+              if (status === 'cancelled') return 'Cancelled';
+              return 'Skipped';
+            };
+            
+            const comment = `## 🤖 CI/CD Pipeline Status
+            
+            ### Job Results
+            
+            | Job | Status | Result |
+            |-----|--------|--------|
+            | Backend (Lint, Test, Build) | ${statusEmoji(backendStatus)} | ${statusText(backendStatus)} |
+            | Webapp (Lint, Build) | ${statusEmoji(webappStatus)} | ${statusText(webappStatus)} |
+            | Security Scan | ${statusEmoji(securityStatus)} | ${statusText(securityStatus)} |
+            
+            ### Overall Status: ${allPassed ? '✅ **Ready to Merge**' : '❌ **Not Ready**'}
+            
+            ${allPassed ? 
+              '🎉 All checks passed! This PR is ready for review and merge.' : 
+              '⚠️ Some checks failed. Please review the failures and push fixes.'}
+            
+            ---
+            
+            <details>
+            <summary>📋 Merge Requirements Checklist</summary>
+            
+            - [${backendStatus === 'success' ? 'x' : ' '}] Backend tests pass
+            - [${backendStatus === 'success' ? 'x' : ' '}] Backend linting passes (ESLint with no warnings)
+            - [${backendStatus === 'success' ? 'x' : ' '}] Backend TypeScript validation passes
+            - [${webappStatus === 'success' ? 'x' : ' '}] Webapp linting passes
+            - [${webappStatus === 'success' ? 'x' : ' '}] Webapp TypeScript validation passes
+            - [${webappStatus === 'success' ? 'x' : ' '}] Webapp builds successfully
+            - [${securityStatus === 'success' ? 'x' : ' '}] Security scan completed
+            - [ ] Code review approved (manual)
+            - [ ] Coverage ≥ 90% (if applicable)
+            - [ ] Deployment previews successful (if applicable)
+            
+            </details>
+            
+            ---
+            
+            **Run Details**: [View Workflow Run](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})
+            `;
+            
+            // Find existing comment or create new one
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            
+            const botComment = comments.find(c => 
+              c.user.type === 'Bot' && 
+              c.body.includes('🤖 CI/CD Pipeline Status')
+            );
+            
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: comment
+              });
+              console.log('Updated existing CI status comment');
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: comment
+              });
+              console.log('Created new CI status comment');
+            }
+      
+      - name: Send notification on failure
+        if: failure() && (github.event_name == 'push' || github.event_name == 'pull_request')
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          if [ -n "$SLACK_WEBHOOK" ]; then
+            echo "Sending Slack notification..."
+            curl -X POST -H 'Content-type: application/json' \
+              --data "{\"text\":\"❌ CI Failed: ${{ github.repository }} - ${{ github.event.head_commit.message || github.event.pull_request.title }}\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Run>\"}" \
+              "$SLACK_WEBHOOK"
+          fi
+          
+          if [ -n "$DISCORD_WEBHOOK" ]; then
+            echo "Sending Discord notification..."
+            curl -X POST -H 'Content-type: application/json' \
+              --data "{\"content\":\"❌ **CI Failed**\n**Repo**: ${{ github.repository }}\n**Message**: ${{ github.event.head_commit.message || github.event.pull_request.title }}\n**Run**: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}" \
+              "$DISCORD_WEBHOOK"
+          fi
+          
+          echo "Notification sent (if webhooks configured)"

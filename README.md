@@ -1,5 +1,12 @@
 # GXQ STUDIO - Advanced Solana DeFi Platform
 
+[![CI Status](https://github.com/SMSDAO/reimagined-jupiter/workflows/CI%20-%20Continuous%20Integration/badge.svg)](https://github.com/SMSDAO/reimagined-jupiter/actions/workflows/ci.yml)
+[![Preview Deployments](https://github.com/SMSDAO/reimagined-jupiter/workflows/Preview%20Deployments/badge.svg)](https://github.com/SMSDAO/reimagined-jupiter/actions/workflows/preview-deployments.yml)
+[![Deploy to Vercel](https://github.com/SMSDAO/reimagined-jupiter/workflows/Deploy%20to%20Vercel/badge.svg)](https://github.com/SMSDAO/reimagined-jupiter/actions/workflows/deploy-vercel.yml)
+[![codecov](https://codecov.io/gh/SMSDAO/reimagined-jupiter/branch/main/graph/badge.svg)](https://codecov.io/gh/SMSDAO/reimagined-jupiter)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Node.js Version](https://img.shields.io/badge/node-%3E%3D18-brightgreen.svg)](https://nodejs.org)
+
 The most advanced Solana DeFi platform with flash loan arbitrage, sniper bot, token launchpad, and comprehensive Web3 UI.
 
 ## 🆕 Latest Updates
