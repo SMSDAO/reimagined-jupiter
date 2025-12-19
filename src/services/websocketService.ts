@@ -51,7 +51,7 @@ export class WebSocketService extends EventEmitter {
         this.handleConnection(ws);
       });
 
-      this.wss.on('error', (error) => {
+      this.wss.on('error', (error: Error) => {
         console.error('[WebSocketService] Server error:', error);
         this.emit('error', error);
       });
@@ -108,7 +108,7 @@ export class WebSocketService extends EventEmitter {
     });
 
     // Handle errors
-    ws.on('error', (error) => {
+    ws.on('error', (error: Error) => {
       console.error('[WebSocketService] Client error:', error);
     });
   }

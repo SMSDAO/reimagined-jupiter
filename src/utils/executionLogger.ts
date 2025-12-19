@@ -134,22 +134,22 @@ export class ExecutionLogger {
   }> {
     try {
       const content = await fs.readFile(this.logFile, 'utf-8');
-      const lines = content.trim().split('\n').filter(line => line.length > 0);
+      const lines = content.trim().split('\n').filter((line: string) => line.length > 0);
       
-      let logs = lines.map(line => JSON.parse(line) as ExecutionLog);
+      let logs = lines.map((line: string) => JSON.parse(line) as ExecutionLog);
       
       // Filter by date if provided
       if (since) {
-        logs = logs.filter(log => new Date(log.timestamp) >= since);
+        logs = logs.filter((log: ExecutionLog) => new Date(log.timestamp) >= since);
       }
       
-      const successful = logs.filter(log => log.status === 'success');
-      const failed = logs.filter(log => log.status === 'failed' || log.status === 'simulation_failed');
+      const successful = logs.filter((log: ExecutionLog) => log.status === 'success');
+      const failed = logs.filter((log: ExecutionLog) => log.status === 'failed' || log.status === 'simulation_failed');
       
-      const totalProfit = successful.reduce((sum, log) => sum + (log.actualProfit || 0), 0);
+      const totalProfit = successful.reduce((sum: number, log: ExecutionLog) => sum + (log.actualProfit || 0), 0);
       const avgProfit = successful.length > 0 ? totalProfit / successful.length : 0;
       
-      const totalFees = logs.reduce((sum, log) => {
+      const totalFees = logs.reduce((sum: number, log: ExecutionLog) => {
         if (!log.fees) return sum;
         return sum + log.fees.transaction + (log.fees.flashLoan || 0) + log.fees.prioritization;
       }, 0);
