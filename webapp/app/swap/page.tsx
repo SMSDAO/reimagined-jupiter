@@ -16,17 +16,49 @@ export default function SwapPage() {
   const [loading, setLoading] = useState(false);
   const [slippage, setSlippage] = useState(1);
   const [priceImpact, setPriceImpact] = useState<number | null>(null);
+  const [tokenList, setTokenList] = useState<Array<{ symbol: string; address: string }>>([]);
+  const [loadingTokens, setLoadingTokens] = useState(false);
 
-  const tokens = ['SOL', 'USDC', 'USDT', 'BONK', 'WIF', 'JUP', 'ORCA', 'RAY'];
+  const defaultTokens = ['SOL', 'USDC', 'USDT', 'BONK', 'WIF', 'JUP', 'ORCA', 'RAY'];
+  const tokens = tokenList.length > 0 ? tokenList.map(t => t.symbol) : defaultTokens;
+
+  // Fetch token list on mount
+  useEffect(() => {
+    const fetchTokenList = async () => {
+      setLoadingTokens(true);
+      try {
+        const response = await fetch('/api/jupiter/tokens?limit=50');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.tokens) {
+            // Filter for popular tokens
+            const popularTokens = data.tokens
+              .filter((t: any) => t.symbol && t.address)
+              .slice(0, 50);
+            setTokenList(popularTokens);
+            console.log('[Swap] Loaded Jupiter token list:', popularTokens.length);
+          }
+        }
+      } catch (error) {
+        console.error('[Swap] Failed to load token list:', error);
+      } finally {
+        setLoadingTokens(false);
+      }
+    };
+    
+    fetchTokenList();
+  }, []);
 
   const getQuote = async () => {
     if (!inputAmount || parseFloat(inputAmount) <= 0) return;
     
     setLoading(true);
     try {
+      const jupiterApiUrl = process.env.NEXT_PUBLIC_JUPITER_API_URL || 'https://quote-api.jup.ag';
+      
       // Jupiter API v6 quote
       const response = await fetch(
-        `https://quote-api.jup.ag/v6/quote?inputMint=${getTokenMint(inputToken)}&outputMint=${getTokenMint(outputToken)}&amount=${Math.floor(parseFloat(inputAmount) * 1e9)}&slippageBps=${slippage * 100}`
+        `${jupiterApiUrl}/v6/quote?inputMint=${getTokenMint(inputToken)}&outputMint=${getTokenMint(outputToken)}&amount=${Math.floor(parseFloat(inputAmount) * 1e9)}&slippageBps=${slippage * 100}`
       );
       const quote = await response.json();
       const outAmount = parseInt(quote.outAmount) / 1e9;
@@ -51,20 +83,23 @@ export default function SwapPage() {
 
     setLoading(true);
     try {
+      const jupiterApiUrl = process.env.NEXT_PUBLIC_JUPITER_API_URL || 'https://quote-api.jup.ag';
+      
       // Get quote
       const quoteResponse = await fetch(
-        `https://quote-api.jup.ag/v6/quote?inputMint=${getTokenMint(inputToken)}&outputMint=${getTokenMint(outputToken)}&amount=${Math.floor(parseFloat(inputAmount) * 1e9)}&slippageBps=${slippage * 100}`
+        `${jupiterApiUrl}/v6/quote?inputMint=${getTokenMint(inputToken)}&outputMint=${getTokenMint(outputToken)}&amount=${Math.floor(parseFloat(inputAmount) * 1e9)}&slippageBps=${slippage * 100}`
       );
       const quote = await quoteResponse.json();
 
       // Get swap transaction
-      const swapResponse = await fetch('https://quote-api.jup.ag/v6/swap', {
+      const swapResponse = await fetch(`${jupiterApiUrl}/v6/swap`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           quoteResponse: quote,
           userPublicKey: publicKey.toString(),
           wrapAndUnwrapSol: true,
+          prioritizationFeeLamports: 'auto',
         }),
       });
       
@@ -85,6 +120,13 @@ export default function SwapPage() {
   };
 
   const getTokenMint = (token: string): string => {
+    // Check if we have the token in our loaded list
+    const foundToken = tokenList.find(t => t.symbol === token);
+    if (foundToken) {
+      return foundToken.address;
+    }
+    
+    // Fallback to default mints
     const mints: { [key: string]: string } = {
       SOL: 'So11111111111111111111111111111111111111112',
       USDC: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',

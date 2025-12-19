@@ -363,14 +363,25 @@ export class ResilientSolanaConnection {
 }
 
 /**
- * Create a resilient connection from environment variables
+ * Create a resilient connection from environment variables with mainnet priority
  */
 export function createResilientConnection(config?: Partial<ResilientConnectionConfig>): ResilientSolanaConnection {
-  const defaultEndpoints = [
-    process.env.NEXT_PUBLIC_RPC_URL || process.env.QUICKNODE_RPC_URL || 'https://api.mainnet-beta.solana.com',
+  // Priority-based mainnet RPC endpoints
+  const priorityEndpoints = [
+    process.env.NEXT_PUBLIC_HELIUS_RPC,
+    process.env.NEXT_PUBLIC_QUICKNODE_RPC,
+    process.env.NEXT_PUBLIC_SOLANA_RPC_PRIMARY,
+    process.env.NEXT_PUBLIC_RPC_URL,
     'https://api.mainnet-beta.solana.com',
     'https://solana-api.projectserum.com',
-  ].filter((url, index, self) => url && self.indexOf(url) === index); // Remove duplicates
+  ];
+
+  // Filter out undefined/null values and remove duplicates
+  const defaultEndpoints = priorityEndpoints
+    .filter((url): url is string => Boolean(url))
+    .filter((url, index, self) => self.indexOf(url) === index);
+
+  console.log('[ResilientConnection] Initialized with endpoints:', defaultEndpoints.length);
 
   return new ResilientSolanaConnection({
     endpoints: defaultEndpoints,

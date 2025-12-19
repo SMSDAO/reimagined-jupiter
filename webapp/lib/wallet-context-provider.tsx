@@ -63,7 +63,28 @@ const WalletEventDispatcher: FC = () => {
 
 export const WalletContextProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const network = WalletAdapterNetwork.Mainnet;
-  const endpoint = useMemo(() => process.env.NEXT_PUBLIC_RPC_URL || clusterApiUrl(network), [network]);
+  
+  // Use priority-based RPC endpoint selection for mainnet
+  const endpoint = useMemo(() => {
+    // Priority 1: Helius (fastest, most reliable)
+    if (process.env.NEXT_PUBLIC_HELIUS_RPC) {
+      return process.env.NEXT_PUBLIC_HELIUS_RPC;
+    }
+    // Priority 2: QuickNode
+    if (process.env.NEXT_PUBLIC_QUICKNODE_RPC) {
+      return process.env.NEXT_PUBLIC_QUICKNODE_RPC;
+    }
+    // Priority 3: Primary RPC
+    if (process.env.NEXT_PUBLIC_SOLANA_RPC_PRIMARY) {
+      return process.env.NEXT_PUBLIC_SOLANA_RPC_PRIMARY;
+    }
+    // Priority 4: Legacy RPC URL
+    if (process.env.NEXT_PUBLIC_RPC_URL) {
+      return process.env.NEXT_PUBLIC_RPC_URL;
+    }
+    // Fallback: Public RPC
+    return clusterApiUrl(network);
+  }, [network]);
 
   const wallets = useMemo(
     () => [
@@ -72,6 +93,10 @@ export const WalletContextProvider: FC<{ children: ReactNode }> = ({ children })
     ],
     []
   );
+
+  useEffect(() => {
+    console.log('[WalletContext] Using RPC endpoint:', endpoint);
+  }, [endpoint]);
 
   return (
     <ConnectionProvider endpoint={endpoint}>

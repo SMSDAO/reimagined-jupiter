@@ -112,28 +112,48 @@ export default function SniperPage() {
         return;
       }
       
-      // Real implementation would:
-      // 1. Get quote from Jupiter for SOL -> target token
-      // 2. Set high priority fee for faster execution
-      // 3. Create and send transaction
-      // 4. Monitor for confirmation
+      // Call our sniper API to prepare the transaction
+      const response = await fetch('/api/sniper/execute', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          tokenMint: target.mint,
+          buyAmountSol: amount,
+          slippageBps: slippage * 100,
+          userPublicKey: publicKey.toString(),
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to prepare snipe transaction');
+      }
+
+      const data = await response.json();
       
-      const amountInLamports = Math.floor(amount * 1e9);
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to prepare snipe transaction');
+      }
+
+      const { estimatedOutput, priceImpact, quote } = data;
       
-      // Get Jupiter quote
-      const quoteResponse = await fetch(
-        `https://quote-api.jup.ag/v6/quote?inputMint=So11111111111111111111111111111111111111112&outputMint=${target.mint}&amount=${amountInLamports}&slippageBps=${slippage * 100}`
+      alert(
+        `Snipe prepared for ${target.name}!\n\n` +
+        `Buy: ${buyAmount} SOL\n` +
+        `Expected: ~${estimatedOutput?.toFixed(4) || 'N/A'} tokens\n` +
+        `Price Impact: ${priceImpact?.toFixed(2) || 'N/A'}%\n` +
+        `Slippage: ${slippage}%\n\n` +
+        `Note: Actual transaction execution requires wallet signing.\n` +
+        `This would submit a high-priority transaction to maximize success chance.`
       );
       
-      if (!quoteResponse.ok) {
-        throw new Error('Failed to get quote from Jupiter');
-      }
-      
-      const quote = await quoteResponse.json();
-      
-      alert(`Snipe prepared for ${target.name}!\n\nBuy: ${buyAmount} SOL\nExpected: ~${(parseInt(quote.outAmount) / 1e9).toFixed(4)} tokens\nSlippage: ${slippage}%\n\nNote: Actual transaction execution requires wallet signing.\nThis would submit a high-priority transaction to maximize success chance.`);
-      
-      console.log('[SniperUI] Quote received:', quote);
+      console.log('[SniperUI] Snipe prepared:', {
+        estimatedOutput,
+        priceImpact,
+        quote,
+      });
       
       // Update target status
       setTargets(prev => prev.map(t => 
