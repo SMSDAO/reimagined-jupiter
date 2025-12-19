@@ -2,6 +2,19 @@
 
 The most advanced Solana DeFi platform with flash loan arbitrage, sniper bot, token launchpad, and comprehensive Web3 UI.
 
+## 🆕 Latest Updates
+
+**✨ Production-Ready API with Comprehensive Validation & Automated Deployment**
+
+- ✅ **Input Validation**: Comprehensive validation for all API endpoints with type checking and sanitization
+- ✅ **Error Handling**: Centralized error handling with standardized responses and custom error types
+- ✅ **CORS Configuration**: Production-ready CORS with environment-aware configurations
+- ✅ **Automated Deployment**: CI/CD workflows for Vercel and Railway with health checks and auto-rollback
+- ✅ **Enhanced Security**: Rate limiting, input sanitization, and authentication validation
+- ✅ **Complete Documentation**: Comprehensive guides for API, validation, deployment, and configuration
+
+📖 **[Quick Start Guide](./docs/QUICK_START.md)** | **[API Validation](./docs/API_VALIDATION.md)** | **[Deployment Guide](./docs/DEPLOYMENT_AUTOMATION.md)**
+
 ## 🌐 Web Application (NEW!)
 
 **Production-ready Next.js web app with full Solana integration!**
@@ -270,7 +283,39 @@ npm run lint
 
 # Run tests
 npm test
+
+# Validate API endpoints
+npm run validate-endpoints http://localhost:3000
 ```
+
+## 🔒 API Security & Validation
+
+All API endpoints now include:
+- ✅ **Input Validation**: Type checking, range validation, and sanitization
+- ✅ **Error Handling**: Consistent error responses with detailed messages
+- ✅ **Rate Limiting**: Protection against abuse (configurable per endpoint)
+- ✅ **CORS Configuration**: Environment-aware cross-origin access control
+- ✅ **Authentication**: JWT-based authentication with expiration
+- ✅ **Request Logging**: Comprehensive logging for debugging and monitoring
+
+See [API Validation Guide](./docs/API_VALIDATION.md) for complete documentation.
+
+## 🚀 Automated Deployment
+
+### Vercel Deployment
+- ✅ Automatic deployment on push to main
+- ✅ Health check validation after deployment
+- ✅ Automatic rollback on failure
+- ✅ Preview deployments for PRs
+- ✅ Deployment status tracking
+
+### Railway Deployment
+- ✅ Automatic deployment with health checks
+- ✅ Retry logic for transient failures
+- ✅ Endpoint validation tests
+- ✅ Issue creation on deployment failure
+
+See [Deployment Automation Guide](./docs/DEPLOYMENT_AUTOMATION.md) for setup instructions.
 
 ## 📊 Flash Loan Provider Comparison
 
@@ -312,6 +357,27 @@ Cryptocurrency trading and arbitrage involve significant risks:
 
 MIT License - see LICENSE file for details
 
+## 📚 Documentation
+
+### Getting Started
+- **[Quick Start Guide](./docs/QUICK_START.md)** - Fast setup and common tasks
+- **[Deployment Ready](./DEPLOYMENT_READY.md)** - Mainnet deployment instructions
+- **[Implementation Summary](./docs/IMPLEMENTATION_SUMMARY.md)** - Complete feature overview
+
+### API & Validation
+- **[API Validation Guide](./docs/API_VALIDATION.md)** - Input validation and error handling
+- **[Endpoint Configuration](./docs/ENDPOINT_CONFIGURATION.md)** - Endpoint reference and configuration
+
+### Deployment & Operations
+- **[Deployment Automation](./docs/DEPLOYMENT_AUTOMATION.md)** - CI/CD workflows and automation
+- **[Vercel Deployment](./VERCEL_DEPLOY.md)** - Vercel-specific instructions
+- **[Enhanced Scanner](./ENHANCED_SCANNER.md)** - Real-time arbitrage scanning
+
+### Features & Guides
+- **[Flash Loan Enhancements](./FLASH_LOAN_ENHANCEMENTS.md)** - Flash loan system details
+- **[Security Guide](./SECURITY_GUIDE.md)** - Security best practices
+- **[Testing Guide](./TESTING.md)** - Testing procedures and coverage
+
 ## 🚀 Production Deployment
 
 For complete mainnet deployment instructions, see [DEPLOYMENT_READY.md](DEPLOYMENT_READY.md) including:
@@ -326,9 +392,20 @@ For complete mainnet deployment instructions, see [DEPLOYMENT_READY.md](DEPLOYME
 
 Contributions are welcome! Please open an issue or submit a pull request.
 
+Before contributing:
+1. Read the documentation in `docs/`
+2. Follow the coding standards
+3. Add tests for new features
+4. Ensure all CI checks pass
+5. Update documentation as needed
+
 ## 📧 Support
 
-For support and questions, please open an issue on GitHub.
+For support and questions:
+- **Issues**: Open a GitHub issue with appropriate labels
+- **Documentation**: Check the `docs/` directory
+- **Security**: See [SECURITY_GUIDE.md](./SECURITY_GUIDE.md)
+- **Deployment**: See [DEPLOYMENT_AUTOMATION.md](./docs/DEPLOYMENT_AUTOMATION.md)
 
 ## 🌟 Acknowledgments
 
@@ -340,3 +417,15 @@ For support and questions, please open an issue on GitHub.
 ---
 
 **Built with ❤️ by GXQ STUDIO**
+
+### Key Features
+- ✅ **5 Flash Loan Providers** with fees from 0.09%-0.20%
+- ✅ **11 DEX Integrations** including Jupiter v6 aggregator
+- ✅ **30+ Token Support** including stablecoins, LSTs, and memecoins
+- ✅ **MEV Protection** via Jito bundles and private RPC
+- ✅ **Real-time Monitoring** with 1-second polling intervals
+- ✅ **Automated Deployment** with health checks and rollback
+- ✅ **Comprehensive Validation** for all API endpoints
+- ✅ **Production-Ready** with complete documentation
+
+**Status**: Production-Ready | **Last Updated**: December 2024
