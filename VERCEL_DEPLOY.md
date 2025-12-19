@@ -1,8 +1,19 @@
-# Deploying to Vercel
+# Deploying to Vercel - Production Mode
 
 This is a monorepo with two components:
 1. **Backend CLI** (root `/src`) - TypeScript trading bot
 2. **Frontend Web App** (`/webapp`) - Next.js application
+
+## Production Mode Features
+
+The webapp now includes:
+- **Centralized API Configuration** - Automatic endpoint management based on environment
+- **Production Mode Detection** - Optimizations when deployed to production
+- **API Health Checking** - Automatic fallback to backup endpoints
+- **Environment Validation** - Ensures all required variables are set
+- **Vercel-Specific Optimizations** - Enhanced caching and edge runtime support
+
+See `webapp/API_CONFIG_GUIDE.md` for complete documentation.
 
 ## Deploy the Web App to Vercel
 
@@ -16,9 +27,18 @@ This is a monorepo with two components:
    - **Build Command**: `npm run build` (auto-detected)
    - **Output Directory**: `.next` (auto-detected)
    - **Install Command**: `npm install` (auto-detected)
-4. Add Environment Variables:
-   - `NEXT_PUBLIC_RPC_URL` = `https://api.mainnet-beta.solana.com` (or your QuickNode URL)
+4. Add Environment Variables (Required):
+   - `NEXT_PUBLIC_RPC_URL` = `https://api.mainnet-beta.solana.com`
+   
+   **Recommended for Production** (for optimal performance):
+   - `NEXT_PUBLIC_HELIUS_RPC` = `https://mainnet.helius-rpc.com/?api-key=YOUR_KEY`
+   - `NEXT_PUBLIC_QUICKNODE_RPC` = `https://your-endpoint.solana-mainnet.quiknode.pro/YOUR_KEY`
+   - `NEXT_PUBLIC_JUPITER_API_URL` = `https://quote-api.jup.ag` (optional, uses default)
+   - `PYTH_HERMES_ENDPOINT` = `https://hermes.pyth.network` (optional, uses default)
+
 5. Click "Deploy"
+
+**Note**: Vercel automatically sets `NODE_ENV=production` and `VERCEL_ENV=production` for production deployments. The centralized API configuration system uses these to enable production optimizations.
 
 ### Method 2: Vercel CLI
 

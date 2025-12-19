@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createResilientConnection } from '@/lib/solana/connection';
+import { API } from '@/lib/config';
 
 // Constants
 const TOKEN_MINTS: Record<string, string> = {
@@ -127,8 +128,7 @@ async function checkArbitrageOpportunity(
   inputSymbol: string,
   outputSymbol: string
 ): Promise<ArbitrageOpportunity | null> {
-  const jupiterApiUrl = process.env.NEXT_PUBLIC_JUPITER_API_URL || 'https://quote-api.jup.ag';
-  const jupiterQuoteUrl = `${jupiterApiUrl}/v6`;
+  const jupiterQuoteUrl = API.jupiterQuote();
   
   // Amount to test (1 SOL or 100 stablecoins)
   const testAmount = inputSymbol === 'SOL' ? TEST_AMOUNT_SOL : TEST_AMOUNT_STABLECOIN;
