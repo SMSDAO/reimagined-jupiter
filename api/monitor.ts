@@ -45,7 +45,7 @@ interface MonitorResponse {
 
 export default async function handler(
   req: VercelRequest,
-  res: VercelResponse<MonitorResponse>
+  res: VercelResponse
 ) {
   const startTime = Date.now();
   

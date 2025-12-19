@@ -49,7 +49,7 @@ function checkRateLimit(ip: string): { allowed: boolean; remaining: number } {
 
 export default async function handler(
   req: VercelRequest,
-  res: VercelResponse<AuthResponse>
+  res: VercelResponse
 ) {
   // Only allow POST requests
   if (req.method !== 'POST') {

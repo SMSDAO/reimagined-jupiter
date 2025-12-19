@@ -18,3 +18,4 @@ webapp/.vercel
 
 # Testing
 webapp/.turbo
+/logs

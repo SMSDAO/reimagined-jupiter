@@ -63,7 +63,7 @@ const metricsData: MetricsData = {
 
 export default async function handler(
   req: VercelRequest,
-  res: VercelResponse<MetricsResponse>
+  res: VercelResponse
 ) {
   try {
     // Verify JWT authentication
@@ -148,8 +148,12 @@ export default async function handler(
       : [];
     
     // Get RPC health
-    let rpcHealth = {
-      status: 'healthy' as const,
+    let rpcHealth: {
+      status: 'healthy' | 'degraded' | 'unhealthy';
+      latency: number;
+      uptime: number;
+    } = {
+      status: 'healthy',
       latency: 0,
       uptime: botStatus.uptime,
     };
