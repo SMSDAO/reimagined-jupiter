@@ -6,6 +6,9 @@ import {
   sendAndConfirmTransaction,
   ComputeBudgetProgram,
   Commitment,
+  TransactionMessage,
+  AddressLookupTableAccount,
+  TransactionInstruction,
 } from '@solana/web3.js';
 import type { PrioritizationFee } from '../types/solana.js';
 
@@ -344,5 +347,153 @@ export class TransactionExecutor {
       console.error('❌ Simulation error:', error);
       return false;
     }
+  }
+  
+  /**
+   * Simulate versioned transaction before execution
+   */
+  async simulateVersionedTransaction(transaction: VersionedTransaction): Promise<boolean> {
+    try {
+      console.log('🔍 Simulating versioned transaction...');
+      
+      const simulation = await this.connection.simulateTransaction(transaction, {
+        sigVerify: false,
+      });
+      
+      if (simulation.value.err) {
+        console.error('❌ Simulation failed:', simulation.value.err);
+        console.error('Logs:', simulation.value.logs);
+        return false;
+      }
+      
+      console.log('✅ Simulation successful');
+      console.log(`   Compute units: ${simulation.value.unitsConsumed?.toLocaleString()}`);
+      
+      return true;
+    } catch (error) {
+      console.error('❌ Simulation error:', error);
+      return false;
+    }
+  }
+  
+  /**
+   * Build a versioned transaction with compute budget instructions
+   * This is useful for Jupiter swaps and other complex transactions
+   */
+  async buildVersionedTransactionWithComputeBudget(
+    instructions: TransactionInstruction[],
+    payer: Keypair,
+    priorityFee: number | PriorityFeeConfig,
+    lookupTableAddresses?: AddressLookupTableAccount[]
+  ): Promise<VersionedTransaction> {
+    try {
+      // Get recent blockhash
+      const { blockhash, lastValidBlockHeight } = await this.connection.getLatestBlockhash('finalized');
+      
+      // Determine priority fee config
+      let feeConfig: PriorityFeeConfig;
+      if (typeof priorityFee === 'number') {
+        feeConfig = {
+          microLamports: priorityFee,
+          computeUnitLimit: 400_000, // Default compute units
+        };
+      } else {
+        feeConfig = priorityFee;
+      }
+      
+      // Create compute budget instructions
+      const computeBudgetInstructions = [
+        ComputeBudgetProgram.setComputeUnitLimit({
+          units: feeConfig.computeUnitLimit,
+        }),
+        ComputeBudgetProgram.setComputeUnitPrice({
+          microLamports: feeConfig.microLamports,
+        }),
+      ];
+      
+      // Combine all instructions
+      const allInstructions = [...computeBudgetInstructions, ...instructions];
+      
+      // Create versioned transaction message
+      const messageV0 = new TransactionMessage({
+        payerKey: payer.publicKey,
+        recentBlockhash: blockhash,
+        instructions: allInstructions,
+      }).compileToV0Message(lookupTableAddresses);
+      
+      // Create versioned transaction
+      const transaction = new VersionedTransaction(messageV0);
+      
+      console.log('📝 Built versioned transaction with compute budget');
+      console.log(`   Priority fee: ${feeConfig.microLamports} microLamports`);
+      console.log(`   Compute limit: ${feeConfig.computeUnitLimit.toLocaleString()} units`);
+      console.log(`   Instructions: ${allInstructions.length}`);
+      console.log(`   Last valid block height: ${lastValidBlockHeight}`);
+      
+      return transaction;
+    } catch (error) {
+      console.error('❌ Error building versioned transaction:', error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Execute transaction with pre-flight simulation
+   * Simulates the transaction first to catch errors before sending
+   */
+  async executeTransactionWithSimulation(
+    transaction: Transaction,
+    signers: Keypair[],
+    priorityFee?: PriorityFeeConfig,
+    commitment: Commitment = 'confirmed'
+  ): Promise<TransactionExecutionResult> {
+    // Add priority fee if provided
+    if (priorityFee) {
+      this.addComputeBudgetInstructions(transaction, priorityFee);
+    } else {
+      const dynamicFee = await this.calculateDynamicPriorityFee('medium');
+      this.addComputeBudgetInstructions(transaction, dynamicFee);
+    }
+    
+    // Get recent blockhash
+    const { blockhash } = await this.connection.getLatestBlockhash(commitment);
+    transaction.recentBlockhash = blockhash;
+    transaction.feePayer = signers[0].publicKey;
+    
+    // Simulate first
+    const simulationSuccess = await this.simulateTransaction(transaction);
+    if (!simulationSuccess) {
+      return {
+        success: false,
+        error: 'Transaction simulation failed - transaction would fail on-chain'
+      };
+    }
+    
+    // Execute the transaction
+    return await this.executeTransaction(transaction, signers, undefined, commitment);
+  }
+  
+  /**
+   * Execute versioned transaction with pre-flight simulation
+   */
+  async executeVersionedTransactionWithSimulation(
+    transaction: VersionedTransaction,
+    signers: Keypair[],
+    commitment: Commitment = 'confirmed'
+  ): Promise<TransactionExecutionResult> {
+    // Sign the transaction
+    transaction.sign(signers);
+    
+    // Simulate first
+    const simulationSuccess = await this.simulateVersionedTransaction(transaction);
+    if (!simulationSuccess) {
+      return {
+        success: false,
+        error: 'Transaction simulation failed - transaction would fail on-chain'
+      };
+    }
+    
+    // Execute the transaction
+    return await this.executeVersionedTransaction(transaction, signers, commitment);
   }
 }

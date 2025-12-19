@@ -80,7 +80,7 @@ export async function exampleJupiterSwap(
 
     // Get quote from Jupiter
     const quoteResponse = await fetch(
-      `https://quote-api.jup.ag/v6/quote?inputMint=${inputMint}&outputMint=${outputMint}&amount=${amount}&slippageBps=${slippageBps}`
+      `https://api.jup.ag/v6/quote?inputMint=${inputMint}&outputMint=${outputMint}&amount=${amount}&slippageBps=${slippageBps}`
     );
     const quoteData = await quoteResponse.json();
 
@@ -91,7 +91,7 @@ export async function exampleJupiterSwap(
     });
 
     // Get swap transaction from Jupiter
-    const swapResponse = await fetch('https://quote-api.jup.ag/v6/swap', {
+    const swapResponse = await fetch('https://api.jup.ag/v6/swap', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

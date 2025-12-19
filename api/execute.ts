@@ -234,7 +234,7 @@ async function executeTrade(
 ): Promise<ExecutionResult> {
   try {
     // Get Jupiter quote
-    const jupiterApiUrl = 'https://quote-api.jup.ag/v6/quote';
+    const jupiterApiUrl = 'https://api.jup.ag/v6/quote';
     const amount = 100000000; // 0.1 SOL in lamports
     
     const quoteParams = new URLSearchParams({
@@ -253,7 +253,7 @@ async function executeTrade(
     const quoteData = await quoteResponse.json();
     
     // Get swap transaction
-    const swapResponse = await fetch('https://quote-api.jup.ag/v6/swap', {
+    const swapResponse = await fetch('https://api.jup.ag/v6/swap', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

@@ -140,8 +140,8 @@ export class APIHealthChecker {
       let checkUrl = endpoint.url;
       
       // For Jupiter APIs, try a lightweight health check endpoint
-      if (endpoint.url.includes('quote-api.jup.ag')) {
-        // Quote API doesn't have a health endpoint, so we just check if it's reachable
+      if (endpoint.url.includes('api.jup.ag') || endpoint.url.includes('quote-api.jup.ag')) {
+        // Quote API - use /health endpoint if available
         checkUrl = endpoint.url;
       } else if (endpoint.url.includes('price.jup.ag')) {
         // Price API - check with a simple query

@@ -249,7 +249,9 @@ export class JupiterV6Integration {
     try {
       console.log(`[Jupiter] Fetching USD price for token: ${tokenMint.slice(0, 8)}...`);
       
-      const response = await axios.get(`https://price.jup.ag/v4/price?ids=${tokenMint}`);
+      // Use v6 price API with fallback to v4
+      const priceApiUrl = config.jupiter.priceApiUrl || 'https://price.jup.ag/v6';
+      const response = await axios.get(`${priceApiUrl}/price?ids=${tokenMint}`);
       
       if (!response.data || !response.data.data) {
         console.error('[Jupiter] Invalid price response: missing data');

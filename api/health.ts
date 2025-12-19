@@ -111,7 +111,7 @@ export default async function handler(
   // Check Jupiter API availability
   let jupiterApiStatus: 'online' | 'offline' = 'online';
   try {
-    const jupiterResponse = await fetch('https://quote-api.jup.ag/v6/health', {
+    const jupiterResponse = await fetch('https://api.jup.ag/v6/health', {
       signal: AbortSignal.timeout(5000),
     });
     

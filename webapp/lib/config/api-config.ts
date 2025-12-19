@@ -220,7 +220,9 @@ export class APIConfigManager {
    * Initialize API configuration from environment variables
    */
   private initializeConfig(): APIConfiguration {
-    const jupiterApiUrl = process.env.NEXT_PUBLIC_JUPITER_API_URL || 'https://quote-api.jup.ag';
+    // Use new Jupiter API v6 endpoints
+    const jupiterApiUrl = process.env.NEXT_PUBLIC_JUPITER_API_URL || 'https://api.jup.ag';
+    const jupiterPriceUrl = process.env.NEXT_PUBLIC_JUPITER_PRICE_API_URL || 'https://price.jup.ag';
     const pythHermesUrl = process.env.PYTH_HERMES_ENDPOINT || 'https://hermes.pyth.network';
 
     return {
@@ -235,13 +237,13 @@ export class APIConfigManager {
         ],
         price: [
           {
-            url: 'https://price.jup.ag/v6',
+            url: `${jupiterPriceUrl}/v6`,
             name: 'Jupiter Price API v6',
             healthy: true,
             lastChecked: 0,
           },
           {
-            url: 'https://price.jup.ag/v4',
+            url: `${jupiterPriceUrl}/v4`,
             name: 'Jupiter Price API v4 (fallback)',
             healthy: true,
             lastChecked: 0,
