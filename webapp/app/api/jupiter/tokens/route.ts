@@ -81,8 +81,8 @@ export async function GET(request: NextRequest) {
     // Fetch fresh token list from Jupiter
     console.log('[Jupiter] Fetching token list from Jupiter API');
     
-    const jupiterApiUrl = process.env.NEXT_PUBLIC_JUPITER_API_URL || 'https://quote-api.jup.ag';
-    const tokenListUrl = 'https://token.jup.ag/all'; // Jupiter token list endpoint
+    // Jupiter token list endpoint
+    const tokenListUrl = 'https://token.jup.ag/all';
     
     const fetchResponse = await fetch(tokenListUrl, {
       headers: {

@@ -98,7 +98,7 @@ export async function GET(request: NextRequest) {
     let publicKey: PublicKey;
     try {
       publicKey = new PublicKey(address);
-    } catch (error) {
+    } catch (_error) {
       return NextResponse.json(
         {
           success: false,

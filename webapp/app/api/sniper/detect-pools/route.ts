@@ -66,14 +66,14 @@ export async function GET(request: NextRequest) {
 
     for (const [dexName, programId] of programsToCheck) {
       try {
-        const pubkey = new PublicKey(programId);
-        
-        // Get program accounts (this will show pools)
-        // Note: In production, you'd use getProgramAccounts with proper filters
-        // or subscribe to logs for real-time detection
-        const connection = resilientConnection.getConnection();
+        // Validate program ID
+        new PublicKey(programId);
         
         // For now, we'll simulate pool detection
+        // In production, you'd use:
+        // const connection = resilientConnection.getConnection();
+        // connection.getProgramAccounts() with proper filters
+        // or subscribe to logs for real-time detection
         // Real implementation would use:
         // 1. connection.onLogs() for real-time monitoring
         // 2. connection.getSignaturesForAddress() to find recent pool creations

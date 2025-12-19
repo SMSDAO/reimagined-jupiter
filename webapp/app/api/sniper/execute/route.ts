@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PublicKey, VersionedTransaction } from '@solana/web3.js';
+import { PublicKey } from '@solana/web3.js';
 
 export const dynamic = 'force-dynamic';
 
@@ -10,9 +10,16 @@ interface SniperExecuteRequest {
   userPublicKey: string;
 }
 
+interface JupiterQuote {
+  inAmount: string;
+  outAmount: string;
+  priceImpactPct?: string;
+  [key: string]: unknown;
+}
+
 interface SniperExecuteResponse {
   success: boolean;
-  quote?: any;
+  quote?: JupiterQuote;
   transaction?: string;
   error?: string;
   estimatedOutput?: number;

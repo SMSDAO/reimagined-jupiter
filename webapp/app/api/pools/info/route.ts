@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
     let poolPubkey: PublicKey;
     try {
       poolPubkey = new PublicKey(poolAddress);
-    } catch (error) {
+    } catch (_error) {
       return NextResponse.json(
         {
           success: false,
