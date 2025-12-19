@@ -2,22 +2,45 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createResilientConnection } from '@/lib/solana/connection';
 import { PublicKey } from '@solana/web3.js';
 
+// Token mints for scanning
+const TOKEN_MINTS: Record<string, string> = {
+  SOL: 'So11111111111111111111111111111111111111112',
+  USDC: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+  USDT: 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB',
+  BONK: 'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263',
+  JUP: 'JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN',
+};
+
+interface ArbitrageOpportunity {
+  id: string;
+  inputMint: string;
+  outputMint: string;
+  inputSymbol: string;
+  outputSymbol: string;
+  profitPercentage: number;
+  estimatedProfit: number;
+  route: string[];
+  priceImpact: number;
+  timestamp: number;
+}
+
 /**
  * GET /api/arbitrage/scan
  * 
- * Scan for arbitrage opportunities using resilient connection
+ * Scan for arbitrage opportunities using Jupiter v6 API
  * 
  * Query parameters:
- * - tokenMint: Token mint address to scan (optional)
  * - minProfit: Minimum profit threshold in % (optional, default: 0.5)
+ * - tokens: Comma-separated token symbols (optional, default: SOL,USDC,USDT)
  */
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
-  const tokenMint = searchParams.get('tokenMint');
   const minProfit = parseFloat(searchParams.get('minProfit') || '0.5');
+  const tokensParam = searchParams.get('tokens') || 'SOL,USDC,USDT';
+  const tokens = tokensParam.split(',').map(t => t.trim().toUpperCase());
 
   console.log('🔍 Scanning for arbitrage opportunities...');
-  console.log(`   Token: ${tokenMint || 'all'}`);
+  console.log(`   Tokens: ${tokens.join(', ')}`);
   console.log(`   Min Profit: ${minProfit}%`);
 
   // Create resilient connection
@@ -28,28 +51,45 @@ export async function GET(request: NextRequest) {
     const slot = await resilientConnection.getSlot();
     console.log(`✅ Connected to Solana, current slot: ${slot}`);
 
-    // TODO: Implement actual arbitrage scanning logic
-    // This would integrate with Jupiter, Raydium, Orca, etc.
-    // For now, return mock data structure
+    const opportunities: ArbitrageOpportunity[] = [];
 
-    const opportunities = [
-      {
-        id: '1',
-        tokenA: 'SOL',
-        tokenB: 'USDC',
-        profitPercentage: 1.2,
-        estimatedProfit: 0.05,
-        route: ['Jupiter', 'Raydium'],
-        executionTime: Date.now(),
+    // Scan token pairs for arbitrage opportunities
+    for (let i = 0; i < tokens.length; i++) {
+      for (let j = i + 1; j < tokens.length; j++) {
+        const tokenA = tokens[i];
+        const tokenB = tokens[j];
+
+        if (!TOKEN_MINTS[tokenA] || !TOKEN_MINTS[tokenB]) {
+          console.log(`⚠️  Skipping ${tokenA}-${tokenB}: unknown token`);
+          continue;
+        }
+
+        try {
+          // Check arbitrage opportunity: A -> B -> A
+          const opportunity = await checkArbitrageOpportunity(
+            TOKEN_MINTS[tokenA],
+            TOKEN_MINTS[tokenB],
+            tokenA,
+            tokenB
+          );
+
+          if (opportunity && opportunity.profitPercentage >= minProfit) {
+            opportunities.push(opportunity);
+            console.log(`✅ Found opportunity: ${tokenA}-${tokenB} (${opportunity.profitPercentage.toFixed(2)}% profit)`);
+          }
+        } catch (error) {
+          console.error(`❌ Error checking ${tokenA}-${tokenB}:`, error);
+        }
       }
-    ];
+    }
 
     // Cleanup
     resilientConnection.destroy();
 
     return NextResponse.json({
       success: true,
-      opportunities: opportunities.filter(o => o.profitPercentage >= minProfit),
+      opportunities: opportunities.sort((a, b) => b.profitPercentage - a.profitPercentage),
+      count: opportunities.length,
       timestamp: Date.now(),
       rpcEndpoint: resilientConnection.getCurrentEndpoint(),
     });
@@ -66,58 +106,161 @@ export async function GET(request: NextRequest) {
 }
 
 /**
+ * Check arbitrage opportunity between two tokens using Jupiter v6
+ */
+async function checkArbitrageOpportunity(
+  inputMint: string,
+  outputMint: string,
+  inputSymbol: string,
+  outputSymbol: string
+): Promise<ArbitrageOpportunity | null> {
+  const jupiterApiUrl = process.env.NEXT_PUBLIC_JUPITER_API_URL || 'https://quote-api.jup.ag/v6';
+  
+  // Amount to test (1 token for SOL, 100 for stablecoins)
+  const testAmount = inputSymbol === 'SOL' ? 1_000_000_000 : 100_000_000; // 1 SOL or 100 USDC
+
+  try {
+    // Step 1: Get quote for A -> B
+    const quote1Response = await fetch(
+      `${jupiterApiUrl}/quote?inputMint=${inputMint}&outputMint=${outputMint}&amount=${testAmount}&slippageBps=50`,
+      { signal: AbortSignal.timeout(10000) }
+    );
+
+    if (!quote1Response.ok) {
+      return null;
+    }
+
+    const quote1 = await quote1Response.json();
+    const intermediateAmount = parseInt(quote1.outAmount);
+
+    // Step 2: Get quote for B -> A
+    const quote2Response = await fetch(
+      `${jupiterApiUrl}/quote?inputMint=${outputMint}&outputMint=${inputMint}&amount=${intermediateAmount}&slippageBps=50`,
+      { signal: AbortSignal.timeout(10000) }
+    );
+
+    if (!quote2Response.ok) {
+      return null;
+    }
+
+    const quote2 = await quote2Response.json();
+    const finalAmount = parseInt(quote2.outAmount);
+
+    // Calculate profit
+    const profit = finalAmount - testAmount;
+    const profitPercentage = (profit / testAmount) * 100;
+
+    // Account for fees (0.3% swap fees + 0.1% flash loan fee)
+    const adjustedProfitPercentage = profitPercentage - 0.4;
+
+    if (adjustedProfitPercentage <= 0) {
+      return null;
+    }
+
+    // Extract route information
+    const route1 = quote1.routePlan?.map((r: any) => r.swapInfo?.label || 'Unknown') || [];
+    const route2 = quote2.routePlan?.map((r: any) => r.swapInfo?.label || 'Unknown') || [];
+    const route = [...route1, ...route2];
+
+    // Calculate price impact
+    const priceImpact1 = parseFloat(quote1.priceImpactPct || '0');
+    const priceImpact2 = parseFloat(quote2.priceImpactPct || '0');
+    const totalPriceImpact = Math.abs(priceImpact1) + Math.abs(priceImpact2);
+
+    return {
+      id: `${inputSymbol}-${outputSymbol}-${Date.now()}`,
+      inputMint,
+      outputMint,
+      inputSymbol,
+      outputSymbol,
+      profitPercentage: parseFloat(adjustedProfitPercentage.toFixed(4)),
+      estimatedProfit: profit / 1_000_000_000, // Convert to SOL
+      route,
+      priceImpact: parseFloat(totalPriceImpact.toFixed(4)),
+      timestamp: Date.now(),
+    };
+  } catch (error) {
+    console.error(`Error checking arbitrage for ${inputSymbol}-${outputSymbol}:`, error);
+    return null;
+  }
+}
+
+/**
  * POST /api/arbitrage/scan
  * 
- * Execute an arbitrage opportunity
+ * Scan for arbitrage opportunities with POST request body
+ * 
+ * Body parameters:
+ * - minProfit: Minimum profit threshold in % (optional, default: 0.5)
+ * - tokens: Array of token symbols (optional, default: ['SOL', 'USDC', 'USDT'])
  */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { opportunityId, walletAddress } = body;
+    const minProfit = parseFloat(body.minProfit || '0.5');
+    const tokens = (body.tokens || ['SOL', 'USDC', 'USDT']).map((t: string) => t.toUpperCase());
 
-    if (!opportunityId || !walletAddress) {
-      return NextResponse.json(
-        { success: false, error: 'opportunityId and walletAddress are required' },
-        { status: 400 }
-      );
-    }
-
-    console.log('⚡ Executing arbitrage opportunity...');
-    console.log(`   Opportunity ID: ${opportunityId}`);
-    console.log(`   Wallet: ${walletAddress}`);
+    console.log('🔍 POST: Scanning for arbitrage opportunities...');
+    console.log(`   Tokens: ${tokens.join(', ')}`);
+    console.log(`   Min Profit: ${minProfit}%`);
 
     // Create resilient connection
     const resilientConnection = createResilientConnection();
 
     try {
-      // Verify wallet address
-      const pubkey = new PublicKey(walletAddress);
-      const balance = await resilientConnection.getBalance(pubkey);
-      
-      console.log(`💰 Wallet balance: ${(balance / 1e9).toFixed(4)} SOL`);
+      // Get current slot to verify connection
+      const slot = await resilientConnection.getSlot();
+      console.log(`✅ Connected to Solana, current slot: ${slot}`);
 
-      // TODO: Implement actual arbitrage execution
-      // This would:
-      // 1. Build transaction with optimal route
-      // 2. Add priority fees
-      // 3. Execute via resilient connection
-      // 4. Monitor confirmation
+      const opportunities: ArbitrageOpportunity[] = [];
+
+      // Scan token pairs for arbitrage opportunities
+      for (let i = 0; i < tokens.length; i++) {
+        for (let j = i + 1; j < tokens.length; j++) {
+          const tokenA = tokens[i];
+          const tokenB = tokens[j];
+
+          if (!TOKEN_MINTS[tokenA] || !TOKEN_MINTS[tokenB]) {
+            console.log(`⚠️  Skipping ${tokenA}-${tokenB}: unknown token`);
+            continue;
+          }
+
+          try {
+            // Check arbitrage opportunity: A -> B -> A
+            const opportunity = await checkArbitrageOpportunity(
+              TOKEN_MINTS[tokenA],
+              TOKEN_MINTS[tokenB],
+              tokenA,
+              tokenB
+            );
+
+            if (opportunity && opportunity.profitPercentage >= minProfit) {
+              opportunities.push(opportunity);
+              console.log(`✅ Found opportunity: ${tokenA}-${tokenB} (${opportunity.profitPercentage.toFixed(2)}% profit)`);
+            }
+          } catch (error) {
+            console.error(`❌ Error checking ${tokenA}-${tokenB}:`, error);
+          }
+        }
+      }
 
       // Cleanup
       resilientConnection.destroy();
 
       return NextResponse.json({
         success: true,
-        message: 'Arbitrage execution not yet implemented',
-        balance: balance / 1e9,
+        opportunities: opportunities.sort((a, b) => b.profitPercentage - a.profitPercentage),
+        count: opportunities.length,
+        timestamp: Date.now(),
+        rpcEndpoint: resilientConnection.getCurrentEndpoint(),
       });
     } catch (error) {
       resilientConnection.destroy();
       throw error;
     }
   } catch (error) {
-    console.error('❌ Arbitrage execution error:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Execution failed';
+    console.error('❌ Arbitrage scan error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Scan failed';
     return NextResponse.json(
       { success: false, error: errorMessage },
       { status: 500 }
