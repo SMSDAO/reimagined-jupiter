@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createResilientConnection } from '@/lib/solana/connection';
 
-// Token mints for scanning
+// Constants
 const TOKEN_MINTS: Record<string, string> = {
   SOL: 'So11111111111111111111111111111111111111112',
   USDC: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
@@ -9,6 +9,20 @@ const TOKEN_MINTS: Record<string, string> = {
   BONK: 'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263',
   JUP: 'JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN',
 };
+
+// Test amounts in lamports/smallest unit
+const TEST_AMOUNT_SOL = 1_000_000_000; // 1 SOL
+const TEST_AMOUNT_STABLECOIN = 100_000_000; // 100 USDC (6 decimals)
+
+// Fee structure: 0.3% swap fees + 0.1% flash loan fee = 0.4% total
+const TOTAL_FEE_PERCENTAGE = 0.4;
+
+// Jupiter API response types
+interface JupiterRoutePlan {
+  swapInfo?: {
+    label?: string;
+  };
+}
 
 interface ArbitrageOpportunity {
   id: string;
@@ -113,15 +127,16 @@ async function checkArbitrageOpportunity(
   inputSymbol: string,
   outputSymbol: string
 ): Promise<ArbitrageOpportunity | null> {
-  const jupiterApiUrl = process.env.NEXT_PUBLIC_JUPITER_API_URL || 'https://quote-api.jup.ag/v6';
+  const jupiterApiUrl = process.env.NEXT_PUBLIC_JUPITER_API_URL || 'https://quote-api.jup.ag';
+  const jupiterQuoteUrl = `${jupiterApiUrl}/v6`;
   
-  // Amount to test (1 token for SOL, 100 for stablecoins)
-  const testAmount = inputSymbol === 'SOL' ? 1_000_000_000 : 100_000_000; // 1 SOL or 100 USDC
+  // Amount to test (1 SOL or 100 stablecoins)
+  const testAmount = inputSymbol === 'SOL' ? TEST_AMOUNT_SOL : TEST_AMOUNT_STABLECOIN;
 
   try {
     // Step 1: Get quote for A -> B
     const quote1Response = await fetch(
-      `${jupiterApiUrl}/quote?inputMint=${inputMint}&outputMint=${outputMint}&amount=${testAmount}&slippageBps=50`,
+      `${jupiterQuoteUrl}/quote?inputMint=${inputMint}&outputMint=${outputMint}&amount=${testAmount}&slippageBps=50`,
       { signal: AbortSignal.timeout(10000) }
     );
 
@@ -134,7 +149,7 @@ async function checkArbitrageOpportunity(
 
     // Step 2: Get quote for B -> A
     const quote2Response = await fetch(
-      `${jupiterApiUrl}/quote?inputMint=${outputMint}&outputMint=${inputMint}&amount=${intermediateAmount}&slippageBps=50`,
+      `${jupiterQuoteUrl}/quote?inputMint=${outputMint}&outputMint=${inputMint}&amount=${intermediateAmount}&slippageBps=50`,
       { signal: AbortSignal.timeout(10000) }
     );
 
@@ -149,16 +164,16 @@ async function checkArbitrageOpportunity(
     const profit = finalAmount - testAmount;
     const profitPercentage = (profit / testAmount) * 100;
 
-    // Account for fees (0.3% swap fees + 0.1% flash loan fee)
-    const adjustedProfitPercentage = profitPercentage - 0.4;
+    // Account for fees
+    const adjustedProfitPercentage = profitPercentage - TOTAL_FEE_PERCENTAGE;
 
     if (adjustedProfitPercentage <= 0) {
       return null;
     }
 
     // Extract route information
-    const route1 = quote1.routePlan?.map((r: { swapInfo?: { label?: string } }) => r.swapInfo?.label || 'Unknown') || [];
-    const route2 = quote2.routePlan?.map((r: { swapInfo?: { label?: string } }) => r.swapInfo?.label || 'Unknown') || [];
+    const route1 = quote1.routePlan?.map((r: JupiterRoutePlan) => r.swapInfo?.label || 'Unknown') || [];
+    const route2 = quote2.routePlan?.map((r: JupiterRoutePlan) => r.swapInfo?.label || 'Unknown') || [];
     const route = [...route1, ...route2];
 
     // Calculate price impact
