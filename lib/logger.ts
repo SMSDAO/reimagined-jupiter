@@ -221,8 +221,8 @@ export function opportunity(message: string, metadata: OpportunityLogMetadata): 
     level: 'info',
     message: `[OPPORTUNITY] ${message}`,
     metadata: {
-      ...metadata,
       type: metadata.type || 'opportunity',
+      ...metadata,
     },
     requestId: currentRequestId,
   });

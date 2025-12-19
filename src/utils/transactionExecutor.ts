@@ -7,11 +7,7 @@ import {
   ComputeBudgetProgram,
   Commitment,
 } from '@solana/web3.js';
-
-interface PrioritizationFee {
-  slot: number;
-  prioritizationFee: number;
-}
+import type { PrioritizationFee } from '../types/solana.js';
 
 export interface TransactionExecutionResult {
   success: boolean;

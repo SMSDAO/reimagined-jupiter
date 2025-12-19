@@ -11,11 +11,7 @@ import {
   TransactionMessage,
 } from '@solana/web3.js';
 import type { Opportunity } from './scanner.js';
-
-interface PrioritizationFee {
-  slot: number;
-  prioritizationFee: number;
-}
+import type { PrioritizationFee } from '../src/types/solana.js';
 
 export interface ExecutionResult {
   success: boolean;
