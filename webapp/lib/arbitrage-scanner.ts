@@ -1,5 +1,6 @@
 import { Connection } from '@solana/web3.js';
 import { getOptimalConnection } from './rpc-rotator';
+import { API } from './config';
 
 export interface ArbitrageOpportunity {
   id: string;
@@ -74,7 +75,7 @@ export class ArbitrageScanner {
         '4k3Dyjzvzp8eMZWUXbBCjEvwSkkk59S5iCNLY3QrkX6R', // RAY
       ];
 
-      const response = await fetch(`https://price.jup.ag/v6/price?ids=${popularTokens.join(',')}`);
+      const response = await fetch(`${API.jupiterPrice()}/price?ids=${popularTokens.join(',')}`);
       
       if (!response.ok) {
         throw new Error(`Failed to fetch prices: ${response.statusText}`);

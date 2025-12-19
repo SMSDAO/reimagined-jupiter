@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { API } from '@/lib/config';
 
 interface TokenPrice {
   symbol: string;
@@ -27,7 +28,7 @@ export default function PriceTicker() {
     const fetchPrices = async () => {
       try {
         const mintAddresses = POPULAR_TOKENS.map(t => t.mint).join(',');
-        const response = await fetch(`https://price.jup.ag/v6/price?ids=${mintAddresses}`);
+        const response = await fetch(`${API.jupiterPrice()}/price?ids=${mintAddresses}`);
         
         if (!response.ok) {
           throw new Error(`Failed to fetch prices: ${response.statusText}`);

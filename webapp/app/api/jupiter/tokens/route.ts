@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { API } from '@/lib/config';
 
 export const dynamic = 'force-dynamic';
 
@@ -82,7 +83,7 @@ export async function GET(request: NextRequest) {
     console.log('[Jupiter] Fetching token list from Jupiter API');
     
     // Jupiter token list endpoint
-    const tokenListUrl = 'https://token.jup.ag/all';
+    const tokenListUrl = API.jupiterTokens();
     
     const fetchResponse = await fetch(tokenListUrl, {
       headers: {
@@ -169,7 +170,7 @@ export async function POST(request: NextRequest) {
       tokens = tokenListCache.data;
     } else {
       // Fetch fresh data
-      const tokenListUrl = 'https://token.jup.ag/all';
+      const tokenListUrl = API.jupiterTokens();
       const fetchResponse = await fetch(tokenListUrl);
       
       if (!fetchResponse.ok) {

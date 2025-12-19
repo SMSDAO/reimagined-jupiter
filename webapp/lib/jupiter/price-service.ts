@@ -4,6 +4,8 @@
  * Includes caching, WebSocket support, and portfolio valuation
  */
 
+import { API } from '../config';
+
 export interface JupiterPriceData {
   id: string;
   mintSymbol: string;
@@ -40,7 +42,9 @@ export interface PortfolioValue {
 }
 
 export class JupiterPriceService {
-  private baseUrl = 'https://price.jup.ag/v6';
+  private get baseUrl(): string {
+    return API.jupiterPrice();
+  }
   private cache = new Map<string, CacheEntry>();
   private cacheDuration = 30000; // 30 seconds
   private subscriptions = new Map<string, PriceSubscription[]>();

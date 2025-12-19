@@ -1,3 +1,5 @@
+import { API } from './config';
+
 // Pyth price feed IDs for common tokens on Solana
 export const PYTH_PRICE_FEEDS = {
   'SOL/USD': '0xef0d8b6fda2ceba41da15d4095d1da392a0d2f8ed0c6c7bc0f4cfac8c280b56d',
@@ -22,8 +24,8 @@ export interface PythPrice {
 export class PythPriceService {
   private hermesUrl: string;
 
-  constructor(hermesUrl: string = 'https://hermes.pyth.network') {
-    this.hermesUrl = hermesUrl;
+  constructor(hermesUrl?: string) {
+    this.hermesUrl = hermesUrl || API.pythHermes();
   }
 
   async getPrice(symbol: string): Promise<PythPrice | null> {

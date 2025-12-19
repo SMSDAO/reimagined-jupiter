@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { HermesClient } from '@pythnetwork/hermes-client';
 import { getJupiterPriceService } from '@/lib/jupiter/price-service';
+import { API } from '@/lib/config';
 
 // Pyth Network price feed IDs for Solana tokens
 const PYTH_PRICE_FEEDS: Record<string, string> = {
@@ -54,7 +55,7 @@ interface TickerResponse {
 }
 
 // Initialize Hermes client
-const hermesClient = new HermesClient('https://hermes.pyth.network');
+const hermesClient = new HermesClient(API.pythHermes());
 
 // Initialize connection
 // const connection = new Connection(
