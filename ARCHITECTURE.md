@@ -475,9 +475,84 @@ GXQ Studio is a production-ready Solana trading bot system with multiple deploym
 - Parallel processing
 - Efficient algorithms
 
+## 📝 Logging & Monitoring
+
+### Centralized Logging System
+
+GXQ Studio uses **Winston** for centralized, structured logging with the following features:
+
+**Log Levels:**
+- `error`: Critical errors requiring immediate attention
+- `warn`: Warning conditions that should be reviewed
+- `info`: Informational messages about normal operations
+- `debug`: Detailed debugging information
+- `verbose`: Very detailed trace information
+
+**Log Features:**
+- **Request ID Tracking**: Each request gets a unique ID for tracing
+- **Context-Aware Logging**: Logs include context (e.g., "RPC", "Transaction", "Auth")
+- **Structured Metadata**: JSON-formatted additional information
+- **Log Rotation**: Automatic rotation at 5MB (5 error files, 10 combined files)
+- **Multiple Transports**: Console (colorized) + File output
+
+**Specialized Logging Methods:**
+```typescript
+import { Logger } from './utils/logger';
+
+const logger = new Logger('MyService');
+
+// RPC errors
+logger.rpcError('getBalance', error, { address: '...' });
+
+// Transaction failures
+logger.transactionError(signature, error, { amount, token });
+
+// Authentication events
+logger.authEvent('login', true, { username });
+
+// Arbitrage opportunities
+logger.opportunity(profitAmount, ['DEX1', 'DEX2'], { slippage });
+
+// Trade execution
+logger.trade('flash-loan-arbitrage', true, { profit, signature });
+```
+
+**Log Files:**
+- `logs/error.log` - Error-level messages only
+- `logs/combined.log` - All log levels
+
+**Environment Variable:**
+- `LOG_LEVEL` - Set log level (default: 'info')
+
+## 🔧 TypeScript Configuration
+
+### Strict Mode Enforcement
+
+The project enforces **TypeScript strict mode** for maximum type safety:
+
+```json
+{
+  "compilerOptions": {
+    "strict": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "strictFunctionTypes": true,
+    "types": ["node", "jest"]
+  }
+}
+```
+
+**Type Definitions:**
+- All external modules have proper `@types/*` packages installed
+- Custom types defined in `src/types.ts`
+- Test files excluded from build (use separate tsconfig for tests)
+
+**ESLint Rules:**
+- `@typescript-eslint/no-explicit-any`: warn (not error)
+- `@typescript-eslint/no-unused-vars`: error (with `argsIgnorePattern: "^_"`)
+
 ---
 
 **For detailed deployment instructions, see:**
 - `QUICKSTART.md` - 5-minute setup
-- `DEPLOYMENT.md` - Complete guide
-- `PRODUCTION_DEPLOYMENT_COMPLETE.md` - Full summary
+- `docs/archive/DEPLOYMENT.md` - Complete guide (archived)
