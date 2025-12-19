@@ -5,6 +5,10 @@
  */
 
 import winston from 'winston';
+import path from 'path';
+
+// Determine log directory (use environment variable or default to logs/)
+const LOG_DIR = process.env.LOG_DIR || path.join(process.cwd(), 'logs');
 
 // Define log levels
 const logLevels = {
@@ -58,14 +62,14 @@ const logger = winston.createLogger({
     }),
     // File transport for errors
     new winston.transports.File({
-      filename: 'logs/error.log',
+      filename: path.join(LOG_DIR, 'error.log'),
       level: 'error',
       maxsize: 5242880, // 5MB
       maxFiles: 5,
     }),
     // File transport for all logs
     new winston.transports.File({
-      filename: 'logs/combined.log',
+      filename: path.join(LOG_DIR, 'combined.log'),
       maxsize: 5242880, // 5MB
       maxFiles: 10,
     }),
@@ -78,7 +82,7 @@ const logger = winston.createLogger({
  * Generate a unique request ID
  */
 export function generateRequestId(): string {
-  return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  return `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
 }
 
 /**
