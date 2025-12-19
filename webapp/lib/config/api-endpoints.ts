@@ -184,11 +184,3 @@ export function logEnvironmentConfig() {
     });
   }
 }
-
-// Auto-validate on import in development
-if (IS_DEVELOPMENT && typeof window !== 'undefined') {
-  const validation = validateEnvironment();
-  if (!validation.valid) {
-    console.warn('⚠️ Missing environment variables:', validation.missing);
-  }
-}

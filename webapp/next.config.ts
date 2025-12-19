@@ -15,10 +15,7 @@ const nextConfig: NextConfig = {
     optimizePackageImports: ['@solana/web3.js', 'framer-motion'],
   },
   
-  // Environment variables validation
-  env: {
-    NEXT_PUBLIC_APP_ENV: process.env.NODE_ENV || 'development',
-  },
+
   
   // Cache control headers for API routes and security headers
   async headers() {
@@ -45,16 +42,6 @@ const nextConfig: NextConfig = {
         ],
       },
     ];
-  },
-  
-  // Redirect configuration (if needed)
-  async redirects() {
-    return [];
-  },
-  
-  // Rewrite configuration (if needed)
-  async rewrites() {
-    return [];
   },
 };
 

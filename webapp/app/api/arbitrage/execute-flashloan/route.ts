@@ -6,6 +6,18 @@ import { FLASHLOAN_PROVIDERS } from '@/lib/flashloan/providers';
 import { API_ENDPOINTS } from '@/lib/config/api-endpoints';
 
 /**
+ * Flash loan execution API response
+ */
+interface FlashloanExecutionResponse {
+  success: boolean;
+  signature?: string;
+  profit?: number;
+  provider?: string;
+  timestamp: number;
+  rpcEndpoint?: string;
+}
+
+/**
  * POST /api/arbitrage/execute-flashloan
  * 
  * Execute flashloan-based arbitrage opportunity
@@ -128,14 +140,7 @@ export async function POST(request: NextRequest) {
     console.log(`   Provider: ${result.provider}`);
 
     // Return response (omit RPC endpoint in production for security)
-    const response: {
-      success: boolean;
-      signature: string | undefined;
-      profit: number | undefined;
-      provider: string | undefined;
-      timestamp: number;
-      rpcEndpoint?: string;
-    } = {
+    const response: FlashloanExecutionResponse = {
       success: true,
       signature: result.signature,
       profit: result.profit,
