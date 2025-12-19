@@ -16,7 +16,7 @@ interface HealthResponse {
  * Health check endpoint for monitoring
  * Returns 200 for healthy, 503 for unhealthy
  */
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   const errors: string[] = [];
   let status: 'healthy' | 'degraded' | 'unhealthy' = 'healthy';
   let rpcLatency = 0;

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createResilientConnection } from '@/lib/solana/connection';
-import { PublicKey } from '@solana/web3.js';
 
 // Token mints for scanning
 const TOKEN_MINTS: Record<string, string> = {
@@ -158,8 +157,8 @@ async function checkArbitrageOpportunity(
     }
 
     // Extract route information
-    const route1 = quote1.routePlan?.map((r: any) => r.swapInfo?.label || 'Unknown') || [];
-    const route2 = quote2.routePlan?.map((r: any) => r.swapInfo?.label || 'Unknown') || [];
+    const route1 = quote1.routePlan?.map((r: { swapInfo?: { label?: string } }) => r.swapInfo?.label || 'Unknown') || [];
+    const route2 = quote2.routePlan?.map((r: { swapInfo?: { label?: string } }) => r.swapInfo?.label || 'Unknown') || [];
     const route = [...route1, ...route2];
 
     // Calculate price impact
