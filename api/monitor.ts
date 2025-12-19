@@ -156,7 +156,7 @@ async function scanOpportunities(connection: Connection): Promise<Opportunity[]>
       try {
         // Simulate opportunity detection
         // In production, this would call Jupiter API v6 for real routes
-        const jupiterApiUrl = 'https://quote-api.jup.ag/v6/quote';
+        const jupiterApiUrl = 'https://api.jup.ag/v6/quote';
         
         // Check if opportunity exists (simplified for serverless constraints)
         const hasOpportunity = Math.random() > 0.7; // 30% chance

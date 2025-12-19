@@ -45,7 +45,8 @@ export const config: Config = {
   },
   jupiter: {
     programId: new PublicKey(process.env.JUPITER_V6_PROGRAM_ID || 'JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4'),
-    apiUrl: 'https://quote-api.jup.ag/v6',
+    apiUrl: process.env.JUPITER_API_URL || 'https://api.jup.ag/v6',
+    priceApiUrl: process.env.JUPITER_PRICE_API_URL || 'https://price.jup.ag/v6',
   },
   gxq: {
     tokenMint: new PublicKey(process.env.GXQ_TOKEN_MINT || '11111111111111111111111111111111'),

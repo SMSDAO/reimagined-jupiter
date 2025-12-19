@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
     const SOL_MINT = 'So11111111111111111111111111111111111111112';
 
     // Get Jupiter API URL from environment
-    const jupiterApiUrl = process.env.NEXT_PUBLIC_JUPITER_API_URL || 'https://quote-api.jup.ag';
+    const jupiterApiUrl = process.env.NEXT_PUBLIC_JUPITER_API_URL || 'https://api.jup.ag';
 
     // Step 1: Get quote from Jupiter
     const quoteUrl = `${jupiterApiUrl}/v6/quote?inputMint=${SOL_MINT}&outputMint=${tokenMint}&amount=${amountInLamports}&slippageBps=${slippageBps}`;

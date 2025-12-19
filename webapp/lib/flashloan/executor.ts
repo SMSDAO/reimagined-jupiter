@@ -43,7 +43,7 @@ export class FlashloanExecutor {
   private connection: Connection;
   private jupiterApiUrl: string;
 
-  constructor(connection: Connection, jupiterApiUrl: string = 'https://quote-api.jup.ag/v6') {
+  constructor(connection: Connection, jupiterApiUrl: string = 'https://api.jup.ag/v6') {
     this.connection = connection;
     this.jupiterApiUrl = jupiterApiUrl;
   }
