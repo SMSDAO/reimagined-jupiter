@@ -69,21 +69,45 @@ Production: [https://jup-nine.vercel.app/](https://jup-nine.vercel.app/)
 
 ## 📦 Environment Variables
 
+The webapp uses a **centralized configuration system** for all API endpoints. See [CENTRALIZED_CONFIG_GUIDE.md](./CENTRALIZED_CONFIG_GUIDE.md) for detailed documentation.
+
+### Quick Setup
+
 Create a `.env.local` file:
 
 ```env
-# Solana RPC (Optional - uses public endpoint by default)
-NEXT_PUBLIC_SOLANA_RPC_URL=https://api.mainnet-beta.solana.com
+# === RPC ENDPOINTS (Choose at least one) ===
 
-# QuickNode RPC (Optional - for better performance)
-NEXT_PUBLIC_QUICKNODE_RPC_URL=your_quicknode_url_here
+# Option 1: Helius (Recommended for production)
+NEXT_PUBLIC_HELIUS_RPC=https://mainnet.helius-rpc.com/?api-key=YOUR_KEY
 
-# Network (mainnet-beta, devnet, testnet)
-NEXT_PUBLIC_SOLANA_NETWORK=mainnet-beta
+# Option 2: QuickNode (Recommended for production)
+NEXT_PUBLIC_QUICKNODE_RPC=https://your-endpoint.solana-mainnet.quiknode.pro/YOUR_KEY
 
-# Developer Wallet for Fee Collection
-NEXT_PUBLIC_DEV_WALLET=monads.solana
+# Option 3: Public RPC (Free, rate-limited)
+NEXT_PUBLIC_RPC_URL=https://api.mainnet-beta.solana.com
+
+# === WALLET CONNECTION (Required) ===
+NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=your_project_id
+
+# === OPTIONAL API ENDPOINTS (Have defaults) ===
+# Jupiter APIs (defaults to official endpoints)
+NEXT_PUBLIC_JUPITER_QUOTE_API=https://quote-api.jup.ag/v6
+NEXT_PUBLIC_JUPITER_PRICE_API=https://price.jup.ag/v6
+
+# Pyth Network (defaults to official Hermes)
+NEXT_PUBLIC_PYTH_HERMES_ENDPOINT=https://hermes.pyth.network
 ```
+
+### Features
+
+✅ **Automatic Configuration** - All API endpoints managed centrally  
+✅ **Environment Detection** - Adapts to production/development automatically  
+✅ **Multiple RPC Fallback** - Automatic failover between providers  
+✅ **Validation** - Checks configuration on startup  
+✅ **Settings UI** - View and validate configuration at `/settings`  
+
+See `.env.example` for all available options.
 
 ## 🎯 SEO & Discoverability
 
