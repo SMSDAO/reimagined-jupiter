@@ -506,6 +506,3 @@ export const API = {
     isVercel: () => EnvironmentDetector.isVercel(),
   },
 };
-
-// Export types
-export type { APIEndpoint, APIConfiguration };

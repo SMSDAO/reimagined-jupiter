@@ -163,7 +163,8 @@ export class EdgeRuntimeChecker {
    */
   static isEdgeRuntime(): boolean {
     // Check for Edge Runtime-specific globals
-    return typeof EdgeRuntime !== 'undefined';
+    // @ts-expect-error - EdgeRuntime is a global in Edge Runtime
+    return typeof globalThis.EdgeRuntime !== 'undefined';
   }
 
   /**
