@@ -2,7 +2,7 @@
  * Custom React hook for strategy management
  */
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { ArbitrageStrategy } from '../types';
 import { 
   defaultStrategies, 
@@ -15,7 +15,7 @@ import {
 export function useStrategies() {
   const [strategies, setStrategies] = useState<ArbitrageStrategy[]>(defaultStrategies);
   const [selectedStrategy, setSelectedStrategy] = useState<ArbitrageStrategy | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading] = useState(false);
 
   const getStrategy = useCallback((id: string): ArbitrageStrategy | undefined => {
     return strategies.find(s => s.id === id);

@@ -110,10 +110,10 @@ function calculateCost(tokenCount: number): number {
  * Optimize a prompt for better results
  */
 export function optimizePrompt(originalPrompt: string): OptimizationResult {
-  const originalMetrics = analyzePrompt(originalPrompt);
+  analyzePrompt(originalPrompt);
   
   // Apply optimization improvements
-  let optimizedPrompt = originalPrompt;
+  const optimizedPrompt = originalPrompt;
   const improvements: string[] = [];
   
   // Add structure if missing
