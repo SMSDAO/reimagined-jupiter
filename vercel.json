@@ -1,20 +1,32 @@
 {
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "cd webapp && npm install && npm run build",
+  "devCommand": "cd webapp && npm run dev",
+  "installCommand": "cd webapp && npm install",
+  "framework": "nextjs",
+  "outputDirectory": "webapp/.next",
+  "regions": ["iad1"],
+  "cleanUrls": true,
+  "trailingSlash": false,
   "crons": [
     {
       "path": "/api/monitor",
-      "schedule": "*/1 * * * *"  // ✅ Good - every minute
+      "schedule": "*/1 * * * *"
     },
     {
       "path": "/api/execute",
-      "schedule": "*/5 * * * *"  // ❌ TOO SLOW - should be every 30 seconds
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/health",
+      "schedule": "*/5 * * * *"
     }
   ],
   "functions": {
     "api/**/*.ts": {
       "runtime": "nodejs18.x",
       "maxDuration": 60,
-      "memory": 1024  // ❌ MISSING - add this
+      "memory": 1024
     }
-  },
-  "regions": ["iad1"]  // ❌ MISSING - add US East for Solana proximity
+  }
 }
