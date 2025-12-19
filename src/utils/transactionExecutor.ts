@@ -60,7 +60,7 @@ export class TransactionExecutor {
       };
       
       const targetPercentile = percentiles[urgency];
-      const fees = recentFees.map(f => f.prioritizationFee).sort((a, b) => a - b);
+      const fees = recentFees.map((f: any) => f.prioritizationFee).sort((a: number, b: number) => a - b);
       const index = Math.floor(fees.length * targetPercentile);
       const baseFee = fees[index] || fees[fees.length - 1] || 1000;
       

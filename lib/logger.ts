@@ -220,10 +220,7 @@ export function opportunity(message: string, metadata: OpportunityLogMetadata): 
     timestamp: new Date().toISOString(),
     level: 'info',
     message: `[OPPORTUNITY] ${message}`,
-    metadata: {
-      type: 'opportunity',
-      ...metadata,
-    },
+    metadata,
     requestId: currentRequestId,
   });
 }
