@@ -1,9 +1,9 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "npm install && npm run build && cd webapp && npm install && npm run build",
+  "buildCommand": "cd webapp && npm install && npm run build",
   "devCommand": "cd webapp && npm run dev",
-  "installCommand": "npm install && cd webapp && npm install",
-  "framework": null,
+  "installCommand": "cd webapp && npm install",
+  "framework": "nextjs",
   "outputDirectory": "webapp/.next",
   "cleanUrls": true,
   "trailingSlash": false,
@@ -18,19 +18,13 @@
     }
   ],
   "functions": {
-    "api/**/*.ts": {
+    "api/monitor.ts": {
+      "runtime": "nodejs18.x",
+      "maxDuration": 60
+    },
+    "api/execute.ts": {
       "runtime": "nodejs18.x",
       "maxDuration": 60
     }
-  },
-  "rewrites": [
-    {
-      "source": "/api/:path*",
-      "destination": "/api/:path*"
-    },
-    {
-      "source": "/admin/:path*",
-      "destination": "/webapp/app/admin/:path*"
-    }
-  ]
+  }
 }
