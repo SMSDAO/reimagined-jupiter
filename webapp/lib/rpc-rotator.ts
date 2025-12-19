@@ -221,45 +221,58 @@ export class RPCRotator {
 let rotatorInstance: RPCRotator | null = null;
 
 /**
- * Get or create the RPC rotator singleton
+ * Get or create the RPC rotator singleton with mainnet endpoints
  */
 export function getRPCRotator(): RPCRotator {
   if (!rotatorInstance) {
-    const rawEndpoints = [
-      {
-        url:
-          process.env.NEXT_PUBLIC_HELIUS_RPC ||
-          process.env.NEXT_PUBLIC_QUICKNODE_RPC ||
-          process.env.NEXT_PUBLIC_RPC_URL ||
-          'https://api.mainnet-beta.solana.com',
-        name: 'Primary',
-      },
-      {
-        url:
-          process.env.NEXT_PUBLIC_QUICKNODE_RPC ||
-          process.env.NEXT_PUBLIC_RPC_URL ||
-          'https://api.mainnet-beta.solana.com',
-        name: 'Secondary',
-      },
-      {
-        url:
-          process.env.NEXT_PUBLIC_SOLANA_RPC_PRIMARY ||
-          'https://api.mainnet-beta.solana.com',
-        name: 'Fallback',
-      },
-    ];
+    // Build endpoint list with proper priority
+    const endpointConfigs = [];
     
-    // Remove duplicates using Set for O(n) complexity
-    const seen = new Set<string>();
-    const endpoints = rawEndpoints.filter((endpoint) => {
-      if (seen.has(endpoint.url)) {
-        return false;
-      }
-      seen.add(endpoint.url);
-      return true;
-    });
+    // Priority 1: Helius
+    if (process.env.NEXT_PUBLIC_HELIUS_RPC) {
+      endpointConfigs.push({
+        url: process.env.NEXT_PUBLIC_HELIUS_RPC,
+        name: 'Helius',
+      });
+    }
+    
+    // Priority 2: QuickNode
+    if (process.env.NEXT_PUBLIC_QUICKNODE_RPC) {
+      endpointConfigs.push({
+        url: process.env.NEXT_PUBLIC_QUICKNODE_RPC,
+        name: 'QuickNode',
+      });
+    }
+    
+    // Priority 3: Primary RPC
+    if (process.env.NEXT_PUBLIC_SOLANA_RPC_PRIMARY) {
+      endpointConfigs.push({
+        url: process.env.NEXT_PUBLIC_SOLANA_RPC_PRIMARY,
+        name: 'Primary',
+      });
+    }
+    
+    // Priority 4: Legacy RPC URL
+    if (process.env.NEXT_PUBLIC_RPC_URL && 
+        !endpointConfigs.find(e => e.url === process.env.NEXT_PUBLIC_RPC_URL)) {
+      endpointConfigs.push({
+        url: process.env.NEXT_PUBLIC_RPC_URL,
+        name: 'Legacy',
+      });
+    }
+    
+    // Fallback: Public RPC
+    if (!endpointConfigs.find(e => e.url === 'https://api.mainnet-beta.solana.com')) {
+      endpointConfigs.push({
+        url: 'https://api.mainnet-beta.solana.com',
+        name: 'Public',
+      });
+    }
+    
+    console.log('[RPCRotator] Initialized with mainnet endpoints:', 
+      endpointConfigs.map(e => e.name).join(', '));
 
-    rotatorInstance = new RPCRotator(endpoints);
+    rotatorInstance = new RPCRotator(endpointConfigs);
   }
 
   return rotatorInstance;
