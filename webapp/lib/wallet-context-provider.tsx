@@ -4,7 +4,10 @@ import React, { FC, ReactNode, useMemo, useEffect } from 'react';
 import { ConnectionProvider, WalletProvider } from '@solana/wallet-adapter-react';
 import { WalletAdapterNetwork } from '@solana/wallet-adapter-base';
 import { WalletModalProvider } from '@solana/wallet-adapter-react-ui';
-import { PhantomWalletAdapter, SolflareWalletAdapter } from '@solana/wallet-adapter-wallets';
+import { 
+  PhantomWalletAdapter, 
+  SolflareWalletAdapter,
+} from '@solana/wallet-adapter-wallets';
 import { clusterApiUrl } from '@solana/web3.js';
 import { useWallet as useWalletHook } from '@solana/wallet-adapter-react';
 import '@solana/wallet-adapter-react-ui/styles.css';
@@ -90,13 +93,17 @@ export const WalletContextProvider: FC<{ children: ReactNode }> = ({ children })
     () => [
       new PhantomWalletAdapter(),
       new SolflareWalletAdapter(),
+      // Additional wallet adapters can be added here as needed
+      // Note: Some adapters may not be available in the current version
+      // of @solana/wallet-adapter-wallets. Check package exports before adding.
     ],
     []
   );
 
   useEffect(() => {
-    console.log('[WalletContext] Using RPC endpoint:', endpoint);
-  }, [endpoint]);
+    console.log('[WalletContext] Initialized with mainnet RPC:', endpoint);
+    console.log('[WalletContext] Supported wallets:', wallets.length);
+  }, [endpoint, wallets.length]);
 
   return (
     <ConnectionProvider endpoint={endpoint}>
