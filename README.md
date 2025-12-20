@@ -281,6 +281,8 @@ src/
 
 ## 🔧 Development
 
+### Local Development Setup
+
 ```bash
 # Run in development mode
 npm run dev
@@ -291,9 +293,52 @@ npm run lint
 # Run tests
 npm test
 
+# Run tests with coverage
+npm run test:coverage
+
 # Validate API endpoints
 npm run validate-endpoints http://localhost:3000
 ```
+
+### CI/CD Pipeline
+
+Our CI/CD pipeline ensures code quality and reliable deployments with:
+
+#### ✅ Automated Testing
+- **Matrix builds** on Node.js 18, 20, and 22
+- **Unit tests** with Jest (90% coverage requirement)
+- **TypeScript validation** (`tsc --noEmit`)
+- **Strict linting** (ESLint with `--max-warnings=0`)
+
+#### 🔒 Security & Quality
+- **npm audit** for vulnerability scanning
+- **Code coverage** tracking with Codecov
+- **Automated code review** for PRs
+- **Security alerts** for dependencies
+
+#### 🚀 Deployment Previews
+- **Vercel preview** for webapp on every PR
+- **Railway preview** for backend API on every PR
+- **Automatic health checks** after deployment
+- **Preview URLs** posted as PR comments
+
+#### 🤖 Auto-Merge
+PRs automatically merge when:
+- All tests pass (Node 18, 20, 22)
+- Linting passes with no warnings
+- TypeScript validation succeeds
+- Security scan completes
+- Coverage ≥ 90%
+- At least 1 approval (non-Dependabot)
+- Preview deployments successful
+
+**Labels:**
+- `auto-merge` - Enable automatic merging
+- `skip-deployment` - Skip preview deployments
+
+**Learn more:**
+- 📖 [Contributing Guide](CONTRIBUTING.md) - Complete CI/CD workflow
+- 🔧 [Troubleshooting Guide](CI_CD_TROUBLESHOOTING.md) - Fix common CI issues
 
 ## 🔒 API Security & Validation
 
@@ -410,9 +455,31 @@ Before contributing:
 
 For support and questions:
 - **Issues**: Open a GitHub issue with appropriate labels
+- **Discussions**: [GitHub Discussions](https://github.com/SMSDAO/reimagined-jupiter/discussions)
 - **Documentation**: Check the `docs/` directory
 - **Security**: See [SECURITY_GUIDE.md](./SECURITY_GUIDE.md)
 - **Deployment**: See [DEPLOYMENT_AUTOMATION.md](./docs/DEPLOYMENT_AUTOMATION.md)
+- **Contributing**: See [CONTRIBUTING.md](./CONTRIBUTING.md)
+- **CI/CD Issues**: See [CI_CD_TROUBLESHOOTING.md](./CI_CD_TROUBLESHOOTING.md)
+
+## 📊 Project Status
+
+### Build Status
+[![CI Status](https://github.com/SMSDAO/reimagined-jupiter/workflows/CI%20-%20Continuous%20Integration/badge.svg)](https://github.com/SMSDAO/reimagined-jupiter/actions/workflows/ci.yml)
+[![Preview Deployments](https://github.com/SMSDAO/reimagined-jupiter/workflows/Preview%20Deployments/badge.svg)](https://github.com/SMSDAO/reimagined-jupiter/actions/workflows/preview-deployments.yml)
+[![Deploy to Vercel](https://github.com/SMSDAO/reimagined-jupiter/workflows/Deploy%20to%20Vercel/badge.svg)](https://github.com/SMSDAO/reimagined-jupiter/actions/workflows/deploy-vercel.yml)
+[![Deploy to Railway](https://github.com/SMSDAO/reimagined-jupiter/workflows/Deploy%20to%20Railway/badge.svg)](https://github.com/SMSDAO/reimagined-jupiter/actions/workflows/deploy-railway.yml)
+
+### Code Quality
+[![codecov](https://codecov.io/gh/SMSDAO/reimagined-jupiter/branch/main/graph/badge.svg)](https://codecov.io/gh/SMSDAO/reimagined-jupiter)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Node.js Version](https://img.shields.io/badge/node-%3E%3D18-brightgreen.svg)](https://nodejs.org)
+
+### Metrics
+- **Test Coverage**: ≥90% (enforced)
+- **Node.js Support**: 18, 20, 22 (LTS)
+- **CI/CD**: Fully automated with preview deployments
+- **Security**: Automated vulnerability scanning
 
 ## 🌟 Acknowledgments
 
