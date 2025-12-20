@@ -79,12 +79,18 @@ jobs:
           if [ -f coverage/coverage-summary.json ]; then
             COVERAGE=$(node -e "const c = require('./coverage/coverage-summary.json'); console.log(c.total.lines.pct);")
             echo "Coverage: ${COVERAGE}%"
-            if (( $(echo "$COVERAGE < 90" | bc -l) )); then
-              echo "❌ Coverage ${COVERAGE}% is below 90% threshold"
-              exit 1
-            else
-              echo "✅ Coverage ${COVERAGE}% meets 90% threshold"
-            fi
+            
+            # Use Node.js for arithmetic comparison
+            node -e "
+              const coverage = parseFloat('${COVERAGE}');
+              if (coverage < 90) {
+                console.log('❌ Coverage ' + coverage + '% is below 90% threshold');
+                process.exit(1);
+              } else {
+                console.log('✅ Coverage ' + coverage + '% meets 90% threshold');
+                process.exit(0);
+              }
+            "
           else
             echo "⚠️ No coverage report found, skipping threshold check"
           fi

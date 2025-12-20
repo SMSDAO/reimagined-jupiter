@@ -98,7 +98,7 @@ jobs:
               ref: pr.head.sha
             });
             
-            // Define required checks
+            // Define required checks - these must match the job names in workflows
             const requiredChecks = [
               'Backend - Lint & Test (Node 18)',
               'Backend - Lint & Test (Node 20)',
@@ -111,8 +111,10 @@ jobs:
             ];
             
             // Add deployment checks if not skipped
+            // Note: These names must match job names in preview-deployments.yml
             if (!skipDeployment) {
-              requiredChecks.push('Vercel Preview Deployment', 'Railway Preview Deployment');
+              requiredChecks.push('Vercel Preview Deployment');
+              requiredChecks.push('Railway Preview Deployment');
             }
             
             const checkStatuses = {};
@@ -126,8 +128,9 @@ jobs:
             const failedChecks = [];
             
             for (const requiredCheck of requiredChecks) {
-              if (!checkStatuses[requiredCheck] || checkStatuses[requiredCheck] !== 'success') {
-                console.log(`Required check "${requiredCheck}" has not passed (status: ${checkStatuses[requiredCheck] || 'not found'})`);
+              const status = checkStatuses[requiredCheck];
+              if (!status || status !== 'success') {
+                console.log(`Required check "${requiredCheck}" has not passed (status: ${status || 'not found'})`);
                 allChecksPassed = false;
                 failedChecks.push(requiredCheck);
               }
