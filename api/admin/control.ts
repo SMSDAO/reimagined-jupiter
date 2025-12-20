@@ -33,7 +33,7 @@ interface ControlResponse {
 }
 
 // In-memory bot state (in production, use Redis or database)
-let botState: BotStatus = {
+const botState: BotStatus = {
   running: false,
   paused: false,
   uptime: 0,

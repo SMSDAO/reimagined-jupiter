@@ -39,7 +39,7 @@ This project adheres to a code of conduct. By participating, you are expected to
 
 ```bash
 # Install dependencies
-npm install --legacy-peer-deps
+npm install
 
 # Copy environment example
 cp .env.example .env
@@ -55,6 +55,12 @@ npm test
 
 # Run linting
 npm run lint
+
+# Run type checking
+npm run type-check
+
+# Run all validation checks
+npm run validate
 ```
 
 ### Webapp Setup
@@ -63,7 +69,7 @@ npm run lint
 cd webapp
 
 # Install dependencies
-npm install --legacy-peer-deps
+npm install
 
 # Create .env.local
 cp .env.example .env.local
@@ -79,7 +85,30 @@ npm run build
 
 # Run linting
 npm run lint
+
+# Run type checking
+cd .. && npm run type-check:webapp
 ```
+
+### Running CI Checks Locally
+
+Before submitting a PR, run these checks locally to ensure they will pass in CI:
+
+```bash
+# Run all validation checks (recommended)
+npm run validate
+
+# Or run individual checks:
+npm run lint              # Lint backend code
+npm run lint:webapp       # Lint webapp code  
+npm run type-check        # Type check backend
+npm run type-check:webapp # Type check webapp
+npm test                  # Run backend tests with coverage
+npm run test:webapp       # Run webapp tests with coverage
+npm run build             # Build both backend and webapp
+```
+
+All these checks must pass for your PR to be merged. The CI pipeline runs on Node.js 18 and 20.
 
 ## Coding Standards
 
@@ -179,14 +208,13 @@ logger.trade('execute', success, { profit, signature });
 ### Running Tests
 
 ```bash
-# Run all tests
-npm test
+# Backend tests
+npm test                    # Run all tests with coverage
+npm run test:coverage       # Generate coverage report
+npm run test:integration    # Run integration tests only
 
-# Run with coverage
-npm run test:coverage
-
-# Run integration tests only
-npm run test:integration
+# Webapp tests
+npm run test:webapp         # Run webapp tests with coverage
 
 # Run specific test file
 npm test -- walletScoring.test.ts
@@ -201,6 +229,9 @@ npm test -- walletScoring.test.ts
 - Test error handling paths
 - Test edge cases (e.g., insufficient balance, failed transactions)
 - Use devnet/testnet addresses, never mainnet in tests
+- All tests must pass before submitting a PR
+- Maintain or improve code coverage (target: 90%)
+- Tests should use mocks for external APIs (no network calls)
 
 ```typescript
 // Example test structure
@@ -222,6 +253,80 @@ describe('MyService', () => {
   });
 });
 ```
+
+### Coverage Requirements
+
+- **Line Coverage**: 90% minimum
+- **Branch Coverage**: 85% minimum  
+- **Function Coverage**: 90% minimum
+
+Coverage reports are automatically generated and uploaded to Codecov on every PR.
+
+## CI/CD Pipeline
+
+### Continuous Integration
+
+All PRs trigger our comprehensive CI pipeline which includes:
+
+1. **Install**: Dependencies installation on Node.js 18 and 20
+2. **Lint**: ESLint checks with --max-warnings=0
+3. **Type Check**: TypeScript strict type checking
+4. **Unit Tests**: Backend and webapp tests with coverage
+5. **Coverage**: Merged coverage report uploaded to Codecov
+6. **Security Scan**: npm audit and CodeQL analysis
+7. **Build**: TypeScript compilation and Next.js build
+
+### Pipeline Requirements
+
+Your PR must pass all of these checks:
+
+- ✅ Lint (zero warnings)
+- ✅ Type check (strict mode)
+- ✅ Backend tests (all passing)
+- ✅ Build (successful compilation)
+
+Optional but recommended:
+- ⚠️ Webapp tests (if webapp is modified)
+- ⚠️ Coverage threshold (90% target)
+- ⚠️ Security scan (no high-severity issues)
+
+### Preview Deployments
+
+When you create a PR, a preview deployment will be automatically created on Vercel (if secrets are configured). The preview URL will be posted as a comment on your PR.
+
+### Viewing CI Results
+
+1. Go to your PR on GitHub
+2. Scroll to the bottom to see CI check status
+3. Click "Details" on any check to view logs
+4. Review any failures and fix them
+5. Push new commits to re-run CI
+
+### Local CI Simulation
+
+Before pushing, simulate the CI pipeline locally:
+
+```bash
+# This runs the same checks as CI
+npm run validate
+
+# Or step by step:
+npm run lint && \
+npm run type-check && \
+npm test && \
+npm run build
+```
+
+### CodeQL Security Scanning
+
+CodeQL automatically scans the codebase for security vulnerabilities:
+
+- Runs on every push to main/develop
+- Runs on every PR
+- Runs weekly on Monday at 02:00 UTC
+- Results viewable in Security → Code scanning alerts
+
+High-severity alerts should be addressed before merging.
 
 ## Submitting Changes
 

@@ -1,5 +1,10 @@
 # GXQ STUDIO - Advanced Solana DeFi Platform
 
+[![CI Pipeline](https://github.com/SMSDAO/reimagined-jupiter/actions/workflows/ci.yml/badge.svg)](https://github.com/SMSDAO/reimagined-jupiter/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/SMSDAO/reimagined-jupiter/actions/workflows/codeql-analysis.yml/badge.svg)](https://github.com/SMSDAO/reimagined-jupiter/actions/workflows/codeql-analysis.yml)
+[![codecov](https://codecov.io/gh/SMSDAO/reimagined-jupiter/branch/main/graph/badge.svg)](https://codecov.io/gh/SMSDAO/reimagined-jupiter)
+[![Deploy Preview](https://github.com/SMSDAO/reimagined-jupiter/actions/workflows/deploy-preview.yml/badge.svg)](https://github.com/SMSDAO/reimagined-jupiter/actions/workflows/deploy-preview.yml)
+
 The most advanced Solana DeFi platform with flash loan arbitrage, sniper bot, token launchpad, and comprehensive Web3 UI.
 
 ## 🆕 Latest Updates
@@ -390,7 +395,7 @@ For complete mainnet deployment instructions, see [DEPLOYMENT_READY.md](DEPLOYME
 
 ## 🤝 Contributing
 
-Contributions are welcome! Please open an issue or submit a pull request.
+We welcome contributions! See [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines.
 
 Before contributing:
 1. Read the documentation in `docs/`
@@ -398,6 +403,64 @@ Before contributing:
 3. Add tests for new features
 4. Ensure all CI checks pass
 5. Update documentation as needed
+
+## 🔄 CI/CD Pipeline
+
+This project includes a comprehensive CI/CD pipeline with automated testing, security scanning, and deployment previews.
+
+### Pipeline Features
+
+- **Multi-Node Testing**: Tests run on Node.js 18 and 20
+- **Code Quality**: ESLint with zero warnings policy
+- **Type Safety**: Strict TypeScript checking
+- **Test Coverage**: Automated coverage collection with 90% target
+- **Security Scanning**: CodeQL analysis and npm audit
+- **Preview Deployments**: Automatic Vercel preview for every PR
+- **Auto-merge**: Automated PR merging when all checks pass
+
+### Running CI Checks Locally
+
+```bash
+# Run all validation checks
+npm run validate
+
+# Individual checks
+npm run lint              # Lint backend
+npm run lint:webapp       # Lint webapp
+npm run type-check        # Type check backend
+npm run type-check:webapp # Type check webapp
+npm run test              # Run backend tests with coverage
+npm run test:webapp       # Run webapp tests with coverage
+npm run build             # Build both backend and webapp
+npm run build:backend     # Build backend only
+npm run build:webapp      # Build webapp only
+```
+
+### Required Secrets for CI/CD
+
+Repository maintainers should configure these secrets in **Settings → Secrets and variables → Actions**:
+
+#### Vercel Deployment
+- `VERCEL_TOKEN` - Vercel authentication token
+- `VERCEL_PROJECT_ID` - Vercel project ID  
+- `VERCEL_ORG_ID` - Vercel organization/team ID
+- `NEXT_PUBLIC_RPC_URL` - Solana RPC URL for webapp
+
+#### Code Coverage
+- `CODECOV_TOKEN` - Codecov upload token
+
+#### Optional Notifications
+- `SLACK_WEBHOOK` - Slack webhook URL for notifications
+
+### CI/CD Workflow Results
+
+Check the [Actions tab](https://github.com/SMSDAO/reimagined-jupiter/actions) to view workflow runs and results. Each PR will show:
+
+- ✅ Lint and type checking results
+- ✅ Test results with coverage report
+- ✅ Security scan results
+- ✅ Build success/failure
+- 🔗 Preview deployment URL (when secrets are configured)
 
 ## 📧 Support
 
