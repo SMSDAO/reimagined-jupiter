@@ -19,3 +19,7 @@ webapp/.vercel
 # Testing
 webapp/.turbo
 /logs
+
+# CI/CD artifacts (local only)
+*.bak
+.github/workflows/*.bak
