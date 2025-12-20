@@ -7,9 +7,9 @@
  * that can be safely removed while preserving all security-critical paths.
  */
 
-import { readFileSync, existsSync } from 'fs';
-import { writeFileSync } from 'fs';
+import { readFileSync, existsSync, writeFileSync } from 'fs';
 import { join } from 'path';
+import { execSync } from 'child_process';
 
 // Security-critical patterns that must NEVER be removed
 const SECURITY_CRITICAL_PATTERNS = [
@@ -131,7 +131,6 @@ class IntelligentAnalyzer {
    * Get file modification dates from git
    */
   getFileModificationDates() {
-    const { execSync } = require('child_process');
     const dates = {};
     
     try {
