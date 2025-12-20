@@ -17,7 +17,7 @@
     "test:integration": "jest --testMatch '**/*.integration.test.ts'",
     "test:farcaster": "npm run build:backend && node dist/scripts/testFarcaster.js",
     "lint": "eslint 'src/**/*.ts' 'api/**/*.ts' 'scripts/**/*.ts' --max-warnings=0",
-    "lint:webapp": "cd webapp && npm run lint",
+    "lint:webapp": "cd webapp && npx eslint . --max-warnings=0",
     "type-check": "tsc --noEmit",
     "type-check:webapp": "cd webapp && tsc --noEmit",
     "coverage:report": "bash scripts/merge-coverage.sh",
