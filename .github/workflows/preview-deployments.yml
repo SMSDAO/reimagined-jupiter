@@ -34,6 +34,7 @@ jobs:
           cache: 'npm'
           
       - name: Validate environment variables
+        id: validate
         run: |
           echo "🔍 Validating environment configuration..."
           MISSING_VARS=""
@@ -58,7 +59,6 @@ jobs:
           
           echo "✅ All required secrets configured"
           echo "has_secrets=true" >> $GITHUB_OUTPUT
-        id: validate
           
       - name: Install Vercel CLI
         if: steps.validate.outputs.has_secrets == 'true'
@@ -224,14 +224,12 @@ jobs:
           DEPLOYMENT_URL=$(railway domain 2>&1 | grep -oP 'https://[^\s]+' | head -1 || echo "")
           
           if [ -z "$DEPLOYMENT_URL" ]; then
-            echo "⚠️ Could not retrieve deployment URL from Railway CLI"
-            echo "Attempting to construct default URL..."
-            # Fallback: Use first 8 chars of project ID (may not always work)
-            # Railway typically uses project-production.railway.app format
-            # Note: This is a best-effort fallback and may need manual verification
-            PROJECT_NAME=$(echo "${{ secrets.RAILWAY_PROJECT_ID }}" | cut -c1-8)
-            DEPLOYMENT_URL="https://${PROJECT_NAME}.railway.app"
-            echo "Using fallback URL: $DEPLOYMENT_URL (may need verification)"
+            echo "⚠️ Could not retrieve deployment URL from Railway CLI."
+            echo "ℹ️ Railway deployment likely succeeded, but the preview URL could not be determined automatically."
+            echo "   Please open the Railway dashboard for project ID '${{ secrets.RAILWAY_PROJECT_ID }}' to find the correct URL."
+            # Do not construct a guessed URL; leave the output empty to avoid posting invalid links.
+            echo "url=" >> $GITHUB_OUTPUT
+            exit 0
           fi
           
           echo "url=$DEPLOYMENT_URL" >> $GITHUB_OUTPUT

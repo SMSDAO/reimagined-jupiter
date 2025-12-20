@@ -79,7 +79,7 @@ jobs:
         if: matrix.node-version == 20
         run: |
           if [ -f coverage/coverage-summary.json ]; then
-            COVERAGE=$(node -e "const c = require('./coverage/coverage-summary.json'); console.log(c.total.lines.pct);")
+            COVERAGE=$(node -e "const fs = require('fs'); const c = JSON.parse(fs.readFileSync('coverage/coverage-summary.json', 'utf8')); console.log(c.total.lines.pct);")
             echo "Coverage: ${COVERAGE}%"
             
             # Use Node.js for arithmetic comparison
