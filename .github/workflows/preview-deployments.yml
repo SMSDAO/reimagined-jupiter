@@ -220,15 +220,18 @@ jobs:
           railway up --detach
           
           # Get deployment URL with error handling
+          # Note: This relies on Railway CLI output format which may change
           DEPLOYMENT_URL=$(railway domain 2>&1 | grep -oP 'https://[^\s]+' | head -1 || echo "")
           
           if [ -z "$DEPLOYMENT_URL" ]; then
             echo "⚠️ Could not retrieve deployment URL from Railway CLI"
             echo "Attempting to construct default URL..."
+            # Fallback: Use first 8 chars of project ID (may not always work)
             # Railway typically uses project-production.railway.app format
+            # Note: This is a best-effort fallback and may need manual verification
             PROJECT_NAME=$(echo "${{ secrets.RAILWAY_PROJECT_ID }}" | cut -c1-8)
             DEPLOYMENT_URL="https://${PROJECT_NAME}.railway.app"
-            echo "Using fallback URL: $DEPLOYMENT_URL"
+            echo "Using fallback URL: $DEPLOYMENT_URL (may need verification)"
           fi
           
           echo "url=$DEPLOYMENT_URL" >> $GITHUB_OUTPUT
