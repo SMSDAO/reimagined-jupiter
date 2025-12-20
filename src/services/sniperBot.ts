@@ -182,7 +182,7 @@ export class SniperBot {
   private handleRaydiumLog(logs: Logs): void {
     try {
       // Check for pool initialization in logs
-      const hasPoolInit = logs.logs.some(log => 
+      const hasPoolInit = logs.logs.some((log: string) => 
         log.includes('initialize') || log.includes('InitializePool') || log.includes('init_pool')
       );
 
@@ -208,7 +208,7 @@ export class SniperBot {
   private handlePumpFunLog(logs: Logs): void {
     try {
       // Check for token creation/launch in logs
-      const hasTokenLaunch = logs.logs.some(log => 
+      const hasTokenLaunch = logs.logs.some((log: string) => 
         log.includes('create') || log.includes('launch') || log.includes('initialize')
       );
 
@@ -233,7 +233,7 @@ export class SniperBot {
 
   private handleOrcaLog(logs: Logs): void {
     try {
-      const hasPoolInit = logs.logs.some(log => 
+      const hasPoolInit = logs.logs.some((log: string) => 
         log.includes('initialize') || log.includes('InitializePool')
       );
 
@@ -258,7 +258,7 @@ export class SniperBot {
 
   private handleMeteoraLog(logs: Logs): void {
     try {
-      const hasPoolInit = logs.logs.some(log => 
+      const hasPoolInit = logs.logs.some((log: string) => 
         log.includes('initialize') || log.includes('create_pool')
       );
 
@@ -283,7 +283,7 @@ export class SniperBot {
 
   private handlePhoenixLog(logs: Logs): void {
     try {
-      const hasMarketInit = logs.logs.some(log => 
+      const hasMarketInit = logs.logs.some((log: string) => 
         log.includes('initialize') || log.includes('create_market')
       );
 

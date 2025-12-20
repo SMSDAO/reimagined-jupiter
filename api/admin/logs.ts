@@ -41,7 +41,7 @@ const logsStore: LogEntry[] = [];
 
 export default async function handler(
   req: VercelRequest,
-  res: VercelResponse<LogsResponse | string>
+  res: VercelResponse
 ) {
   try {
     // Verify JWT authentication

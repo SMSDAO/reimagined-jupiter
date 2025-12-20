@@ -3,7 +3,7 @@
  * Express server with health checks and continuous arbitrage scanning
  */
 
-import express from 'express';
+import express, { Request, Response } from 'express';
 import { Connection, Keypair } from '@solana/web3.js';
 import bs58 from 'bs58';
 import { scanOpportunities } from '../lib/scanner.js';
@@ -79,7 +79,7 @@ async function initialize() {
 /**
  * Health check endpoint
  */
-app.get('/api/health', (req, res) => {
+app.get('/api/health', (req: Request, res: Response) => {
   const uptime = process.uptime();
   const memory = process.memoryUsage();
   
@@ -110,7 +110,7 @@ app.get('/api/health', (req, res) => {
 /**
  * Metrics endpoint
  */
-app.get('/api/metrics', (req, res) => {
+app.get('/api/metrics', (req: Request, res: Response) => {
   res.json({
     success: true,
     metrics: {
@@ -129,7 +129,7 @@ app.get('/api/metrics', (req, res) => {
 /**
  * Control endpoint (start/stop/pause/resume)
  */
-app.post('/api/control', express.json(), (req, res) => {
+app.post('/api/control', express.json(), (req: Request, res: Response) => {
   const { command } = req.body;
   
   switch (command) {
@@ -186,6 +186,7 @@ app.post('/api/control', express.json(), (req, res) => {
 async function monitoringLoop() {
   logger.info('Starting continuous arbitrage monitoring...');
   
+  // eslint-disable-next-line no-constant-condition
   while (true) {
     try {
       // Skip if paused or not running

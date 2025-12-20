@@ -41,6 +41,7 @@ export interface Config {
   jupiter: {
     programId: PublicKey;
     apiUrl: string;
+    priceApiUrl: string;
   };
   gxq: {
     tokenMint: PublicKey;

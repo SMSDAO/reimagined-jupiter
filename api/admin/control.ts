@@ -46,7 +46,7 @@ let botStartTime = 0;
 
 export default async function handler(
   req: VercelRequest,
-  res: VercelResponse<ControlResponse>
+  res: VercelResponse
 ) {
   // Only allow POST requests
   if (req.method !== 'POST') {

@@ -16,7 +16,7 @@ export interface ValidationRule {
   custom?: (value: any) => boolean | string;
 }
 
-export interface ValidationError {
+export interface ValidationErrorDetail {
   field: string;
   message: string;
   value?: any;
@@ -60,7 +60,7 @@ function isValidUrl(url: string): boolean {
 /**
  * Validate a single field against a rule
  */
-function validateField(value: any, rule: ValidationRule): ValidationError | null {
+function validateField(value: any, rule: ValidationRule): ValidationErrorDetail | null {
   const { field, type, required, min, max, pattern, enum: enumValues, custom } = rule;
 
   // Check if required
@@ -181,8 +181,8 @@ function validateField(value: any, rule: ValidationRule): ValidationError | null
 export function validateRequest(
   body: any,
   rules: ValidationRule[]
-): { valid: boolean; errors: ValidationError[] } {
-  const errors: ValidationError[] = [];
+): { valid: boolean; errors: ValidationErrorDetail[] } {
+  const errors: ValidationErrorDetail[] = [];
 
   for (const rule of rules) {
     const value = body[rule.field];
@@ -226,7 +226,7 @@ export function createValidationMiddleware(rules: ValidationRule[]) {
 export function validateQuery(
   query: any,
   rules: ValidationRule[]
-): { valid: boolean; errors: ValidationError[] } {
+): { valid: boolean; errors: ValidationErrorDetail[] } {
   return validateRequest(query, rules);
 }
 

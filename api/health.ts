@@ -42,7 +42,7 @@ let lastTradeTime: number | null = null;
 
 export default async function handler(
   req: VercelRequest,
-  res: VercelResponse<HealthResponse>
+  res: VercelResponse
 ) {
   const errors: string[] = [];
   let status: 'healthy' | 'degraded' | 'unhealthy' = 'healthy';
