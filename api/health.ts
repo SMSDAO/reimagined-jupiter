@@ -34,7 +34,7 @@ interface HealthResponse {
 }
 
 // In-memory tracking for uptime and errors
-let startTime = Date.now();
+const startTime = Date.now();
 let totalRequests = 0;
 let errorCount = 0;
 let lastMonitorRun: number | null = null;

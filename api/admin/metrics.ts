@@ -148,7 +148,7 @@ export default async function handler(
       : [];
     
     // Get RPC health
-    let rpcHealth: {
+    const rpcHealth: {
       status: 'healthy' | 'degraded' | 'unhealthy';
       latency: number;
       uptime: number;
