@@ -1,0 +1,196 @@
+name: Deploy Preview
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches:
+      - main
+      - develop
+
+permissions:
+  contents: read
+  pull-requests: write
+  deployments: write
+
+jobs:
+  validate-secrets:
+    name: Validate Required Secrets
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      has-secrets: ${{ steps.check.outputs.has-secrets }}
+    
+    steps:
+      - name: Check required secrets
+        id: check
+        run: |
+          MISSING_SECRETS=""
+          
+          if [ -z "${{ secrets.VERCEL_TOKEN }}" ]; then
+            MISSING_SECRETS="${MISSING_SECRETS}VERCEL_TOKEN, "
+          fi
+          
+          if [ -z "${{ secrets.VERCEL_PROJECT_ID }}" ]; then
+            MISSING_SECRETS="${MISSING_SECRETS}VERCEL_PROJECT_ID, "
+          fi
+          
+          if [ -z "${{ secrets.VERCEL_ORG_ID }}" ]; then
+            MISSING_SECRETS="${MISSING_SECRETS}VERCEL_ORG_ID, "
+          fi
+          
+          if [ -n "$MISSING_SECRETS" ]; then
+            echo "has-secrets=false" >> $GITHUB_OUTPUT
+            echo "⚠️ Missing required secrets: $MISSING_SECRETS"
+            echo "::warning::Missing required secrets: $MISSING_SECRETS"
+          else
+            echo "has-secrets=true" >> $GITHUB_OUTPUT
+            echo "✅ All required secrets are configured"
+          fi
+
+  deploy-preview:
+    name: Deploy to Vercel Preview
+    runs-on: ubuntu-latest
+    needs: validate-secrets
+    if: needs.validate-secrets.outputs.has-secrets == 'true'
+    timeout-minutes: 15
+    environment:
+      name: preview
+      url: ${{ steps.deploy.outputs.url }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: webapp/package-lock.json
+          
+      - name: Install webapp dependencies
+        working-directory: ./webapp
+        run: npm ci
+        
+      - name: Build webapp
+        working-directory: ./webapp
+        run: npm run build
+        env:
+          NEXT_PUBLIC_RPC_URL: ${{ secrets.NEXT_PUBLIC_RPC_URL || 'https://api.mainnet-beta.solana.com' }}
+          
+      - name: Deploy to Vercel
+        id: deploy
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          working-directory: ./webapp
+          scope: ${{ secrets.VERCEL_ORG_ID }}
+          
+      - name: Add preview-deployed label
+        uses: actions/github-script@v7
+        with:
+          script: |
+            try {
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                labels: ['preview-deployed']
+              });
+            } catch (error) {
+              console.log('Label may already exist:', error.message);
+            }
+          
+      - name: Comment preview URL on PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const url = '${{ steps.deploy.outputs.preview-url }}';
+            const comment = `## 🚀 Preview Deployment
+            
+            Your preview deployment is ready!
+            
+            **Preview URL**: ${url}
+            
+            ### Quick Links
+            - [🌐 Preview Site](${url})
+            - [🔍 Health Check](${url}/api/health)
+            - [📊 Vercel Dashboard](https://vercel.com/${{ secrets.VERCEL_ORG_ID }}/${{ secrets.VERCEL_PROJECT_ID }})
+            
+            ### Deployment Details
+            - **Commit**: ${context.sha.substring(0, 7)}
+            - **Branch**: ${context.ref.replace('refs/heads/', '')}
+            - **Author**: @${context.actor}
+            
+            ---
+            
+            *This preview will be automatically updated when you push new commits.*
+            `;
+            
+            // Check if a preview comment already exists
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number
+            });
+            
+            const botComment = comments.find(comment => 
+              comment.user.type === 'Bot' && 
+              comment.body.includes('Preview Deployment')
+            );
+            
+            if (botComment) {
+              // Update existing comment
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: comment
+              });
+            } else {
+              // Create new comment
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: comment
+              });
+            }
+
+  skip-preview:
+    name: Skip Preview (Missing Secrets)
+    runs-on: ubuntu-latest
+    needs: validate-secrets
+    if: needs.validate-secrets.outputs.has-secrets == 'false'
+    
+    steps:
+      - name: Comment on PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const comment = `## ⚠️ Preview Deployment Skipped
+            
+            Preview deployment was skipped because required secrets are not configured.
+            
+            ### Required Secrets
+            Repository maintainers need to configure these secrets in repository settings:
+            - \`VERCEL_TOKEN\` - Vercel authentication token
+            - \`VERCEL_PROJECT_ID\` - Vercel project ID
+            - \`VERCEL_ORG_ID\` - Vercel organization/team ID
+            
+            ### How to Configure
+            1. Go to repository **Settings** → **Secrets and variables** → **Actions**
+            2. Add the required secrets
+            3. Re-run this workflow or push a new commit
+            
+            For more information, see the [Vercel deployment documentation](https://vercel.com/docs/deployments/git).
+            `;
+            
+            github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: comment
+            });

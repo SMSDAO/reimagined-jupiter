@@ -1,0 +1,98 @@
+name: CodeQL Security Analysis
+
+on:
+  push:
+    branches: 
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+      - develop
+  schedule:
+    # Run at 02:00 UTC every Monday
+    - cron: '0 2 * * 1'
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+  security-events: write
+
+jobs:
+  analyze:
+    name: CodeQL Analysis
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
+    strategy:
+      fail-fast: false
+      matrix:
+        language: ['javascript']
+        # CodeQL supports: 'cpp', 'csharp', 'go', 'java', 'javascript', 'python', 'ruby', 'swift'
+        # Learn more: https://aka.ms/codeql-docs/language-support
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          # If you want to specify custom queries, you can do so here
+          # queries: security-extended,security-and-quality
+          config-file: ./.github/codeql-config.yml
+          
+      - name: Install dependencies (for better analysis)
+        run: |
+          npm ci || echo "Dependency install failed, continuing with available code"
+          cd webapp && npm ci || echo "Webapp dependency install failed"
+        continue-on-error: true
+        
+      # Autobuild attempts to build any compiled languages (C/C++, C#, Go, Java, or Swift).
+      # For JavaScript/TypeScript, autobuild will install dependencies and build if a build script exists
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v3
+        continue-on-error: true
+        
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{ matrix.language }}"
+          upload: true
+          
+      - name: Upload SARIF results
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: ../results
+        continue-on-error: true
+        
+      - name: Check for high severity alerts
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: alerts } = await github.rest.codeScanning.listAlertsForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              severity: 'high'
+            });
+            
+            const criticalAlerts = alerts.filter(a => a.rule.severity === 'error' || a.rule.severity === 'warning');
+            
+            if (criticalAlerts.length > 0) {
+              console.log(`⚠️ Found ${criticalAlerts.length} high/critical severity alerts`);
+              core.warning(`Found ${criticalAlerts.length} high/critical severity CodeQL alerts. Please review in the Security tab.`);
+            } else {
+              console.log('✅ No high/critical severity alerts found');
+            }
+        continue-on-error: true
