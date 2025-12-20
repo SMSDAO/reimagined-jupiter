@@ -28,7 +28,7 @@ jobs:
         
       - name: Get workflow run details
         id: workflow
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             let runId;
@@ -118,7 +118,7 @@ jobs:
             
       - name: Retry workflow
         if: steps.workflow.outputs.should_retry == 'true'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const runId = parseInt('${{ steps.workflow.outputs.run_id }}');
@@ -141,7 +141,7 @@ jobs:
         if: |
           steps.workflow.outputs.should_retry == 'false' &&
           steps.workflow.outputs.attempt >= 3
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const runId = '${{ steps.workflow.outputs.run_id }}';
