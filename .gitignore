@@ -23,3 +23,7 @@ webapp/.turbo
 # CI/CD artifacts (local only)
 *.bak
 .github/workflows/*.bak
+
+# Cleanup analysis (temporary files, uploaded as artifacts)
+.cleanup-analysis/*.txt
+.cleanup-analysis/*.json
