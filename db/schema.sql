@@ -366,6 +366,225 @@ ORDER BY gm_count DESC;
 -- VALUES ('DevWalletAddress123...', 85, 'DEGEN', 18, 19, 12, 15, 14, 13, 5, 5000.00);
 
 -- =====================================================
+-- 9. USERS TABLE (Wallet Governance)
+-- =====================================================
+CREATE TABLE users (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  wallet_public_key VARCHAR(44) UNIQUE NOT NULL,
+  
+  -- Hashed identifiers (never store raw values)
+  ip_hash VARCHAR(64) NOT NULL,
+  device_fingerprint_hash VARCHAR(64) NOT NULL,
+  
+  -- Session tracking
+  last_login TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  login_count INTEGER DEFAULT 1,
+  
+  -- User status
+  is_active BOOLEAN DEFAULT TRUE,
+  is_banned BOOLEAN DEFAULT FALSE,
+  
+  -- Timestamps
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  
+  -- Constraints
+  CONSTRAINT wallet_public_key_format CHECK (LENGTH(wallet_public_key) BETWEEN 32 AND 44)
+);
+
+-- =====================================================
+-- 10. SUB_WALLETS TABLE (Arbitrage Wallets)
+-- =====================================================
+CREATE TABLE sub_wallets (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID NOT NULL,
+  
+  -- Wallet identification
+  public_key VARCHAR(44) UNIQUE NOT NULL,
+  wallet_name VARCHAR(100),
+  
+  -- GXQ-ending validation (enforced by application)
+  -- Public keys must end with 'GXQ'
+  
+  -- Wallet metadata
+  wallet_index INTEGER NOT NULL CHECK (wallet_index >= 1 AND wallet_index <= 3),
+  is_active BOOLEAN DEFAULT TRUE,
+  
+  -- Balance tracking
+  last_balance_sol DECIMAL(20, 9) DEFAULT 0,
+  last_balance_check TIMESTAMP,
+  
+  -- Usage statistics
+  total_trades INTEGER DEFAULT 0,
+  total_profit_sol DECIMAL(20, 9) DEFAULT 0,
+  
+  -- Timestamps
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  
+  -- Foreign key
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  
+  -- Constraints
+  CONSTRAINT public_key_format CHECK (LENGTH(public_key) BETWEEN 32 AND 44),
+  CONSTRAINT unique_user_wallet_index UNIQUE (user_id, wallet_index)
+);
+
+-- =====================================================
+-- 11. WALLET_KEYS TABLE (Encrypted Private Keys - Secure Enclave)
+-- =====================================================
+CREATE TABLE wallet_keys (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  sub_wallet_id UUID UNIQUE NOT NULL,
+  
+  -- Encrypted private key (AES-256-GCM encrypted)
+  encrypted_private_key TEXT NOT NULL,
+  encryption_iv VARCHAR(32) NOT NULL,
+  encryption_tag VARCHAR(32) NOT NULL,
+  
+  -- Key derivation metadata
+  key_version INTEGER DEFAULT 1,
+  encryption_algorithm VARCHAR(50) DEFAULT 'AES-256-GCM',
+  
+  -- Security metadata
+  last_used TIMESTAMP,
+  usage_count INTEGER DEFAULT 0,
+  
+  -- Timestamps
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  
+  -- Foreign key
+  FOREIGN KEY (sub_wallet_id) REFERENCES sub_wallets(id) ON DELETE CASCADE
+);
+
+-- =====================================================
+-- 12. WALLET_AUDIT_LOG TABLE (Comprehensive Audit Trail)
+-- =====================================================
+CREATE TABLE wallet_audit_log (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  
+  -- User and wallet identification
+  user_id UUID,
+  sub_wallet_id UUID,
+  wallet_public_key VARCHAR(44),
+  
+  -- Event details
+  event_type VARCHAR(50) NOT NULL,
+  event_action VARCHAR(100) NOT NULL,
+  event_description TEXT,
+  
+  -- Request metadata (hashed)
+  ip_hash VARCHAR(64),
+  device_fingerprint_hash VARCHAR(64),
+  user_agent TEXT,
+  
+  -- Transaction details (for trade events)
+  transaction_signature VARCHAR(88),
+  amount_sol DECIMAL(20, 9),
+  profit_sol DECIMAL(20, 9),
+  
+  -- Status
+  status VARCHAR(20) DEFAULT 'success',
+  error_message TEXT,
+  
+  -- Timestamp
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  
+  -- Foreign keys (nullable for flexibility)
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
+  FOREIGN KEY (sub_wallet_id) REFERENCES sub_wallets(id) ON DELETE SET NULL,
+  
+  -- Constraints
+  CONSTRAINT valid_event_type CHECK (event_type IN (
+    'wallet_created', 'wallet_imported', 'wallet_exported', 
+    'wallet_deleted', 'wallet_activated', 'wallet_deactivated',
+    'trade_executed', 'trade_failed', 'balance_check',
+    'user_login', 'user_logout', 'admin_action'
+  )),
+  CONSTRAINT valid_status CHECK (status IN ('success', 'failure', 'pending'))
+);
+
+-- =====================================================
+-- INDEXES FOR NEW TABLES
+-- =====================================================
+
+-- Users indexes
+CREATE INDEX idx_users_wallet_public_key ON users(wallet_public_key);
+CREATE INDEX idx_users_last_login ON users(last_login);
+CREATE INDEX idx_users_is_active ON users(is_active);
+CREATE INDEX idx_users_created_at ON users(created_at);
+
+-- Sub-wallets indexes
+CREATE INDEX idx_sub_wallets_user_id ON sub_wallets(user_id);
+CREATE INDEX idx_sub_wallets_public_key ON sub_wallets(public_key);
+CREATE INDEX idx_sub_wallets_is_active ON sub_wallets(is_active);
+CREATE INDEX idx_sub_wallets_created_at ON sub_wallets(created_at);
+
+-- Wallet keys indexes
+CREATE INDEX idx_wallet_keys_sub_wallet_id ON wallet_keys(sub_wallet_id);
+CREATE INDEX idx_wallet_keys_last_used ON wallet_keys(last_used);
+
+-- Wallet audit log indexes
+CREATE INDEX idx_audit_user_id ON wallet_audit_log(user_id);
+CREATE INDEX idx_audit_sub_wallet_id ON wallet_audit_log(sub_wallet_id);
+CREATE INDEX idx_audit_wallet_public_key ON wallet_audit_log(wallet_public_key);
+CREATE INDEX idx_audit_event_type ON wallet_audit_log(event_type);
+CREATE INDEX idx_audit_created_at ON wallet_audit_log(created_at);
+CREATE INDEX idx_audit_status ON wallet_audit_log(status);
+
+-- =====================================================
+-- TRIGGERS FOR NEW TABLES
+-- =====================================================
+
+-- Update timestamp triggers
+CREATE TRIGGER update_users_updated_at BEFORE UPDATE
+    ON users FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_sub_wallets_updated_at BEFORE UPDATE
+    ON sub_wallets FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_wallet_keys_updated_at BEFORE UPDATE
+    ON wallet_keys FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- =====================================================
+-- VIEWS FOR WALLET GOVERNANCE
+-- =====================================================
+
+-- User wallet overview
+CREATE OR REPLACE VIEW user_wallet_overview AS
+SELECT 
+    u.id as user_id,
+    u.wallet_public_key as main_wallet,
+    u.last_login,
+    u.login_count,
+    COUNT(sw.id) as sub_wallet_count,
+    SUM(CASE WHEN sw.is_active THEN 1 ELSE 0 END) as active_sub_wallets,
+    SUM(sw.total_trades) as total_trades,
+    SUM(sw.total_profit_sol) as total_profit_sol,
+    MAX(sw.last_balance_check) as last_balance_check
+FROM users u
+LEFT JOIN sub_wallets sw ON u.id = sw.user_id
+GROUP BY u.id, u.wallet_public_key, u.last_login, u.login_count;
+
+-- Recent audit events view
+CREATE OR REPLACE VIEW recent_audit_events AS
+SELECT 
+    wal.id,
+    wal.event_type,
+    wal.event_action,
+    wal.wallet_public_key,
+    u.wallet_public_key as user_main_wallet,
+    sw.public_key as sub_wallet_public_key,
+    wal.status,
+    wal.created_at
+FROM wallet_audit_log wal
+LEFT JOIN users u ON wal.user_id = u.id
+LEFT JOIN sub_wallets sw ON wal.sub_wallet_id = sw.id
+ORDER BY wal.created_at DESC
+LIMIT 100;
+
+-- =====================================================
 -- GRANT PERMISSIONS (adjust as needed)
 -- =====================================================
 
