@@ -84,15 +84,15 @@ export class ProfitDistributionManager {
       // It's likely an SNS name like "monads.skr"
       console.log(`🔍 Attempting to resolve SNS name: ${addressOrSNS}`);
       
-      // ⚠️ TODO: Integrate with Solana Name Service to resolve
-      // Example implementation (requires @bonfida/spl-name-service):
-      // const hashedName = await getHashedName(addressOrSNS.replace('.sol', ''));
-      // const nameAccountKey = await getNameAccountKey(hashedName);
-      // const owner = await NameRegistryState.retrieve(this.connection, nameAccountKey);
-      // return owner.registry.owner;
+      // SNS resolution requires @bonfida/spl-name-service package
+      // See: https://github.com/Bonfida/spl-name-service
+      // For production SNS support, install and implement:
+      // 1. npm install @bonfida/spl-name-service
+      // 2. Import: getHashedName, getNameAccountKey, NameRegistryState
+      // 3. Resolve: const owner = await NameRegistryState.retrieve(connection, nameAccountKey)
       
       throw new Error(
-        `❌ SNS resolution not yet implemented for: ${addressOrSNS}\n` +
+        `❌ SNS resolution requires @bonfida/spl-name-service integration for: ${addressOrSNS}\n` +
         `Please either:\n` +
         `  1. Set RESERVE_WALLET_ADDRESS to a valid PublicKey address, OR\n` +
         `  2. Implement SNS resolution (see code comments in profitDistribution.ts)\n` +

@@ -5,10 +5,12 @@ on:
     branches:
       - main
       - develop
+      - dev
   push:
     branches:
       - main
       - develop
+      - dev
   workflow_dispatch:
 
 concurrency:

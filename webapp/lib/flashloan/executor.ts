@@ -42,10 +42,16 @@ export interface FlashloanExecutionResult {
 export class FlashloanExecutor {
   private connection: Connection;
   private jupiterApiUrl: string;
+  private minProfitThreshold: number;
 
-  constructor(connection: Connection, jupiterApiUrl: string = 'https://api.jup.ag/v6') {
+  constructor(
+    connection: Connection, 
+    jupiterApiUrl: string = 'https://api.jup.ag/v6',
+    minProfitThreshold: number = 0.001 // 0.1% of loan amount
+  ) {
     this.connection = connection;
     this.jupiterApiUrl = jupiterApiUrl;
+    this.minProfitThreshold = minProfitThreshold;
   }
 
   /**
@@ -172,12 +178,10 @@ export class FlashloanExecutor {
 
       console.log('[FlashloanExecutor] Simulation successful!');
 
-      // Note: In production, the transaction would be signed by the user's wallet
-      // and sent to the network. For API endpoint, we return the unsigned transaction
-      // or the transaction data for the client to sign.
-      
-      // TODO: Return serialized transaction for client-side signing
+      // Production Note: Transaction requires user's wallet signature
+      // For client-side signing, serialize and return the transaction:
       // const serializedTx = transaction.serialize({ requireAllSignatures: false });
+      // return { ...result, serializedTransaction: serializedTx }
       
       return {
         success: true,
@@ -278,15 +282,13 @@ export class FlashloanExecutor {
     // Calculate profit
     const profit = outputAmount - repayAmount;
     
-    // Check minimum profit threshold (0.1% of loan amount by default)
-    // TODO: Make this configurable via constructor or environment variable
-    const minProfitThreshold = 0.001; // 0.1%
-    const minProfit = Math.floor(loanAmount * minProfitThreshold);
+    // Check minimum profit threshold (configurable via constructor)
+    const minProfit = Math.floor(loanAmount * this.minProfitThreshold);
     if (profit < minProfit) {
       return {
         profitable: false,
         profit,
-        reason: `Profit ${profit} below minimum threshold ${minProfit} (${minProfitThreshold * 100}%)`,
+        reason: `Profit ${profit} below minimum threshold ${minProfit} (${this.minProfitThreshold * 100}%)`,
       };
     }
     

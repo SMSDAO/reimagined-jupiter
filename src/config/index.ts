@@ -66,7 +66,9 @@ export const config: Config = {
   devFee: {
     enabled: process.env.DEV_FEE_ENABLED !== 'false',
     percentage: parseFloat(process.env.DEV_FEE_PERCENTAGE || '0.10'), // 10% default
-    wallet: new PublicKey(process.env.DEV_FEE_WALLET || '11111111111111111111111111111111'), // Placeholder, use real wallet in production
+    // IMPORTANT: Set DEV_FEE_WALLET environment variable before enabling dev fees in production
+    // Using system program address as placeholder - this will cause fees to fail if not configured
+    wallet: new PublicKey(process.env.DEV_FEE_WALLET || '11111111111111111111111111111111'),
   },
   profitDistribution: {
     enabled: process.env.PROFIT_DISTRIBUTION_ENABLED !== 'false',
