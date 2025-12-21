@@ -191,12 +191,13 @@ merge_score() {
     local insertions=0
     local deletions=0
     
-    # Attempt merge in test mode
-    if git merge --no-commit --no-ff "$branch" 2>/dev/null; then
-        # Successful merge, analyze changes
-        files_changed=$(git diff --cached --numstat | wc -l)
-        insertions=$(git diff --cached --numstat | awk '{sum+=$1} END {print sum+0}')
-        deletions=$(git diff --cached --numstat | awk '{sum+=$2} END {print sum+0}')
+    # Attempt merge in test mode (without committing)
+    # Note: We use --no-commit to analyze the merge without completing it
+    if git merge --no-commit "$branch" 2>/dev/null; then
+        # Successful merge (or merge in progress), analyze changes
+        files_changed=$(git diff --cached --numstat | grep -v "^-" | wc -l)
+        insertions=$(git diff --cached --numstat | grep -v "^-" | awk '{sum+=$1} END {print sum+0}')
+        deletions=$(git diff --cached --numstat | grep -v "^-" | awk '{sum+=$2} END {print sum+0}')
         
         # Abort the test merge
         git merge --abort 2>/dev/null || true
@@ -419,10 +420,10 @@ merge_branch() {
     
     # Wait with timeout
     local elapsed=0
-    while kill -0 $merge_pid 2>/dev/null; do
+    while kill -0 "$merge_pid" 2>/dev/null; do
         if [ "$elapsed" -ge "$TIMEOUT_SECONDS" ]; then
             log "ERROR" "Merge timeout for $branch (${TIMEOUT_SECONDS}s)"
-            kill -9 $merge_pid 2>/dev/null || true
+            kill -9 "$merge_pid" 2>/dev/null || true
             cleanup_worktree "$worktree_path"
             json_add "$branch" "timeout" "$score" "Merge timeout" "$conflicts" "$files_changed"
             save_state "$branch" "timeout"
@@ -572,13 +573,7 @@ generate_report() {
     # Update summary in report
     local temp_file
     temp_file=$(mktemp)
-    jq ".summary.total = $total | 
-        .summary.success = $success | 
-        .summary.failed = $failed | 
-        .summary.skipped = $skipped | 
-        .summary.timeout = $timeout | 
-        .summary.dry_run = $dry_run |
-        .summary.end_time = \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"" "$REPORT_FILE" > "$temp_file" && mv "$temp_file" "$REPORT_FILE"
+    jq ".summary.total = $total | .summary.success = $success | .summary.failed = $failed | .summary.skipped = $skipped | .summary.timeout = $timeout | .summary.dry_run = $dry_run | .summary.end_time = \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"" "$REPORT_FILE" > "$temp_file" && mv "$temp_file" "$REPORT_FILE"
     
     log "INFO" "========================================="
     log "INFO" "MERGE SUMMARY"
