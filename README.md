@@ -4,6 +4,7 @@
 [![CodeQL](https://github.com/SMSDAO/reimagined-jupiter/actions/workflows/codeql-analysis.yml/badge.svg)](https://github.com/SMSDAO/reimagined-jupiter/actions/workflows/codeql-analysis.yml)
 [![codecov](https://codecov.io/gh/SMSDAO/reimagined-jupiter/branch/main/graph/badge.svg)](https://codecov.io/gh/SMSDAO/reimagined-jupiter)
 [![Deploy Preview](https://github.com/SMSDAO/reimagined-jupiter/actions/workflows/deploy-preview.yml/badge.svg)](https://github.com/SMSDAO/reimagined-jupiter/actions/workflows/deploy-preview.yml)
+[![Deploy Railway](https://github.com/SMSDAO/reimagined-jupiter/actions/workflows/deploy-railway.yml/badge.svg)](https://github.com/SMSDAO/reimagined-jupiter/actions/workflows/deploy-railway.yml)
 
 The most advanced Solana DeFi platform with flash loan arbitrage, sniper bot, token launchpad, and comprehensive Web3 UI.
 
@@ -52,6 +53,54 @@ vercel --prod
 ```
 
 See [VERCEL_DEPLOY.md](VERCEL_DEPLOY.md) for detailed instructions and troubleshooting.
+
+### Quick Deploy to Railway
+
+**Railway provides 24/7 backend hosting with automated arbitrage scanning!**
+
+[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/template/SMSDAO/reimagined-jupiter?referralCode=gxq)
+
+#### Automated Setup:
+```bash
+bash scripts/setup-railway.sh
+```
+
+#### Manual Setup:
+```bash
+# Install Railway CLI
+curl -fsSL https://railway.app/install.sh | sh
+
+# Login and link to project
+railway login
+railway link 2077acd9-f81f-47ba-b8c7-8bf6905f45fc
+
+# Set environment variables
+railway variables --set SOLANA_RPC_URL="your-rpc-url"
+railway variables --set WALLET_PRIVATE_KEY="your-private-key"
+
+# Deploy
+railway up
+```
+
+**Features:**
+- ✅ 24/7 automated arbitrage scanning
+- ✅ Auto-deployment on push to main
+- ✅ Preview deployments for PRs
+- ✅ Health check monitoring with auto-restart
+- ✅ Secret synchronization workflow
+- ✅ Automatic rollback on failure
+- ✅ Real-time logs and metrics
+
+**Required Secrets:**
+- `RAILWAY_TOKEN` - Railway API token
+- `RAILWAY_PROJECT_ID` - `2077acd9-f81f-47ba-b8c7-8bf6905f45fc`
+- `SOLANA_RPC_URL` - Solana RPC endpoint
+- `WALLET_PRIVATE_KEY` - Wallet private key (base58)
+- `ADMIN_USERNAME` - Admin username
+- `ADMIN_PASSWORD` - Admin password
+- `JWT_SECRET` - JWT secret
+
+📖 See [docs/RAILWAY_DEPLOYMENT.md](docs/RAILWAY_DEPLOYMENT.md) for complete Railway deployment guide.
 
 ## 🚀 Backend CLI Features
 
@@ -460,8 +509,9 @@ This project includes a comprehensive CI/CD pipeline with automated testing, sec
 - **Type Safety**: Strict TypeScript checking
 - **Test Coverage**: Automated coverage collection with 90% target
 - **Security Scanning**: CodeQL analysis and npm audit
-- **Preview Deployments**: Automatic Vercel preview for every PR
+- **Preview Deployments**: Automatic Vercel and Railway previews for every PR
 - **Auto-merge**: Automated PR merging when all checks pass
+- **Dual Deployment**: Automatic deployment to both Vercel (webapp) and Railway (backend) on push to main
 
 ### Running CI Checks Locally
 
@@ -485,11 +535,20 @@ npm run build:webapp      # Build webapp only
 
 Repository maintainers should configure these secrets in **Settings → Secrets and variables → Actions**:
 
-#### Vercel Deployment
+#### Vercel Deployment (Webapp)
 - `VERCEL_TOKEN` - Vercel authentication token
 - `VERCEL_PROJECT_ID` - Vercel project ID  
 - `VERCEL_ORG_ID` - Vercel organization/team ID
 - `NEXT_PUBLIC_RPC_URL` - Solana RPC URL for webapp
+
+#### Railway Deployment (Backend)
+- `RAILWAY_TOKEN` - Railway API authentication token
+- `RAILWAY_PROJECT_ID` - Railway project ID (`2077acd9-f81f-47ba-b8c7-8bf6905f45fc`)
+- `SOLANA_RPC_URL` - Solana RPC endpoint URL
+- `WALLET_PRIVATE_KEY` - Wallet private key (base58 format)
+- `ADMIN_USERNAME` - Admin panel username
+- `ADMIN_PASSWORD` - Admin panel password
+- `JWT_SECRET` - JWT authentication secret
 
 #### Code Coverage
 - `CODECOV_TOKEN` - Codecov upload token

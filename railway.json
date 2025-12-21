@@ -1,5 +1,8 @@
 {
   "$schema": "https://railway.app/railway.schema.json",
+  "projectId": "2077acd9-f81f-47ba-b8c7-8bf6905f45fc",
+  "name": "gxq-studio-solana-arbitrage",
+  "description": "Advanced Solana DeFi platform with flash loan arbitrage, sniper bot, and token launchpad",
   "build": {
     "builder": "NIXPACKS",
     "buildCommand": "npm install && npm run build"
@@ -10,8 +13,11 @@
     "restartPolicyMaxRetries": 10,
     "healthcheckPath": "/api/health",
     "healthcheckTimeout": 30,
+    "healthcheckInterval": 60,
+    "healthcheckMaxRetries": 5,
     "numReplicas": 1,
-    "sleepApplication": false
+    "sleepApplication": false,
+    "region": "us-west1"
   },
   "environmentVariables": {
     "SOLANA_RPC_URL": {
