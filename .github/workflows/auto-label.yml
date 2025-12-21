@@ -2,7 +2,7 @@ name: Auto-label PRs
 
 on:
   pull_request:
-    types: [opened, reopened, synchronize]
+    types: [opened, reopened]
   workflow_dispatch:
     inputs:
       apply_to_all_open_prs:
@@ -16,8 +16,7 @@ permissions:
   pull-requests: write
 
 jobs:
-  label-single:
-    if: github.event_name == 'pull_request'
+  ensure-labels:
     runs-on: ubuntu-latest
     steps:
       - name: Ensure labels exist
@@ -49,6 +48,12 @@ jobs:
                 }
               }
             }
+
+  label-single:
+    needs: ensure-labels
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
       - name: Add labels to this PR
         uses: actions/github-script@v8
         with:
@@ -79,38 +84,10 @@ jobs:
               });
             }
   label-all-open:
+    needs: ensure-labels
     if: github.event_name == 'workflow_dispatch' && inputs.apply_to_all_open_prs == true
     runs-on: ubuntu-latest
     steps:
-      - name: Ensure labels exist
-        uses: actions/github-script@v8
-        with:
-          script: |
-            const labels = [
-              { name: "auto-merge", color: "2ecc71", description: "Enable auto-merge when checks pass" },
-              { name: "skip-deployment", color: "b31f45", description: "Skip deployment checks" },
-            ];
-            for (const l of labels) {
-              try {
-                await github.rest.issues.getLabel({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  name: l.name,
-                });
-              } catch (e) {
-                if (e.status === 404) {
-                  await github.rest.issues.createLabel({
-                    owner: context.repo.owner,
-                    repo: context.repo.repo,
-                    name: l.name,
-                    color: l.color,
-                    description: l.description,
-                  });
-                } else {
-                  throw e;
-                }
-              }
-            }
       - name: Add labels to all open PRs
         uses: actions/github-script@v8
         with:
@@ -133,12 +110,54 @@ jobs:
               return results;
             }
 
+            // Add a delay between API calls to avoid rate limiting
+            const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
             const prs = await paginateAllOpenPRs();
+            console.log(`Found ${prs.length} open PRs to process`);
+            
+            let successCount = 0;
+            let skipCount = 0;
+            let errorCount = 0;
+            
             for (const pr of prs) {
-              await github.rest.issues.addLabels({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: pr.number,
-                labels: ["auto-merge", "skip-deployment"],
-              });
+              try {
+                // Check if labels already exist on this PR
+                const existingLabels = Array.isArray(pr.labels)
+                  ? pr.labels
+                      .map((label) => label && label.name)
+                      .filter((name) => typeof name === "string")
+                  : [];
+
+                const desiredLabels = ["auto-merge", "skip-deployment"];
+
+                // Only add labels that are not already present
+                const labelsToAdd = desiredLabels.filter(
+                  (label) => !existingLabels.includes(label),
+                );
+
+                if (labelsToAdd.length > 0) {
+                  await github.rest.issues.addLabels({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: pr.number,
+                    labels: labelsToAdd,
+                  });
+                  console.log(`✓ Added ${labelsToAdd.join(', ')} to PR #${pr.number}`);
+                  successCount++;
+                  
+                  // Add delay between requests to avoid rate limiting
+                  await delay(100);
+                } else {
+                  console.log(`⊘ Skipped PR #${pr.number} (labels already present)`);
+                  skipCount++;
+                }
+              } catch (error) {
+                console.warn(
+                  `✗ Failed to add labels to PR #${pr.number}: ${error?.message ?? String(error)}`
+                );
+                errorCount++;
+              }
             }
+            
+            console.log(`\nSummary: ${successCount} labeled, ${skipCount} skipped, ${errorCount} failed`);
