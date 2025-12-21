@@ -53,14 +53,31 @@ jobs:
         uses: actions/github-script@v8
         with:
           script: |
-            const number = context.payload.pull_request.number;
-            await github.rest.issues.addLabels({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: number,
-              labels: ["auto-merge", "skip-deployment"],
-            });
+            const pr = context.payload.pull_request;
+            const number = pr.number;
 
+            // Extract existing label names on this PR
+            const existingLabels = Array.isArray(pr.labels)
+              ? pr.labels
+                  .map((label) => label && label.name)
+                  .filter((name) => typeof name === "string")
+              : [];
+
+            const desiredLabels = ["auto-merge", "skip-deployment"];
+
+            // Only add labels that are not already present
+            const labelsToAdd = desiredLabels.filter(
+              (label) => !existingLabels.includes(label),
+            );
+
+            if (labelsToAdd.length > 0) {
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: number,
+                labels: labelsToAdd,
+              });
+            }
   label-all-open:
     if: github.event_name == 'workflow_dispatch' && inputs.apply_to_all_open_prs == true
     runs-on: ubuntu-latest
