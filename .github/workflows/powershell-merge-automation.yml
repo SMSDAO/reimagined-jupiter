@@ -1,0 +1,298 @@
+name: PowerShell Merge Automation (Optional)
+
+# This workflow demonstrates the PowerShell merge automation script.
+# It is disabled by default. To enable, remove the `if: false` condition.
+
+on:
+  schedule:
+    # Run daily at 2 AM UTC (disabled by default)
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      source_branches:
+        description: 'Comma-separated list of branches to merge (leave empty for auto-sweep)'
+        required: false
+        type: string
+      target_branch:
+        description: 'Target branch'
+        required: false
+        default: 'develop'
+        type: string
+      max_parallel_jobs:
+        description: 'Maximum parallel jobs (1-8)'
+        required: false
+        default: '4'
+        type: choice
+        options:
+          - '1'
+          - '2'
+          - '4'
+          - '6'
+          - '8'
+      dry_run:
+        description: 'Dry run mode (test without making changes)'
+        required: false
+        default: true
+        type: boolean
+      benchmark_mode:
+        description: 'Enable performance benchmarking'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  merge-branches:
+    name: Automated Branch Merge
+    runs-on: ubuntu-latest
+    # Disabled by default - remove this line to enable
+    if: false
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history needed for merge operations
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Validate PowerShell Installation
+        shell: pwsh
+        run: |
+          Write-Host "PowerShell Version: $($PSVersionTable.PSVersion)"
+          Write-Host "Git Version: $(git --version)"
+
+      - name: Run Test Suite
+        shell: pwsh
+        run: |
+          Write-Host "Running validation tests..."
+          ./scripts/Test-MergeBranches.ps1
+
+      - name: Prepare Merge Parameters
+        id: params
+        shell: pwsh
+        run: |
+          $isAutoSweep = "${{ inputs.source_branches }}" -eq ""
+          $isDryRun = "${{ inputs.dry_run }}" -eq "true"
+          $isBenchmark = "${{ inputs.benchmark_mode }}" -eq "true"
+          
+          Write-Output "auto_sweep=$isAutoSweep" >> $env:GITHUB_OUTPUT
+          Write-Output "dry_run=$isDryRun" >> $env:GITHUB_OUTPUT
+          Write-Output "benchmark=$isBenchmark" >> $env:GITHUB_OUTPUT
+          
+          Write-Host "Configuration:"
+          Write-Host "  Auto-Sweep: $isAutoSweep"
+          Write-Host "  Dry Run: $isDryRun"
+          Write-Host "  Benchmark: $isBenchmark"
+          Write-Host "  Target Branch: ${{ inputs.target_branch }}"
+          Write-Host "  Max Parallel Jobs: ${{ inputs.max_parallel_jobs }}"
+
+      - name: Run Merge Script
+        shell: pwsh
+        run: |
+          $params = @{
+            TargetBranch = "${{ inputs.target_branch }}"
+            MaxParallelJobs = [int]"${{ inputs.max_parallel_jobs }}"
+            UseWorktrees = $true
+            IncrementalMode = $true
+          }
+          
+          # Add source branches if specified
+          if ("${{ inputs.source_branches }}" -ne "") {
+            $branches = "${{ inputs.source_branches }}" -split ',' | 
+              ForEach-Object { $_.Trim() } | 
+              Where-Object { $_ }
+            $params.SourceBranches = $branches
+            Write-Host "Merging specific branches: $($branches -join ', ')"
+          } else {
+            $params.AutoSweep = $true
+            Write-Host "Auto-sweep mode: will merge all feature/* branches"
+          }
+          
+          # Add optional flags
+          if ("${{ inputs.dry_run }}" -eq "true") {
+            $params.DryRun = $true
+            Write-Host "DRY RUN MODE - No changes will be made"
+          }
+          
+          if ("${{ inputs.benchmark_mode }}" -eq "true") {
+            $params.BenchmarkMode = $true
+            Write-Host "Benchmark mode enabled"
+          }
+          
+          # Execute merge script
+          Write-Host "`nExecuting merge script with parameters:"
+          $params.GetEnumerator() | ForEach-Object {
+            Write-Host "  $($_.Key): $($_.Value)"
+          }
+          Write-Host ""
+          
+          ./scripts/Merge-Branches.ps1 @params
+
+      - name: Upload Merge Logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: merge-logs-${{ github.run_number }}-${{ github.run_attempt }}
+          path: scripts/merge-log-*.txt
+          retention-days: 30
+          if-no-files-found: warn
+
+      - name: Create Summary
+        if: always()
+        shell: pwsh
+        run: |
+          Write-Host "Creating job summary..."
+          
+          # Find latest log file
+          $logFile = Get-ChildItem -Path scripts -Filter "merge-log-*.txt" | 
+            Sort-Object LastWriteTime -Descending | 
+            Select-Object -First 1
+          
+          if ($logFile) {
+            Write-Host "Found log file: $($logFile.Name)"
+            
+            $logContent = Get-Content $logFile.FullName -Raw
+            
+            # Extract summary information
+            $successLines = ($logContent -split "`n" | Where-Object { $_ -match '\[Success\]' }).Count
+            $errorLines = ($logContent -split "`n" | Where-Object { $_ -match '\[Error\]' }).Count
+            $warningLines = ($logContent -split "`n" | Where-Object { $_ -match '\[Warning\]' }).Count
+            
+            # Create GitHub summary
+            @"
+          ## 🔄 Merge Automation Summary
+          
+          **Configuration:**
+          - Target Branch: \`${{ inputs.target_branch }}\`
+          - Max Parallel Jobs: ${{ inputs.max_parallel_jobs }}
+          - Dry Run: ${{ inputs.dry_run }}
+          - Benchmark Mode: ${{ inputs.benchmark_mode }}
+          
+          **Results:**
+          - ✅ Success Events: $successLines
+          - ⚠️  Warnings: $warningLines
+          - ❌ Errors: $errorLines
+          
+          **Logs:** See artifacts for detailed logs
+          "@ | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+          } else {
+            Write-Host "No log file found"
+          }
+
+      - name: Create Issue on Failure
+        if: failure() && github.event_name == 'schedule'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+            
+            // Find latest log file
+            const scriptsDir = path.join(process.env.GITHUB_WORKSPACE, 'scripts');
+            let errorDetails = 'Log file not found';
+            
+            try {
+              const logFiles = fs.readdirSync(scriptsDir)
+                .filter(f => f.startsWith('merge-log-'))
+                .sort()
+                .reverse();
+              
+              if (logFiles.length > 0) {
+                const logPath = path.join(scriptsDir, logFiles[0]);
+                const logContent = fs.readFileSync(logPath, 'utf8');
+                const errors = logContent.split('\n')
+                  .filter(line => line.includes('[Error]'))
+                  .slice(-10)
+                  .join('\n');
+                errorDetails = errors || 'No specific errors found in log';
+              }
+            } catch (err) {
+              errorDetails = `Error reading log: ${err.message}`;
+            }
+            
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `🔴 Automated Merge Failed - ${new Date().toISOString().split('T')[0]}`,
+              body: `## PowerShell Merge Automation Failure\n\n` +
+                    `**Workflow Run:** [#${context.runNumber}](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})\n` +
+                    `**Run Attempt:** ${context.runAttempt}\n` +
+                    `**Trigger:** ${context.eventName}\n\n` +
+                    `### Recent Errors\n\`\`\`\n${errorDetails}\n\`\`\`\n\n` +
+                    `### Actions Required\n` +
+                    `1. Review the [workflow logs](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})\n` +
+                    `2. Check the uploaded log artifacts\n` +
+                    `3. Investigate and resolve merge conflicts\n` +
+                    `4. Re-run the workflow or perform manual merge\n\n` +
+                    `### Troubleshooting\n` +
+                    `See [Merge Automation Documentation](./docs/MERGE_AUTOMATION.md#troubleshooting) for common issues.`,
+              labels: ['automation', 'merge-failure', 'needs-investigation']
+            });
+
+      - name: Comment Success
+        if: success() && github.event_name == 'workflow_dispatch'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // If triggered manually, post a success comment to a tracking issue
+            console.log('✅ Merge automation completed successfully');
+            
+            // Optionally create a success notification issue
+            if ("${{ inputs.dry_run }}" === "false") {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: `✅ Merge Automation Success - ${new Date().toISOString().split('T')[0]}`,
+                body: `## PowerShell Merge Automation Success\n\n` +
+                      `**Workflow Run:** [#${context.runNumber}](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})\n` +
+                      `**Target Branch:** \`${{ inputs.target_branch }}\`\n` +
+                      `**Max Parallel Jobs:** ${{ inputs.max_parallel_jobs }}\n\n` +
+                      `All branches merged successfully! 🎉`,
+                labels: ['automation', 'merge-success']
+              });
+            }
+
+  # Optional: Add a job to clean up old merge logs
+  cleanup-old-logs:
+    name: Cleanup Old Merge Logs
+    runs-on: ubuntu-latest
+    if: false  # Disabled by default
+    needs: merge-branches
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Remove Old Log Files
+        shell: pwsh
+        run: |
+          # Remove log files older than 7 days
+          $cutoffDate = (Get-Date).AddDays(-7)
+          Get-ChildItem -Path scripts -Filter "merge-log-*.txt" |
+            Where-Object { $_.LastWriteTime -lt $cutoffDate } |
+            ForEach-Object {
+              Write-Host "Removing old log: $($_.Name)"
+              Remove-Item $_.FullName -Force
+            }
+
+      - name: Commit Cleanup
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          
+          if [[ -n $(git status --porcelain) ]]; then
+            git add scripts/
+            git commit -m "chore: cleanup old merge logs [skip ci]"
+            git push
+          else
+            echo "No old logs to remove"
+          fi
