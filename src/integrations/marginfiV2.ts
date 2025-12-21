@@ -276,7 +276,7 @@ export class MarginfiV2Integration {
     console.log('[MarginfiV2] Calculating optimal route...');
     console.log(`[MarginfiV2] Available DEXs: ${availableDexs.join(', ')}`);
     
-    // Production implementation TODO:
+    // Production implementation requires Jupiter aggregator integration:
     // 1. Query real-time prices from all available DEXs via Jupiter aggregator
     // 2. Calculate best route considering slippage and fees
     // 3. Return the route with highest net output after all fees
