@@ -1,191 +1,64 @@
-name: Auto-Merge PR
+name: Auto-Merge When Ready
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened, ready_for_review]
-  pull_request_review:
-    types: [submitted]
-  check_suite:
-    types: [completed]
-  workflow_dispatch:
-    inputs:
-      pr_number:
-        description: 'PR number to auto-merge'
-        required: true
-        type: number
+    types: [opened, reopened, synchronize, ready_for_review]
 
 permissions:
   contents: write
   pull-requests: write
-  checks: read
 
 jobs:
-  auto-merge:
-    name: Auto-Merge PR
+  gate-and-enable:
     runs-on: ubuntu-latest
-    if: |
-      github.event_name == 'workflow_dispatch' ||
-      (github.event.pull_request.draft == false &&
-       (contains(github.event.pull_request.labels.*.name, 'auto-merge') ||
-        github.event.pull_request.user.login == 'dependabot[bot]'))
-    
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        
-      - name: Get PR number
-        id: pr
-        run: |
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            echo "number=${{ inputs.pr_number }}" >> $GITHUB_OUTPUT
-          else
-            echo "number=${{ github.event.pull_request.number }}" >> $GITHUB_OUTPUT
-          fi
-          
-      - name: Check for skip-deployment label
-        id: skip_deployment
-        uses: actions/github-script@v8
+      - name: Gate and enable native auto-merge
+        uses: actions/github-script@v7
         with:
           script: |
-            const prNumber = ${{ steps.pr.outputs.number }};
-            const { data: pr } = await github.rest.pulls.get({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: prNumber
-            });
-            
-            const hasSkipLabel = pr.labels.some(label => label.name === 'skip-deployment');
-            core.setOutput('skip', hasSkipLabel ? 'true' : 'false');
-            return hasSkipLabel;
-          
-      - name: Check PR status
-        id: check
-        uses: actions/github-script@v8
-        with:
-          script: |
-            const prNumber = ${{ steps.pr.outputs.number }};
-            
-            // Get PR details
-            const { data: pr } = await github.rest.pulls.get({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: prNumber
-            });
-            
-            console.log(`PR #${prNumber}: ${pr.title}`);
-            console.log(`State: ${pr.state}`);
-            console.log(`Mergeable: ${pr.mergeable}`);
-            console.log(`Draft: ${pr.draft}`);
-            
-            // Check if PR is mergeable
-            if (pr.state !== 'open') {
-              core.setFailed('PR is not open');
-              return false;
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const number = context.payload.pull_request.number;
+            const pr = (await github.rest.pulls.get({ owner, repo, pull_number: number })).data;
+
+            const labels = pr.labels.map(l => l.name);
+            if (!labels.includes("auto-merge")) {
+              core.setFailed("Missing 'auto-merge' label.");
+              return;
             }
-            
             if (pr.draft) {
-              core.setFailed('PR is in draft state');
-              return false;
+              core.setFailed("PR is draft.");
+              return;
             }
-            
-            // Get required checks
-            const { data: checks } = await github.rest.checks.listForRef({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              ref: pr.head.sha
+
+            // Latest review states by user
+            const reviews = await github.paginate(github.rest.pulls.listReviews, { owner, repo, pull_number: number });
+            const latestByUser = new Map();
+            for (const r of reviews) {
+              if (r.user?.login) latestByUser.set(r.user.login, r);
+            }
+            const approvals = [...latestByUser.values()].filter(r => {
+              const isBot = r.user?.type === "Bot" || r.user?.login?.endsWith("[bot]");
+              return r.state === "APPROVED" && !isBot;
             });
-            
-            // Check if all required checks passed
-            const requiredChecks = ['Backend - Lint & Test', 'Webapp - Lint & Build', 'Security Scan'];
-            const checkStatuses = {};
-            
-            for (const check of checks.check_runs) {
-              checkStatuses[check.name] = check.conclusion;
+            const changesRequested = [...latestByUser.values()].some(r => r.state === "CHANGES_REQUESTED");
+            if (changesRequested) {
+              core.setFailed("Changes requested.");
+              return;
             }
-            
-            console.log('Check statuses:', checkStatuses);
-            
-            let allChecksPassed = true;
-            for (const requiredCheck of requiredChecks) {
-              if (!checkStatuses[requiredCheck] || checkStatuses[requiredCheck] !== 'success') {
-                console.log(`Required check "${requiredCheck}" has not passed`);
-                allChecksPassed = false;
+            if (approvals.length < 1) {
+              core.setFailed(`Not enough approvals (have ${approvals.length}, need 1).`);
+              return;
+            }
+
+            // Enable native auto-merge (GitHub will merge when required checks are green)
+            const prNodeId = pr.node_id;
+            const mutation = `
+              mutation($pullRequestId: ID!, $mergeMethod: PullRequestMergeMethod!) {
+                enablePullRequestAutoMerge(input: { pullRequestId: $pullRequestId, mergeMethod: $mergeMethod }) {
+                  pullRequest { number autoMergeRequest { enabledAt } }
+                }
               }
-            }
-            
-            // Get reviews
-            const { data: reviews } = await github.rest.pulls.listReviews({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: prNumber
-            });
-            
-            // Check for approvals (at least 1 required for non-dependabot PRs)
-            const approvals = reviews.filter(r => r.state === 'APPROVED').length;
-            const changesRequested = reviews.filter(r => r.state === 'CHANGES_REQUESTED').length;
-            
-            console.log(`Approvals: ${approvals}, Changes requested: ${changesRequested}`);
-            
-            const isDependabot = pr.user.login === 'dependabot[bot]';
-            
-            if (!isDependabot && approvals < 1) {
-              core.setFailed('At least 1 approval required for non-dependabot PRs');
-              return false;
-            }
-            
-            if (changesRequested > 0) {
-              core.setFailed('Changes requested on this PR');
-              return false;
-            }
-            
-            if (!allChecksPassed) {
-              core.setFailed('Not all required checks have passed');
-              return false;
-            }
-            
-            core.setOutput('can_merge', 'true');
-            return true;
-            
-      - name: Enable auto-merge
-        if: steps.check.outputs.can_merge == 'true'
-        uses: actions/github-script@v8
-        with:
-          script: |
-            const prNumber = ${{ steps.pr.outputs.number }};
-            
-            try {
-              await github.rest.pulls.merge({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                pull_number: prNumber,
-                merge_method: 'squash'
-              });
-              
-              console.log(`✅ Successfully merged PR #${prNumber}`);
-            } catch (error) {
-              console.error('Failed to merge PR:', error);
-              core.setFailed(`Failed to merge PR: ${error.message}`);
-            }
-            
-      - name: Comment on PR
-        if: failure()
-        uses: actions/github-script@v8
-        with:
-          script: |
-            const prNumber = ${{ steps.pr.outputs.number }};
-            
-            await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: prNumber,
-              body: '⚠️ Auto-merge failed. Please check the requirements:\n\n' +
-                    '- ✅ All required CI checks must pass (Backend, Webapp, Security)\n' +
-                    '- ✅ At least 1 approval required (except for Dependabot PRs)\n' +
-                    '- ✅ No changes requested\n' +
-                    '- ✅ PR must not be in draft state\n' +
-                    '- ✅ Security scan must pass\n\n' +
-                    '**Labels:**\n' +
-                    '- Add `auto-merge` label to enable auto-merge\n' +
-                    '- Add `skip-deployment` label to skip deployment checks\n\n' +
-                    'You can retry auto-merge once all conditions are met.'
-            });
+            `;
+            await github.graphql(mutation, { pullRequestId: prNodeId, mergeMethod: "SQUASH" });
+            console.log(`✅ Auto-merge enabled for PR #${number}. Will merge automatically when all checks pass.`);
