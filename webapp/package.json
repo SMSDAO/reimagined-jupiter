@@ -23,7 +23,7 @@
   },
   "dependencies": {
     "@jup-ag/api": "^6.0.45",
-    "@pythnetwork/hermes-client": "^2.0.0",
+    "@pythnetwork/hermes-client": "^2.1.0",
     "@react-three/drei": "^10.7.6",
     "@react-three/fiber": "^9.4.0",
     "@solana/wallet-adapter-base": "^0.9.27",
