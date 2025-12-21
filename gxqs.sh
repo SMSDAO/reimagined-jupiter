@@ -195,7 +195,7 @@ merge_score() {
     # Note: We use --no-commit to analyze the merge without completing it
     if git merge --no-commit "$branch" 2>/dev/null; then
         # Successful merge (or merge in progress), analyze changes
-        files_changed=$(git diff --cached --numstat | grep -v "^-" | wc -l)
+        files_changed=$(git diff --cached --numstat | grep -vc "^-")
         insertions=$(git diff --cached --numstat | grep -v "^-" | awk '{sum+=$1} END {print sum+0}')
         deletions=$(git diff --cached --numstat | grep -v "^-" | awk '{sum+=$2} END {print sum+0}')
         
