@@ -1,5 +1,6 @@
 import { Connection, PublicKey, Keypair, Transaction, SystemProgram, sendAndConfirmTransaction } from '@solana/web3.js';
 import { getAssociatedTokenAddress, createTransferInstruction, TOKEN_PROGRAM_ID } from '@solana/spl-token';
+import { WalletScoring } from './walletScoring.js';
 
 export interface CommunityAirdropConfig {
   daoWalletAddress: PublicKey;
@@ -30,6 +31,7 @@ export interface AirdropDistributionResult {
 export class CommunityAirdropService {
   private connection: Connection;
   private config: CommunityAirdropConfig;
+  private walletScoring: WalletScoring;
   private totalDistributed: number = 0;
   private distributionHistory: Array<{
     timestamp: number;
@@ -37,9 +39,10 @@ export class CommunityAirdropService {
     recipients: number;
   }> = [];
 
-  constructor(connection: Connection, config: CommunityAirdropConfig) {
+  constructor(connection: Connection, config: CommunityAirdropConfig, neynarApiKey?: string) {
     this.connection = connection;
     this.config = config;
+    this.walletScoring = new WalletScoring(connection, neynarApiKey);
   }
 
   /**
@@ -342,30 +345,41 @@ export class CommunityAirdropService {
     walletAddresses: PublicKey[],
     minScore: number = 50
   ): Promise<AirdropRecipient[]> {
-    // This would integrate with WalletScoring service
-    // For now, return mock data
     const recipients: AirdropRecipient[] = [];
 
-    for (const address of walletAddresses) {
-      // Mock scoring logic
-      const score = Math.random() * 100;
-      
-      if (score >= minScore) {
-        let tier: 'platinum' | 'gold' | 'silver' | 'bronze';
-        if (score >= 90) tier = 'platinum';
-        else if (score >= 75) tier = 'gold';
-        else if (score >= 60) tier = 'silver';
-        else tier = 'bronze';
+    console.log(`\n🔍 Analyzing ${walletAddresses.length} wallets for airdrop eligibility...`);
+    console.log(`   Minimum score threshold: ${minScore}`);
 
-        recipients.push({
-          address,
-          amount: 0, // Will be calculated during distribution
-          tier,
-          score,
-        });
+    for (const address of walletAddresses) {
+      try {
+        // Use real WalletScoring service to analyze wallet
+        const walletScore = await this.walletScoring.analyzeWallet(address, false); // Skip social for performance
+        
+        if (walletScore.totalScore >= minScore) {
+          let tier: 'platinum' | 'gold' | 'silver' | 'bronze';
+          if (walletScore.totalScore >= 90) tier = 'platinum';
+          else if (walletScore.totalScore >= 75) tier = 'gold';
+          else if (walletScore.totalScore >= 60) tier = 'silver';
+          else tier = 'bronze';
+
+          recipients.push({
+            address,
+            amount: 0, // Will be calculated during distribution
+            tier,
+            score: walletScore.totalScore,
+          });
+
+          console.log(`   ✅ ${address.toString().slice(0, 8)}... - Score: ${walletScore.totalScore.toFixed(1)}, Tier: ${tier}`);
+        } else {
+          console.log(`   ⏭️  ${address.toString().slice(0, 8)}... - Below threshold (${walletScore.totalScore.toFixed(1)})`);
+        }
+      } catch (error) {
+        console.error(`   ❌ Failed to analyze ${address.toString().slice(0, 8)}...:`, error instanceof Error ? error.message : error);
+        // Continue with next wallet
       }
     }
 
+    console.log(`\n📊 Eligibility results: ${recipients.length}/${walletAddresses.length} wallets qualified`);
     return recipients;
   }
 
