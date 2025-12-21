@@ -77,7 +77,32 @@ gh workflow run auto-merge.yml -f pr_number=<pr-number>
 - Safe checks before merging
 - Supports Dependabot auto-merge
 
-### 3. Failed Job Handler (`failed-job-handler.yml`)
+### 3. Auto-label PRs (`auto-label.yml`)
+
+**Purpose**: Automatically apply standard labels to all pull requests for consistent workflow automation.
+
+**Triggers**:
+- PR opened, synchronized, or reopened
+- Manual workflow dispatch with option to backfill all open PRs
+
+**Labels Applied**:
+- `auto-merge` - Enable auto-merge when checks pass (color: #2ecc71)
+- `skip-deployment` - Skip deployment checks (color: #b31f45)
+
+**Features**:
+- **Automatic Labeling**: New and updated PRs automatically receive both labels
+- **Label Creation**: Creates labels if they don't exist in the repository
+- **Backfill Support**: Manual dispatch can apply labels to all existing open PRs
+- **Pagination**: Handles repositories with large numbers of open PRs
+
+**Usage**:
+```bash
+# Labels are applied automatically to new/updated PRs
+# Or trigger manually to backfill all open PRs:
+gh workflow run auto-label.yml -f apply_to_all_open_prs=true
+```
+
+### 4. Failed Job Handler (`failed-job-handler.yml`)
 
 **Purpose**: Automatically detect, retry, and report CI failures.
 
