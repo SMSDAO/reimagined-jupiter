@@ -23,3 +23,9 @@ webapp/.turbo
 # CI/CD artifacts (local only)
 *.bak
 .github/workflows/*.bak
+
+# Smart merge automation artifacts
+.worktrees/
+.merge-state
+merge-report.json
+smart-merge.log
