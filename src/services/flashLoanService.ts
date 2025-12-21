@@ -423,7 +423,7 @@ export class FlashLoanService {
    * @returns Array of provider names sorted by fee (lowest first)
    */
   getAvailableProviders(): string[] {
-    return ['marginfi', 'solend', 'kamino', 'mango', 'portFinance', 'saveFinance'];
+    return ['marginfi', 'solend', 'saveFinance', 'kamino', 'tulip', 'drift', 'mango', 'jet', 'portFinance'];
   }
   
   /**

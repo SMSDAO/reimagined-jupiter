@@ -7,7 +7,10 @@ import {
   SolendProvider, 
   MangoProvider, 
   KaminoProvider, 
-  PortFinanceProvider 
+  PortFinanceProvider,
+  TulipProvider,
+  DriftProvider,
+  JetProvider,
 } from '../providers/flashLoan.js';
 import { config, FLASH_LOAN_FEES, SUPPORTED_TOKENS } from '../config/index.js';
 
@@ -44,6 +47,21 @@ export class FlashLoanArbitrage {
       connection,
       config.flashLoanProviders.portFinance,
       FLASH_LOAN_FEES.portFinance
+    ));
+    this.providers.set('tulip', new TulipProvider(
+      connection,
+      config.flashLoanProviders.tulip,
+      FLASH_LOAN_FEES.tulip
+    ));
+    this.providers.set('drift', new DriftProvider(
+      connection,
+      config.flashLoanProviders.drift,
+      FLASH_LOAN_FEES.drift
+    ));
+    this.providers.set('jet', new JetProvider(
+      connection,
+      config.flashLoanProviders.jet,
+      FLASH_LOAN_FEES.jet
     ));
   }
   

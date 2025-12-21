@@ -22,6 +22,9 @@ export interface Config {
     kamino: PublicKey;
     portFinance: PublicKey;
     saveFinance: PublicKey;
+    tulip: PublicKey;
+    drift: PublicKey;
+    jet: PublicKey;
   };
   dexPrograms: {
     raydium: PublicKey;
