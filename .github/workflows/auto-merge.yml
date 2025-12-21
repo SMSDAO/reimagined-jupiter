@@ -38,7 +38,7 @@ jobs:
               if (r.user?.login) latestByUser.set(r.user.login, r);
             }
             const approvals = [...latestByUser.values()].filter(r => {
-              const isBot = r.user?.type === "Bot" || r.user?.login?.includes("[bot]");
+              const isBot = r.user?.type === "Bot" || r.user?.login?.endsWith("[bot]");
               return r.state === "APPROVED" && !isBot;
             });
             const changesRequested = [...latestByUser.values()].some(r => r.state === "CHANGES_REQUESTED");
