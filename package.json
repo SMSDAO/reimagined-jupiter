@@ -32,7 +32,10 @@
     "logs": "vercel logs",
     "monitor": "ts-node-esm scripts/monitor-health.ts",
     "cli": "ts-node-esm cli/index.ts",
-    "admin": "ts-node-esm cli/commands/admin.ts"
+    "admin": "ts-node-esm cli/commands/admin.ts",
+    "analyze-deployment": "ts-node-esm scripts/post-deployment-analyzer.ts",
+    "canary-deploy": "ts-node-esm scripts/canary-deployment.ts",
+    "setup-monitoring": "ts-node-esm scripts/monitoring-setup.ts"
   },
   "keywords": [
     "solana",
@@ -46,6 +49,7 @@
   "license": "MIT",
   "dependencies": {
     "@jup-ag/api": "^6.0.0",
+    "@octokit/rest": "^20.0.2",
     "@pythnetwork/client": "^2.22.1",
     "@pythnetwork/hermes-client": "^2.0.0",
     "@solana/spl-token": "^0.3.9",
@@ -64,6 +68,7 @@
     "jsonwebtoken": "^9.0.2",
     "ora": "^7.0.1",
     "pg": "^8.16.3",
+    "prom-client": "^15.0.0",
     "winston": "^3.19.0"
   },
   "devDependencies": {

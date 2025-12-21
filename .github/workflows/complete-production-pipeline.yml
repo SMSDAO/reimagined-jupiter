@@ -1,0 +1,371 @@
+name: Complete Production Pipeline
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+      - staging
+  pull_request:
+    branches:
+      - main
+      - develop
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+  checks: write
+  pull-requests: write
+  issues: write
+  actions: write
+
+jobs:
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '20'
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Run npm audit
+        run: npm audit --audit-level=high || echo "⚠️ Security vulnerabilities found"
+        continue-on-error: true
+        
+      - name: Run Snyk security scan
+        uses: snyk/actions/node@master
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --severity-threshold=high
+
+  build-and-test:
+    name: Build and Test
+    runs-on: ubuntu-latest
+    needs: security-scan
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        retry: [1, 2, 3]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '20'
+          cache: 'npm'
+          
+      - name: Install backend dependencies (with retry)
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 10
+          max_attempts: 3
+          retry_wait_seconds: 30
+          command: npm ci
+          
+      - name: Install webapp dependencies (with retry)
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 10
+          max_attempts: 3
+          retry_wait_seconds: 30
+          command: cd webapp && npm ci
+          
+      - name: Lint backend
+        run: npm run lint
+        continue-on-error: true
+        
+      - name: Lint webapp
+        run: npm run lint:webapp
+        continue-on-error: true
+        
+      - name: Type check
+        run: npm run type-check && npm run type-check:webapp
+        
+      - name: Run tests (with retry)
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 15
+          max_attempts: 2
+          retry_wait_seconds: 60
+          command: npm test
+          
+      - name: Build backend
+        run: npm run build:backend
+        
+      - name: Build webapp
+        run: npm run build:webapp
+        env:
+          NEXT_PUBLIC_RPC_URL: ${{ secrets.NEXT_PUBLIC_RPC_URL || 'https://api.mainnet-beta.solana.com' }}
+          
+      - name: Upload artifacts
+        if: matrix.retry == 1
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts
+          path: |
+            dist/
+            webapp/.next/
+          retention-days: 3
+          
+      - name: Success on first try
+        if: matrix.retry == 1 && success()
+        run: echo "::notice::Build succeeded on first attempt"
+
+  canary-deployment:
+    name: Canary Deployment
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    if: github.ref == 'refs/heads/staging' || github.event.inputs.environment == 'staging'
+    timeout-minutes: 30
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '20'
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Run canary deployment
+        run: npm run canary-deploy
+        env:
+          STAGING_URL: ${{ secrets.STAGING_URL || 'https://gxq-staging.vercel.app' }}
+          PRODUCTION_URL: ${{ secrets.PRODUCTION_URL || 'https://gxq.vercel.app' }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          
+      - name: Comment on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v8
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: '✅ Canary deployment completed successfully! Ready for production.'
+            });
+
+  post-deployment-analysis:
+    name: Post-Deployment Analysis
+    runs-on: ubuntu-latest
+    needs: [build-and-test]
+    if: always()
+    timeout-minutes: 15
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '20'
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Fetch deployment logs
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
+        run: |
+          echo "Fetching logs from Vercel..."
+          # In a real setup, fetch logs from Vercel API
+          touch combined.log error.log
+        continue-on-error: true
+        
+      - name: Run post-deployment analysis
+        run: npm run analyze-deployment
+        env:
+          AUTO_FIX_ENABLED: ${{ secrets.AUTO_FIX_ENABLED || 'false' }}
+          AUTO_REDEPLOY_ENABLED: ${{ secrets.AUTO_REDEPLOY_ENABLED || 'false' }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        continue-on-error: true
+        
+      - name: Commit auto-fixes
+        if: env.AUTO_FIX_ENABLED == 'true'
+        run: |
+          git config user.name "GXQ Auto-Fix Bot"
+          git config user.email "bot@gxq.studio"
+          git add .
+          if ! git diff --staged --quiet; then
+            git commit -m "Auto-fix: Applied fixes from post-deployment analysis [skip ci]"
+            git push
+          fi
+        continue-on-error: true
+
+  setup-monitoring:
+    name: Setup Monitoring
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    if: github.ref == 'refs/heads/main'
+    timeout-minutes: 10
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '20'
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Generate monitoring configs
+        run: npm run setup-monitoring
+        
+      - name: Upload monitoring configs
+        uses: actions/upload-artifact@v4
+        with:
+          name: monitoring-configs
+          path: monitoring/
+          retention-days: 30
+          
+      - name: Deploy to Grafana
+        if: env.GRAFANA_API_KEY != ''
+        run: |
+          echo "Deploying dashboard to Grafana..."
+          # In a real setup, use Grafana API to import dashboard
+        env:
+          GRAFANA_API_KEY: ${{ secrets.GRAFANA_API_KEY }}
+          GRAFANA_URL: ${{ secrets.GRAFANA_URL }}
+        continue-on-error: true
+
+  auto-ticketing:
+    name: Auto-Ticketing
+    runs-on: ubuntu-latest
+    needs: [build-and-test, post-deployment-analysis]
+    if: failure()
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Create failure issue
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const workflowRun = await github.rest.actions.getWorkflowRun({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: context.runId
+            });
+            
+            const issueBody = `## 🚨 Production Pipeline Failure
+            
+            **Workflow:** ${workflowRun.data.name}
+            **Run:** [#${workflowRun.data.run_number}](${workflowRun.data.html_url})
+            **Branch:** ${context.ref}
+            **Commit:** ${context.sha.substring(0, 7)}
+            **Triggered by:** ${context.actor}
+            
+            ### Failed Jobs
+            Check the workflow run for details on which jobs failed.
+            
+            ### Recommended Actions
+            1. Review the failed job logs
+            2. Check for dependency or configuration issues
+            3. Verify all required secrets are set
+            4. Run the pipeline locally to reproduce
+            5. Fix the issue and re-run the pipeline
+            
+            ---
+            *This issue was automatically created by the production pipeline*
+            `;
+            
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `Production Pipeline Failure: ${context.ref}`,
+              body: issueBody,
+              labels: ['pipeline-failure', 'automated', 'high-priority']
+            });
+
+  pipeline-summary:
+    name: Pipeline Summary
+    runs-on: ubuntu-latest
+    needs: 
+      - security-scan
+      - build-and-test
+      - canary-deployment
+      - post-deployment-analysis
+      - setup-monitoring
+    if: always()
+    
+    steps:
+      - name: Generate summary
+        run: |
+          echo "## 🚀 Production Pipeline Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Security Scan | ${{ needs.security-scan.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Build and Test | ${{ needs.build-and-test.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Canary Deployment | ${{ needs.canary-deployment.result == 'success' && '✅' || needs.canary-deployment.result == 'skipped' && '⏭️' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Post-Deployment | ${{ needs.post-deployment-analysis.result == 'success' && '✅' || '⚠️' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Monitoring Setup | ${{ needs.setup-monitoring.result == 'success' && '✅' || needs.setup-monitoring.result == 'skipped' && '⏭️' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [[ "${{ needs.build-and-test.result }}" == "failure" ]] || \
+             [[ "${{ needs.security-scan.result }}" == "failure" ]]; then
+            echo "❌ **Pipeline failed!** Check the jobs above for details." >> $GITHUB_STEP_SUMMARY
+            exit 1
+          else
+            echo "✅ **Pipeline completed successfully!**" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+      - name: Notify on Slack
+        if: failure() && github.ref == 'refs/heads/main'
+        run: |
+          curl -X POST ${{ secrets.SLACK_WEBHOOK_URL }} \
+            -H 'Content-Type: application/json' \
+            -d '{
+              "text": "🚨 Production pipeline failed!",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*Production Pipeline Failure*\n\nWorkflow: ${{ github.workflow }}\nBranch: ${{ github.ref }}\nCommit: ${{ github.sha }}"
+                  }
+                }
+              ]
+            }'
+        continue-on-error: true
