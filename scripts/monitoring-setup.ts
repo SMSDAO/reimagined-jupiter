@@ -4,7 +4,7 @@
 
 import { createServer } from 'http';
 import { register, collectDefaultMetrics, Counter, Gauge, Histogram } from 'prom-client';
-import { writeFileSync } from 'fs';
+import { writeFileSync, mkdirSync, existsSync } from 'fs';
 import { resolve } from 'path';
 import { logger } from '../lib/logger.js';
 
@@ -454,7 +454,6 @@ export function saveMonitoringConfigs(): void {
 
   try {
     // Create monitoring directory if it doesn't exist
-    const { mkdirSync, existsSync } = await import('fs');
     if (!existsSync(monitoringDir)) {
       mkdirSync(monitoringDir, { recursive: true });
     }
@@ -487,8 +486,9 @@ export function saveMonitoringConfigs(): void {
   }
 }
 
-// Main execution
-if (import.meta.url === `file://${process.argv[1]}`) {
+// Main execution - check if script is run directly
+const isMainModule = process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '/'));
+if (isMainModule) {
   logger.info('Setting up monitoring system...');
   
   try {

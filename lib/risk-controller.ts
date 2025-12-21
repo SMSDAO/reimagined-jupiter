@@ -250,9 +250,10 @@ export class RiskController {
     const netProfitLoss = this.metrics.totalProfitSol - this.metrics.totalLossSol;
     if (netProfitLoss < 0) {
       // Calculate drawdown as percentage of total capital at risk
-      // Assuming initial capital is 10 SOL for calculation purposes
-      const assumedCapital = 10;
-      this.metrics.currentDrawdownBps = Math.abs((netProfitLoss / assumedCapital) * 10000);
+      // Using assumed capital of 10 SOL as a baseline for percentage calculation
+      // This can be made configurable if needed for different capital sizes
+      const ASSUMED_CAPITAL_SOL = 10;
+      this.metrics.currentDrawdownBps = Math.abs((netProfitLoss / ASSUMED_CAPITAL_SOL) * 10000);
     } else {
       this.metrics.currentDrawdownBps = 0;
     }

@@ -271,15 +271,23 @@ function applyFixes(fixes: CodeFix[]): { applied: number; failed: number } {
 
       const newContent = content.replace(fix.search, fix.replace);
       
-      // In a real implementation, we would write the file
-      // For now, we'll just log what would be changed
-      console.log(`Would apply fix to ${fix.file}:`);
-      console.log(`  Description: ${fix.description}`);
-      console.log(`  Search: ${fix.search}`);
-      console.log(`  Replace: ${fix.replace}`);
-      
-      // writeFileSync(filePath, newContent, 'utf-8');
-      applied++;
+      // Check if AUTO_FIX_ENABLED is true before writing
+      if (process.env.AUTO_FIX_ENABLED === 'true') {
+        // Actual fix application - write to file
+        const { writeFileSync } = await import('fs');
+        writeFileSync(filePath, newContent, 'utf-8');
+        console.log(`✅ Applied fix to ${fix.file}:`);
+        console.log(`  Description: ${fix.description}`);
+        applied++;
+      } else {
+        // Dry-run mode - just log what would be changed
+        console.log(`[DRY RUN] Would apply fix to ${fix.file}:`);
+        console.log(`  Description: ${fix.description}`);
+        console.log(`  Search: ${fix.search}`);
+        console.log(`  Replace: ${fix.replace}`);
+        console.log(`  Enable AUTO_FIX_ENABLED=true to apply fixes`);
+        applied++;
+      }
     } catch (error) {
       console.error(`Failed to apply fix to ${fix.file}:`, error);
       failed++;
@@ -459,8 +467,9 @@ async function runPostDeploymentAnalysis(): Promise<void> {
   console.log('\n✅ Post-deployment analysis complete!');
 }
 
-// Main execution
-if (import.meta.url === `file://${process.argv[1]}`) {
+// Main execution - check if script is run directly
+const isMainModule = process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '/'));
+if (isMainModule) {
   runPostDeploymentAnalysis().catch(error => {
     console.error('Fatal error during analysis:', error);
     process.exit(1);

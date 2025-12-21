@@ -334,13 +334,49 @@ export class CanaryDeployment {
   async rollback(reason: string): Promise<void> {
     logger.warn('🔄 Rolling back deployment', { reason });
 
-    try {
-      // In a real implementation, this would:
-      // 1. Revert Vercel deployment to previous version
-      // 2. Update DNS/routing to direct all traffic to production
-      // 3. Notify team of rollback
+    const vercelToken = process.env.VERCEL_TOKEN;
+    if (!vercelToken) {
+      logger.warn('VERCEL_TOKEN not set, cannot perform automatic rollback');
+      logger.warn('Manual rollback required: vercel rollback');
+      throw new Error('Automatic rollback not configured');
+    }
 
-      logger.info('Rollback completed successfully');
+    try {
+      // Get recent deployments
+      const deploymentsResponse = await axios.get(
+        `https://api.vercel.com/v6/deployments?limit=10`,
+        {
+          headers: {
+            Authorization: `Bearer ${vercelToken}`,
+          },
+        }
+      );
+
+      const deployments = deploymentsResponse.data.deployments;
+      
+      // Find the last production deployment (excluding current staging)
+      const lastProductionDeployment = deployments.find(
+        (d: any) => d.target === 'production' && d.url !== this.config.stagingUrl
+      );
+
+      if (!lastProductionDeployment) {
+        throw new Error('No previous production deployment found');
+      }
+
+      // Promote previous deployment to production
+      await axios.patch(
+        `https://api.vercel.com/v13/deployments/${lastProductionDeployment.uid}`,
+        { target: 'production' },
+        {
+          headers: {
+            Authorization: `Bearer ${vercelToken}`,
+          },
+        }
+      );
+
+      logger.info('Rollback completed successfully', {
+        rolledBackTo: lastProductionDeployment.uid,
+      });
     } catch (error) {
       logger.error('Rollback failed', { error });
       throw error;
@@ -423,8 +459,9 @@ export class CanaryDeployment {
   }
 }
 
-// Main execution
-if (import.meta.url === `file://${process.argv[1]}`) {
+// Main execution - check if script is run directly
+const isMainModule = process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '/'));
+if (isMainModule) {
   (async () => {
     try {
       const canary = new CanaryDeployment();
