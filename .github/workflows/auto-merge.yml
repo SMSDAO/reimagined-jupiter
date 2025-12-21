@@ -32,7 +32,7 @@ jobs:
             }
 
             // Latest review states by user
-            const reviews = await github.paginate(github.rest.pulls.listReviews, { owner, repo, pull_number: number, per_page: 100 });
+            const reviews = await github.paginate(github.rest.pulls.listReviews, { owner, repo, pull_number: number });
             const latestByUser = new Map();
             for (const r of reviews) {
               if (r.user?.login) latestByUser.set(r.user.login, r);
