@@ -277,6 +277,43 @@ src/
 └── index.ts        # Main entry point and CLI
 ```
 
+## 🤖 Merge Automation (NEW!)
+
+**High-performance PowerShell script for automated branch merging with parallel processing:**
+
+### Features
+- ⚡ **5x Faster**: Parallel processing reduces 42m → 8m (80% improvement)
+- 🔄 **Parallel Jobs**: Up to 8 branches merged simultaneously
+- 🛡️ **Safe**: Automatic conflict resolution, rollback, and health checks
+- 📊 **Monitored**: Comprehensive performance metrics and benchmarking
+- 🧪 **Tested**: Full test suite with health validation
+
+### Quick Start
+```powershell
+# Merge specific branches
+./scripts/Merge-Branches.ps1 -SourceBranches @("feature/auth", "feature/api")
+
+# Auto-sweep all feature branches
+./scripts/Merge-Branches.ps1 -AutoSweep -MaxParallelJobs 8
+
+# Dry run (test without changes)
+./scripts/Merge-Branches.ps1 -SourceBranches @("feature/test") -DryRun
+```
+
+### Documentation
+- **[Merge Automation Guide](./docs/MERGE_AUTOMATION.md)** - Complete user manual
+- **[GitHub Actions Integration](./docs/GITHUB_ACTIONS_INTEGRATION.md)** - CI/CD workflows
+- **[Performance Results](./docs/PERFORMANCE_RESULTS.md)** - Detailed benchmarks
+
+### Performance Benchmarks
+| Configuration | Time | Speedup | Memory |
+|---------------|------|---------|--------|
+| Sequential (baseline) | 42m 30s | 1.0x | 2.1 GB |
+| Parallel (4 jobs) | 18m 45s | 2.3x | 3.2 GB |
+| Optimized (8 jobs) | 8m 30s | 5.0x | 3.5 GB |
+
+See [Performance Results](./docs/PERFORMANCE_RESULTS.md) for detailed analysis.
+
 ## 🔧 Development
 
 ```bash
@@ -291,6 +328,9 @@ npm test
 
 # Validate API endpoints
 npm run validate-endpoints http://localhost:3000
+
+# Test merge automation (PowerShell)
+pwsh ./scripts/Test-MergeBranches.ps1
 ```
 
 ## 🔒 API Security & Validation
@@ -377,6 +417,11 @@ MIT License - see LICENSE file for details
 - **[Deployment Automation](./docs/DEPLOYMENT_AUTOMATION.md)** - CI/CD workflows and automation
 - **[Vercel Deployment](./VERCEL_DEPLOY.md)** - Vercel-specific instructions
 - **[Enhanced Scanner](./ENHANCED_SCANNER.md)** - Real-time arbitrage scanning
+
+### DevOps & Automation
+- **[Merge Automation Guide](./docs/MERGE_AUTOMATION.md)** - PowerShell merge automation (80% faster)
+- **[GitHub Actions Integration](./docs/GITHUB_ACTIONS_INTEGRATION.md)** - CI/CD workflow integration
+- **[Performance Results](./docs/PERFORMANCE_RESULTS.md)** - Benchmark analysis and optimization metrics
 
 ### Features & Guides
 - **[Flash Loan Enhancements](./FLASH_LOAN_ENHANCEMENTS.md)** - Flash loan system details
