@@ -1,6 +1,7 @@
 # GXQ STUDIO - Advanced Solana DeFi Platform
 
 [![CI Pipeline](https://github.com/SMSDAO/reimagined-jupiter/actions/workflows/ci.yml/badge.svg)](https://github.com/SMSDAO/reimagined-jupiter/actions/workflows/ci.yml)
+[![Self-Optimize](https://github.com/SMSDAO/reimagined-jupiter/actions/workflows/self-optimize.yml/badge.svg)](https://github.com/SMSDAO/reimagined-jupiter/actions/workflows/self-optimize.yml)
 [![CodeQL](https://github.com/SMSDAO/reimagined-jupiter/actions/workflows/codeql-analysis.yml/badge.svg)](https://github.com/SMSDAO/reimagined-jupiter/actions/workflows/codeql-analysis.yml)
 [![codecov](https://codecov.io/gh/SMSDAO/reimagined-jupiter/branch/main/graph/badge.svg)](https://codecov.io/gh/SMSDAO/reimagined-jupiter)
 [![Deploy Preview](https://github.com/SMSDAO/reimagined-jupiter/actions/workflows/deploy-preview.yml/badge.svg)](https://github.com/SMSDAO/reimagined-jupiter/actions/workflows/deploy-preview.yml)
@@ -8,6 +9,17 @@
 The most advanced Solana DeFi platform with flash loan arbitrage, sniper bot, token launchpad, and comprehensive Web3 UI.
 
 ## 🆕 Latest Updates
+
+**🤖 Continuous Self-Optimizing Workflow**
+
+- ✅ **Auto-Fix**: Automatically applies safe code fixes (ESLint, formatting) on every PR
+- 🗑️ **Dead Code Removal**: Identifies and flags unused code for removal
+- 🧪 **Test Generation**: Generates test stubs for files with low coverage (< 80%)
+- 🔒 **Security Scanning**: Comprehensive vulnerability detection with CodeQL integration
+- 💬 **Inline PR Comments**: Explains changes and flags risky code patterns
+- 📊 **Coverage Analysis**: Tracks and improves test coverage automatically
+
+📖 **[Quick Ref](./.github/SELF_OPTIMIZE_QUICK_REF.md)** | **[Full Docs](./.github/SELF_OPTIMIZE_WORKFLOW.md)** | **[Integration Guide](./.github/SELF_OPTIMIZE_INTEGRATION.md)**
 
 **✨ Production-Ready API with Comprehensive Validation & Automated Deployment**
 
