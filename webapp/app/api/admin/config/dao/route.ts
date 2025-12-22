@@ -11,9 +11,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { PublicKey } from '@solana/web3.js';
 import {
   requirePermission,
-  logAdminAction,
-  validateInput,
+  getClientIp,
   sanitizeForLogging,
+  validateInput as _validateInput,
 } from '@/lib/admin-auth';
 
 /**
@@ -205,7 +205,7 @@ export async function POST(request: NextRequest) {
 /**
  * OPTIONS handler for CORS
  */
-export async function OPTIONS(request: NextRequest) {
+export async function OPTIONS(_request: NextRequest) {
   return new NextResponse(null, {
     status: 200,
     headers: {

@@ -34,7 +34,7 @@ interface BotState {
 }
 
 // In-memory bot state (replace with database in production)
-let botState: BotState = {
+const botState: BotState = {
   running: false,
   paused: false,
 };
@@ -218,7 +218,7 @@ export async function POST(request: NextRequest) {
 /**
  * OPTIONS handler for CORS
  */
-export async function OPTIONS(request: NextRequest) {
+export async function OPTIONS(_request: NextRequest) {
   return new NextResponse(null, {
     status: 200,
     headers: {

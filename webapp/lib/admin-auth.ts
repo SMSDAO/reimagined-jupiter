@@ -47,8 +47,8 @@ export interface AuditLogData {
   action: string;
   resource?: string;
   resourceId?: string;
-  requestData?: Record<string, any>;
-  responseData?: Record<string, any>;
+  requestData?: Record<string, unknown>;
+  responseData?: Record<string, unknown>;
   status: 'success' | 'failure' | 'error';
   errorMessage?: string;
 }
@@ -280,10 +280,10 @@ export function getClientIp(request: NextRequest): string {
 /**
  * Sanitize sensitive data before logging
  */
-export function sanitizeForLogging(data: any): any {
+export function sanitizeForLogging(data: unknown): unknown {
   if (!data) return data;
 
-  const sanitized = { ...data };
+  const sanitized = { ...data as Record<string, unknown> };
   const sensitiveKeys = [
     'password',
     'passwordHash',
@@ -308,7 +308,7 @@ export function sanitizeForLogging(data: any): any {
  * For complex validation, use Zod schemas
  */
 export function validateInput(
-  input: any,
+  input: Record<string, unknown>,
   rules: {
     required?: string[];
     maxLength?: Record<string, number>;

@@ -6,7 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getAdminSession, logAdminAction } from '@/lib/admin-auth';
+import { getAdminSession } from '@/lib/admin-auth';
 
 /**
  * GET /api/admin/auth/verify
@@ -81,7 +81,7 @@ export async function GET(request: NextRequest) {
 /**
  * OPTIONS handler for CORS
  */
-export async function OPTIONS(request: NextRequest) {
+export async function OPTIONS(_request: NextRequest) {
   return new NextResponse(null, {
     status: 200,
     headers: {

@@ -9,7 +9,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { Connection } from '@solana/web3.js';
-import { requirePermission, logAdminAction } from '@/lib/admin-auth';
+import { requirePermission } from '@/lib/admin-auth';
 
 /**
  * SDK Health Status
@@ -29,7 +29,7 @@ interface SdkHealth {
 export async function GET(request: NextRequest) {
   try {
     // Require authentication and permission
-    const session = await requirePermission(request, 'canViewMetrics');
+    await requirePermission(request, 'canViewMetrics');
 
     const startTime = Date.now();
 
@@ -187,7 +187,7 @@ export async function GET(request: NextRequest) {
 /**
  * OPTIONS handler for CORS
  */
-export async function OPTIONS(request: NextRequest) {
+export async function OPTIONS(_request: NextRequest) {
   return new NextResponse(null, {
     status: 200,
     headers: {
