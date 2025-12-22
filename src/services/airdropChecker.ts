@@ -35,16 +35,27 @@ export class AirdropChecker {
     this.connection = connection;
     this.userPublicKey = userPublicKey;
     
-    // Dev wallet from env - must be valid Solana address
-    const devWalletAddress = process.env.DEV_FEE_WALLET || '11111111111111111111111111111111'; 
-    try {
-      this.devWallet = new PublicKey(devWalletAddress);
-    } catch (error) {
-      console.error('[AirdropChecker] Invalid DEV_FEE_WALLET address, using system program as fallback');
-      this.devWallet = new PublicKey('11111111111111111111111111111111'); // System program as safe fallback
+    // Dev wallet from env - REQUIRED for production
+    const devWalletAddress = process.env.DEV_FEE_WALLET;
+    if (!devWalletAddress) {
+      console.warn('[AirdropChecker] DEV_FEE_WALLET not set - donations will be disabled');
+      // Use a well-known burn address as fallback to make missing config obvious
+      this.devWallet = new PublicKey('1nc1nerator11111111111111111111111111111111'); // Incinerator (burn address)
+    } else {
+      try {
+        this.devWallet = new PublicKey(devWalletAddress);
+        console.log(`[AirdropChecker] Dev wallet configured: ${this.devWallet.toString().slice(0, 8)}...`);
+      } catch (error) {
+        console.error('[AirdropChecker] Invalid DEV_FEE_WALLET address format');
+        throw new Error('Invalid DEV_FEE_WALLET configuration - must be a valid Solana public key');
+      }
     }
     
     this.devFeePercentage = parseFloat(process.env.DEV_FEE_PERCENTAGE || '0.10');
+    if (this.devFeePercentage < 0 || this.devFeePercentage > 1) {
+      console.warn('[AirdropChecker] Invalid DEV_FEE_PERCENTAGE, using default 10%');
+      this.devFeePercentage = 0.10;
+    }
   }
   
   async checkAllAirdrops(): Promise<AirdropInfo[]> {

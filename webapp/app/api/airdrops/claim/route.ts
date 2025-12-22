@@ -40,12 +40,15 @@ export async function POST(request: NextRequest) {
     console.log('   This endpoint can be used to log the claim attempt');
 
     // Get user IP and User-Agent for audit logging
+    // Note: IP addresses are logged for fraud prevention (legitimate interest under GDPR)
+    // Ensure compliance with privacy regulations in your jurisdiction
     const userIpAddress = request.headers.get('x-forwarded-for') || 
                           request.headers.get('x-real-ip') || 
                           'unknown';
     const userAgent = request.headers.get('user-agent') || 'unknown';
 
-    console.log(`   IP: ${userIpAddress}, UA: ${userAgent.substring(0, 50)}...`);
+    // Log audit information securely (avoid exposing in production logs)
+    console.log(`🔐 Claim attempt - Protocol: ${protocol}, Wallet: ${walletAddress.slice(0, 8)}...`);
 
     return NextResponse.json({
       success: false,

@@ -61,7 +61,9 @@ interface Airdrop {
 }
 
 // Constants for value calculations
-const PLACEHOLDER_TOKEN_VALUE_USD = 0.5; // Placeholder USD value per token for estimation
+// TODO: Move to environment variables or configuration file for production
+// This allows updating token values without code changes
+const PLACEHOLDER_TOKEN_VALUE_USD = parseFloat(process.env.NEXT_PUBLIC_TOKEN_VALUE_USD || '0.5');
 
 // Helper function to calculate total claimable value
 function calculateTotalClaimableValue(airdrops: Airdrop[]): number {
@@ -224,10 +226,12 @@ export default function AirdropPage() {
       setLoading(true);
       
       // Note: In production, this would:
-      // 1. Build the claim transaction on client
-      // 2. Sign it with wallet adapter
-      // 3. Submit signed transaction to API
-      // For now, we call the API to log the attempt
+      // 1. Build the claim transaction on client using wallet adapter
+      // 2. Sign it with the connected wallet
+      // 3. Submit signed transaction to API or RPC
+      // 
+      // Current implementation is a placeholder that demonstrates the flow
+      // without actual transaction execution (requires protocol SDK integration)
       
       const response = await fetch('/api/airdrops/claim', {
         method: 'POST',
@@ -235,7 +239,7 @@ export default function AirdropPage() {
         body: JSON.stringify({
           protocol: airdrop.protocol,
           walletAddress: publicKey.toString(),
-          signedTransaction: '', // Placeholder - would be actual signed tx
+          signedTransaction: 'PLACEHOLDER_PENDING_SDK_INTEGRATION',
         }),
       });
       
