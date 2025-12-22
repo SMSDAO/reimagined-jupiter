@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Connection, PublicKey } from '@solana/web3.js';
+import { auditLog } from '@/../../src/services/auditLogger';
 
 /**
  * Enhanced Wallet Analysis API Endpoint
@@ -199,6 +200,8 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ address: string }> }
 ) {
+  const startTime = Date.now();
+  
   try {
     const { address } = await params;
 
@@ -223,6 +226,17 @@ export async function GET(
     // Perform live analysis
     const analysis = await analyzeWallet(address);
 
+    // Log successful analysis
+    auditLog.walletAnalysis({
+      walletAddress: address,
+      score: analysis.trust_score,
+      tier: analysis.wallet_type,
+      riskLevel: analysis.risk_level,
+      dataSource: { jupiter: false, solanascan: false, onchain: true },
+      duration: Date.now() - startTime,
+      success: true,
+    });
+
     return NextResponse.json(analysis, {
       headers: {
         'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600',
@@ -231,6 +245,19 @@ export async function GET(
 
   } catch (error) {
     console.error('[API] Error analyzing wallet:', error);
+    
+    // Log failed analysis
+    auditLog.walletAnalysis({
+      walletAddress: 'unknown',
+      score: 0,
+      tier: 'UNKNOWN',
+      riskLevel: 'UNKNOWN',
+      dataSource: { jupiter: false, solanascan: false, onchain: true },
+      duration: Date.now() - startTime,
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+    
     return NextResponse.json(
       { 
         error: 'Failed to analyze wallet',

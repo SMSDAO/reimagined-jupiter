@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Connection, PublicKey } from '@solana/web3.js';
+import { auditLog } from '@/../../src/services/auditLogger';
 
 /**
  * Admin Portfolio Analytics API
@@ -100,6 +101,8 @@ async function quickScoreWallet(connection: Connection, address: string) {
  * Batch analyze multiple wallets
  */
 export async function POST(request: NextRequest) {
+  const startTime = Date.now();
+  
   try {
     const body = await request.json();
     const { wallets, action } = body;
@@ -132,6 +135,15 @@ export async function POST(request: NextRequest) {
         return acc;
       }, {} as Record<string, number>);
       
+      // Log successful batch scoring
+      auditLog.batchScoring({
+        walletCount: results.length,
+        avgScore: Math.round(avgScore),
+        duration: Date.now() - startTime,
+        success: true,
+        metadata: { tierCounts },
+      });
+      
       return NextResponse.json({
         success: true,
         results,
@@ -158,6 +170,13 @@ export async function POST(request: NextRequest) {
       );
       const csv = [csvHeader, ...csvRows].join('\n');
       
+      // Log successful export
+      auditLog.export({
+        walletCount: results.length,
+        duration: Date.now() - startTime,
+        success: true,
+      });
+      
       return new NextResponse(csv, {
         headers: {
           'Content-Type': 'text/csv',
@@ -173,6 +192,15 @@ export async function POST(request: NextRequest) {
     
   } catch (error) {
     console.error('[Admin API] Portfolio analytics error:', error);
+    
+    // Log failed operation
+    auditLog.adminAction({
+      action: 'portfolio-analytics',
+      duration: Date.now() - startTime,
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+    
     return NextResponse.json(
       { 
         error: 'Failed to process portfolio analytics',
