@@ -13,7 +13,7 @@
  *   node scripts/testFarcaster.js [wallet_address]
  */
 
-import { Connection, PublicKey } from '@solana/web3.js';
+import { Connection } from '@solana/web3.js';
 import { config } from '../src/config/index.js';
 import { WalletScoring } from '../src/services/walletScoring.js';
 import { FarcasterScoring } from '../src/services/farcasterScoring.js';
@@ -68,7 +68,8 @@ async function testFarcasterIntegration() {
     // Test 3: Farcaster Scoring Service
     section('3️⃣ Testing Farcaster Scoring Service');
     if (config.neynar.apiKey) {
-      const farcasterScoring = new FarcasterScoring(config.neynar.apiKey);
+      // const farcasterScoring = new FarcasterScoring(config.neynar.apiKey);
+      new FarcasterScoring(config.neynar.apiKey); // Initialize to verify it doesn't throw
       log('✅ FarcasterScoring service initialized', 'green');
 
       // Test profile lookup (with mock data for demo)
@@ -83,7 +84,8 @@ async function testFarcasterIntegration() {
 
     // Test 4: Wallet Scoring with Social Intelligence
     section('4️⃣ Testing Enhanced Wallet Scoring');
-    const walletScoring = new WalletScoring(connection, config.neynar.apiKey);
+    // const walletScoring = new WalletScoring(connection, config.neynar.apiKey);
+    new WalletScoring(connection, config.neynar.apiKey); // Initialize to verify it doesn't throw
     log('✅ WalletScoring service initialized with social intelligence', 'green');
 
     // Test scoring algorithms

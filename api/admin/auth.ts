@@ -12,7 +12,7 @@ interface AuthRequest {
   password: string;
 }
 
-interface AuthResponse {
+export interface AuthResponse {
   success: boolean;
   token?: string;
   expiresIn?: number;

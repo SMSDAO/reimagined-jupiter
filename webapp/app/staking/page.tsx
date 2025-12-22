@@ -28,14 +28,26 @@ export default function StakingPage() {
     { name: 'KMNO', protocol: 'Kamino', apy: 12.3, tvl: '$180M', minStake: 1, logo: '💎' },
   ]);
 
-  // Simulate real-time APY updates
+  // Fetch real-time APY data from protocols
   useEffect(() => {
-    const interval = setInterval(() => {
-      setPools(prev => prev.map(pool => ({
-        ...pool,
-        apy: Math.max(5, pool.apy + (Math.random() - 0.5) * 0.2),
-      })));
-    }, 3000);
+    const fetchLiveAPYs = async () => {
+      try {
+        // Fetch real APYs from protocol APIs
+        const response = await fetch('/api/staking/apy');
+        if (response.ok) {
+          const data = await response.json();
+          setPools(prev => prev.map(pool => ({
+            ...pool,
+            apy: data[pool.protocol.toLowerCase()] || pool.apy,
+          })));
+        }
+      } catch (error) {
+        console.error('[Staking] Error fetching APYs:', error);
+      }
+    };
+
+    fetchLiveAPYs();
+    const interval = setInterval(fetchLiveAPYs, 60000); // Update every minute
 
     return () => clearInterval(interval);
   }, []);

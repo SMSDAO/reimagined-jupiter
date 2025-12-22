@@ -202,7 +202,7 @@ export function validateRequest(
  * Create validation middleware
  */
 export function createValidationMiddleware(rules: ValidationRule[]) {
-  return (req: VercelRequest, res: VercelResponse, next?: Function) => {
+  return (req: VercelRequest, res: VercelResponse, next?: () => void) => {
     const validation = validateRequest(req.body, rules);
 
     if (!validation.valid) {

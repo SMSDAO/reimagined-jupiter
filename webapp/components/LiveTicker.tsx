@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 
 interface TickerData {
@@ -18,19 +18,74 @@ export default function LiveTicker() {
     { symbol: 'WIF', price: 2.87, change: -0.8, volume: 234567 },
     { symbol: 'RAY', price: 4.56, change: 3.2, volume: 345678 },
   ]);
+  const wsRef = useRef<WebSocket | null>(null);
+  const [isConnected, setIsConnected] = useState(false);
 
-  // Simulate real-time price updates every second
   useEffect(() => {
-    const interval = setInterval(() => {
-      setTickers(prev => prev.map(ticker => ({
-        ...ticker,
-        price: ticker.price * (1 + (Math.random() - 0.5) * 0.01),
-        change: ticker.change + (Math.random() - 0.5) * 0.5,
-        volume: ticker.volume + Math.floor((Math.random() - 0.5) * 10000),
-      })));
-    }, 1000);
+    // Connect to WebSocket service for real-time price updates
+    const connectWebSocket = () => {
+      try {
+        const ws = new WebSocket(process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:3001');
+        
+        ws.onopen = () => {
+          console.log('[LiveTicker] WebSocket connected');
+          setIsConnected(true);
+          // Subscribe to price feeds
+          ws.send(JSON.stringify({
+            type: 'subscribe',
+            channel: 'prices',
+            symbols: ['SOL', 'BONK', 'JUP', 'WIF', 'RAY']
+          }));
+        };
+        
+        ws.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            if (data.type === 'price_update' && data.prices) {
+              setTickers(prev => prev.map(ticker => {
+                const update = data.prices.find((p: any) => p.symbol === ticker.symbol);
+                if (update) {
+                  return {
+                    ...ticker,
+                    price: update.price,
+                    change: update.change24h || ticker.change,
+                    volume: update.volume24h || ticker.volume,
+                  };
+                }
+                return ticker;
+              }));
+            }
+          } catch (error) {
+            console.error('[LiveTicker] Error parsing message:', error);
+          }
+        };
+        
+        ws.onerror = (error) => {
+          console.error('[LiveTicker] WebSocket error:', error);
+          setIsConnected(false);
+        };
+        
+        ws.onclose = () => {
+          console.log('[LiveTicker] WebSocket closed');
+          setIsConnected(false);
+          // Reconnect after 5 seconds
+          setTimeout(connectWebSocket, 5000);
+        };
+        
+        wsRef.current = ws;
+      } catch (error) {
+        console.error('[LiveTicker] Error connecting to WebSocket:', error);
+        setIsConnected(false);
+      }
+    };
 
-    return () => clearInterval(interval);
+    connectWebSocket();
+
+    return () => {
+      if (wsRef.current) {
+        wsRef.current.close();
+      }
+    };
   }, []);
 
   return (
@@ -52,6 +107,9 @@ export default function LiveTicker() {
             }`}>
               {ticker.change >= 0 ? '▲' : '▼'} {Math.abs(ticker.change).toFixed(2)}%
             </span>
+            {!isConnected && index === 0 && (
+              <span className="text-xs text-yellow-400" title="Reconnecting to live data">⚠️</span>
+            )}
           </motion.div>
         ))}
       </div>

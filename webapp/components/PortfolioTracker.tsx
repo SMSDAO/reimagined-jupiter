@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import StatCard from './StatCard';
 
@@ -21,26 +21,77 @@ export default function PortfolioTracker() {
 
   const [totalValue, setTotalValue] = useState(0);
   const [totalChange, setTotalChange] = useState(0);
+  const wsRef = useRef<WebSocket | null>(null);
 
-  // Simulate real-time value updates
   useEffect(() => {
-    const interval = setInterval(() => {
-      setAssets(prev => prev.map(asset => ({
-        ...asset,
-        value: asset.value * (1 + (Math.random() - 0.5) * 0.01),
-        change24h: asset.change24h + (Math.random() - 0.5) * 0.3,
-      })));
-    }, 2000);
+    // Connect to WebSocket service for real-time portfolio updates
+    const connectWebSocket = () => {
+      try {
+        const ws = new WebSocket(process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:3001');
+        
+        ws.onopen = () => {
+          console.log('[PortfolioTracker] WebSocket connected');
+          // Subscribe to portfolio updates
+          ws.send(JSON.stringify({
+            type: 'subscribe',
+            channel: 'portfolio'
+          }));
+        };
+        
+        ws.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            if (data.type === 'portfolio_update' && data.assets) {
+              setAssets(data.assets);
+            } else if (data.type === 'price_update' && data.prices) {
+              // Update asset values based on price updates
+              setAssets(prev => prev.map(asset => {
+                const priceUpdate = data.prices.find((p: any) => p.symbol === asset.symbol);
+                if (priceUpdate) {
+                  const newValue = asset.amount * priceUpdate.price;
+                  return {
+                    ...asset,
+                    value: newValue,
+                    change24h: priceUpdate.change24h || asset.change24h,
+                  };
+                }
+                return asset;
+              }));
+            }
+          } catch (error) {
+            console.error('[PortfolioTracker] Error parsing message:', error);
+          }
+        };
+        
+        ws.onerror = (error) => {
+          console.error('[PortfolioTracker] WebSocket error:', error);
+        };
+        
+        ws.onclose = () => {
+          console.log('[PortfolioTracker] WebSocket closed, reconnecting...');
+          // Reconnect after 5 seconds
+          setTimeout(connectWebSocket, 5000);
+        };
+        
+        wsRef.current = ws;
+      } catch (error) {
+        console.error('[PortfolioTracker] Error connecting to WebSocket:', error);
+      }
+    };
 
-    return () => clearInterval(interval);
+    connectWebSocket();
+
+    return () => {
+      if (wsRef.current) {
+        wsRef.current.close();
+      }
+    };
   }, []);
 
   useEffect(() => {
     const total = assets.reduce((sum, asset) => sum + asset.value, 0);
     const avgChange = assets.reduce((sum, asset) => sum + asset.change24h, 0) / assets.length;
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setTotalValue(total);
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setTotalChange(avgChange);
   }, [assets]);
 

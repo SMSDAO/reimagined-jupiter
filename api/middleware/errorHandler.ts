@@ -70,7 +70,7 @@ export function createErrorResponse(
  * Error handler wrapper for API endpoints
  */
 export function withErrorHandler(
-  handler: (req: VercelRequest, res: VercelResponse) => Promise<any>
+  handler: (req: VercelRequest, res: VercelResponse) => Promise<unknown>
 ) {
   return async (req: VercelRequest, res: VercelResponse) => {
     try {
@@ -203,7 +203,7 @@ export function safeJsonParse<T>(json: string, defaultValue: T): T {
 /**
  * Log error with context
  */
-export function logError(error: Error | string, context?: Record<string, any>): void {
+export function logError(error: Error | string, context?: Record<string, unknown>): void {
   const timestamp = new Date().toISOString();
   const errorMessage = typeof error === 'string' ? error : error.message;
   const errorStack = typeof error === 'object' && 'stack' in error ? error.stack : undefined;

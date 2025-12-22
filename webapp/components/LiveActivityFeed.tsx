@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface Activity {
@@ -14,33 +14,66 @@ interface Activity {
 
 export default function LiveActivityFeed() {
   const [activities, setActivities] = useState<Activity[]>([]);
+  const wsRef = useRef<WebSocket | null>(null);
 
-  // Simulate real-time activity updates
   useEffect(() => {
-    const interval = setInterval(() => {
-      const types: Activity['type'][] = ['arbitrage', 'swap', 'snipe', 'stake'];
-      const messages = [
-        'Flash loan arbitrage executed',
-        'Token swap completed',
-        'New token sniped',
-        'Staking position opened',
-        'Opportunity detected',
-        'Transaction confirmed',
-      ];
+    // Connect to WebSocket service for real-time activity updates
+    const connectWebSocket = () => {
+      try {
+        const ws = new WebSocket(process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:3001');
+        
+        ws.onopen = () => {
+          console.log('[LiveActivityFeed] WebSocket connected');
+          // Subscribe to activity feed
+          ws.send(JSON.stringify({
+            type: 'subscribe',
+            channel: 'activity'
+          }));
+        };
+        
+        ws.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            if (data.type === 'activity') {
+              const newActivity: Activity = {
+                id: data.id || Date.now().toString(),
+                type: data.activityType || 'swap',
+                message: data.message || 'Transaction processed',
+                timestamp: new Date(data.timestamp || Date.now()),
+                amount: data.amount ? `$${data.amount.toFixed(2)}` : undefined,
+                status: data.status || 'success',
+              };
+              
+              setActivities(prev => [newActivity, ...prev.slice(0, 9)]);
+            }
+          } catch (error) {
+            console.error('[LiveActivityFeed] Error parsing message:', error);
+          }
+        };
+        
+        ws.onerror = (error) => {
+          console.error('[LiveActivityFeed] WebSocket error:', error);
+        };
+        
+        ws.onclose = () => {
+          console.log('[LiveActivityFeed] WebSocket closed, reconnecting...');
+          // Reconnect after 5 seconds
+          setTimeout(connectWebSocket, 5000);
+        };
+        
+        wsRef.current = ws;
+      } catch (error) {
+        console.error('[LiveActivityFeed] Error connecting to WebSocket:', error);
+      }
+    };
 
-      const newActivity: Activity = {
-        id: Date.now().toString(),
-        type: types[Math.floor(Math.random() * types.length)],
-        message: messages[Math.floor(Math.random() * messages.length)],
-        timestamp: new Date(),
-        amount: `$${(Math.random() * 1000).toFixed(2)}`,
-        status: Math.random() > 0.2 ? 'success' : Math.random() > 0.5 ? 'pending' : 'failed',
-      };
+    connectWebSocket();
 
-      setActivities(prev => [newActivity, ...prev.slice(0, 9)]);
-    }, 3000);
-
-    return () => clearInterval(interval);
+    return () => {
+      if (wsRef.current) {
+        wsRef.current.close();
+      }
+    };
   }, []);
 
   const getTypeIcon = (type: Activity['type']) => {

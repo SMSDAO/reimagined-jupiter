@@ -89,10 +89,11 @@ async function testEndpoint(
     };
 
     const req = client.request(url, options, (res) => {
-      let data = '';
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      let _data = '';
 
       res.on('data', (chunk) => {
-        data += chunk;
+        _data += chunk;
       });
 
       res.on('end', () => {

@@ -4,7 +4,7 @@
  * Now includes circuit breaker, RPC manager, and profit tracking status
  */
 
-import { Connection, PublicKey } from '@solana/web3.js';
+import { Connection } from '@solana/web3.js';
 import bs58 from 'bs58';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
