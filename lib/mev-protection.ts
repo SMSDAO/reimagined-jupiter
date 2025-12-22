@@ -177,12 +177,23 @@ export function buildJitoTipInstruction(
     tipLamports,
   });
   
-  // Create actual SOL transfer instruction to Jito tip account
-  return SystemProgram.transfer({
-    fromPubkey: from.publicKey,
-    toPubkey: new PublicKey(config.tipAccount),
-    lamports: tipLamports,
-  });
+  // Validate tip account before creating PublicKey
+  try {
+    const tipAccountPubkey = new PublicKey(config.tipAccount);
+    
+    // Create actual SOL transfer instruction to Jito tip account
+    return SystemProgram.transfer({
+      fromPubkey: from.publicKey,
+      toPubkey: tipAccountPubkey,
+      lamports: tipLamports,
+    });
+  } catch (error) {
+    logger.error('Invalid Jito tip account address', {
+      tipAccount: config.tipAccount,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+    throw new Error(`Invalid Jito tip account: ${config.tipAccount}`);
+  }
 }
 
 /**
