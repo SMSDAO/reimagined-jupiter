@@ -1,4 +1,7 @@
 import { PublicKey, Transaction, VersionedTransaction } from '@solana/web3.js';
+import { Logger } from './logger.js';
+
+const logger = new Logger('SecurityValidator');
 
 /**
  * Security validation utilities for mainnet operations
@@ -24,13 +27,13 @@ export class SecurityValidator {
       const addressStr = pubkey.toString();
       
       if (this.BLACKLISTED_ADDRESSES.has(addressStr)) {
-        console.error('[Security] Address is blacklisted:', addressStr);
+        logger.error('Address is blacklisted', error, { address: addressStr });
         return false;
       }
       
       return true;
     } catch (error) {
-      console.error('[Security] Invalid address format:', error);
+      logger.error('Invalid address format', error);
       return false;
     }
   }
@@ -53,19 +56,19 @@ export class SecurityValidator {
       }
       
       if (!instructions || instructions.length === 0) {
-        console.error('[Security] Transaction has no instructions');
+        logger.error('Transaction has no instructions');
         return false;
       }
       
       // Validate signers
       if (expectedSigners.length === 0) {
-        console.error('[Security] No expected signers provided');
+        logger.error('No expected signers provided');
         return false;
       }
       
       return true;
     } catch (error) {
-      console.error('[Security] Transaction validation error:', error);
+      logger.error('Transaction validation error', error);
       return false;
     }
   }
@@ -75,12 +78,12 @@ export class SecurityValidator {
    */
   static validateSlippage(slippage: number): boolean {
     if (slippage < 0) {
-      console.error('[Security] Slippage cannot be negative:', slippage);
+      logger.error('Slippage cannot be negative', undefined, { slippage });
       return false;
     }
     
     if (slippage > this.MAX_SLIPPAGE_PERCENT) {
-      console.error('[Security] Slippage exceeds maximum allowed:', slippage, 'max:', this.MAX_SLIPPAGE_PERCENT);
+      logger.error('Slippage exceeds maximum allowed', undefined, { slippage, max: this.MAX_SLIPPAGE_PERCENT });
       return false;
     }
     
@@ -92,19 +95,19 @@ export class SecurityValidator {
    */
   static validateAmount(amount: number, decimals: number = 9): boolean {
     if (amount <= 0) {
-      console.error('[Security] Amount must be positive:', amount);
+      logger.error('Amount must be positive', undefined, { amount });
       return false;
     }
     
     if (!Number.isFinite(amount)) {
-      console.error('[Security] Amount must be finite:', amount);
+      logger.error('Amount must be finite', undefined, { amount });
       return false;
     }
     
     // Check for unreasonably large amounts (> 1 trillion tokens)
     const maxAmount = 1_000_000_000_000 * Math.pow(10, decimals);
     if (amount > maxAmount) {
-      console.error('[Security] Amount exceeds reasonable limit:', amount);
+      logger.error('Amount exceeds reasonable limit', undefined, { amount, maxAmount });
       return false;
     }
     
@@ -117,13 +120,13 @@ export class SecurityValidator {
   static validateProfitEstimate(profitPercent: number): boolean {
     // Profit cannot be negative (would be a loss)
     if (profitPercent < 0) {
-      console.warn('[Security] Negative profit detected:', profitPercent);
+      logger.warn('Negative profit detected', { profitPercent });
       return false;
     }
     
     // Extremely high profit (>100%) is suspicious
     if (profitPercent > 1.0) {
-      console.warn('[Security] Suspiciously high profit estimate:', profitPercent);
+      logger.warn('Suspiciously high profit estimate', { profitPercent });
       return false;
     }
     
@@ -147,13 +150,13 @@ export class SecurityValidator {
       
       const mintStr = mintPubkey.toString();
       if (invalidAddresses.includes(mintStr)) {
-        console.error('[Security] Invalid token mint:', mintStr);
+        logger.error('Invalid token mint', undefined, { mint: mintStr });
         return false;
       }
       
       return this.validateAddress(mintPubkey);
     } catch (error) {
-      console.error('[Security] Token mint validation error:', error);
+      logger.error('Token mint validation error', error);
       return false;
     }
   }
@@ -253,18 +256,17 @@ export class SecurityValidator {
     event: string,
     details?: any
   ): void {
-    const timestamp = new Date().toISOString();
-    const logMessage = `[Security][${level.toUpperCase()}][${timestamp}] ${event}`;
+    const sanitizedDetails = details ? { details } : undefined;
     
     switch (level) {
       case 'error':
-        console.error(logMessage, details || '');
+        logger.error(event, undefined, sanitizedDetails);
         break;
       case 'warn':
-        console.warn(logMessage, details || '');
+        logger.warn(event, sanitizedDetails);
         break;
       default:
-        console.log(logMessage, details || '');
+        logger.info(event, sanitizedDetails);
     }
   }
 }
