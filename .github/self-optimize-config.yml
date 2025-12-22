@@ -1,0 +1,239 @@
+name: "Self-Optimization Configuration"
+version: "1.0"
+
+# Configuration for the self-optimizing workflow
+# This file defines rules and thresholds for automated code optimization
+
+# Auto-fix settings
+auto_fix:
+  enabled: true
+  # Types of fixes to apply automatically
+  fix_types:
+    - problem        # Fix code problems (bugs, errors)
+    - suggestion     # Apply code suggestions
+    - layout         # Fix code formatting/layout
+  
+  # Exclude patterns from auto-fixing
+  exclude_patterns:
+    - "**/node_modules/**"
+    - "**/dist/**"
+    - "**/build/**"
+    - "**/.next/**"
+    - "**/coverage/**"
+  
+  # Safe patterns that can always be auto-fixed
+  safe_rules:
+    - "no-unused-vars"
+    - "no-console"        # Only in production code
+    - "semi"
+    - "quotes"
+    - "indent"
+    - "comma-dangle"
+    - "eol-last"
+    - "no-trailing-spaces"
+    - "arrow-spacing"
+    - "keyword-spacing"
+
+# Dead code detection
+dead_code:
+  enabled: true
+  
+  # Files to check for dead code
+  include:
+    - "src/**/*.ts"
+    - "api/**/*.ts"
+    - "lib/**/*.ts"
+    - "webapp/**/*.{ts,tsx}"
+  
+  # Exclude from dead code removal
+  exclude:
+    - "**/*.test.ts"
+    - "**/*.spec.ts"
+    - "**/index.ts"           # Index files are often re-exports
+    - "**/types.ts"           # Type definitions
+    - "**/constants.ts"       # Constants may be used externally
+    
+  # Safe removal criteria
+  safe_removal:
+    # Only remove if all criteria are met
+    not_in_index: true         # Not exported from index files
+    not_in_tests: true         # Not in test files
+    not_public_api: true       # Not marked as public API
+    no_external_imports: true  # Not imported by external packages
+    unused_for_days: 30        # Unused for at least 30 days
+
+# Test coverage thresholds
+coverage:
+  enabled: true
+  
+  # Minimum coverage thresholds
+  thresholds:
+    lines: 80
+    statements: 80
+    functions: 75
+    branches: 70
+  
+  # Generate test stubs for files below threshold
+  generate_stubs: true
+  
+  # Exclude from coverage requirements
+  exclude:
+    - "**/*.test.ts"
+    - "**/*.spec.ts"
+    - "**/index.ts"
+    - "**/__tests__/**"
+    - "**/scripts/**"         # Scripts may not need full coverage
+    - "**/types/**"           # Type-only files
+
+# Code quality rules
+quality:
+  enabled: true
+  
+  # Complexity thresholds
+  complexity:
+    max_cyclomatic: 15        # Maximum cyclomatic complexity
+    max_cognitive: 20         # Maximum cognitive complexity
+    warn_at: 10               # Warn when approaching limit
+  
+  # File size limits
+  file_size:
+    max_lines: 500            # Maximum lines per file
+    warn_at: 300              # Warn when approaching limit
+  
+  # Function length limits
+  function_length:
+    max_lines: 100            # Maximum lines per function
+    warn_at: 50               # Warn when approaching limit
+
+# Security rules
+security:
+  enabled: true
+  
+  # Patterns to flag as security risks
+  risky_patterns:
+    - pattern: "eval\\("
+      severity: "high"
+      message: "Use of eval() is dangerous and should be avoided"
+      
+    - pattern: "Function\\("
+      severity: "high"
+      message: "Dynamic function creation is a security risk"
+      
+    - pattern: "innerHTML\\s*="
+      severity: "medium"
+      message: "Direct innerHTML assignment can lead to XSS"
+      
+    - pattern: "dangerouslySetInnerHTML"
+      severity: "medium"
+      message: "Ensure content is properly sanitized before use"
+      
+    - pattern: "(password|secret|api_key|private_key|token)\\s*=\\s*[\"'][^\"']{8,}"
+      severity: "critical"
+      message: "Potential hardcoded secret detected"
+      
+    - pattern: "process\\.env\\.\\w+\\s*\\|\\|\\s*[\"']"
+      severity: "low"
+      message: "Default values for environment variables should be reviewed"
+  
+  # Vulnerability severity levels
+  vulnerability_thresholds:
+    block_on: ["critical", "high"]
+    warn_on: ["medium"]
+    ignore: ["low"]
+
+# PR comment settings
+pr_comments:
+  enabled: true
+  
+  # What to comment on
+  comment_on:
+    auto_fixes: true          # Explain what was auto-fixed
+    removed_code: true        # Explain why code was removed
+    test_results: true        # Report test outcomes
+    risky_code: true          # Flag risky patterns
+    coverage_gaps: true       # Highlight low coverage areas
+    security_issues: true     # Flag security concerns
+  
+  # Comment style
+  style:
+    use_emoji: true
+    severity_icons:
+      critical: "🔴"
+      high: "🟠"
+      medium: "🟡"
+      low: "🔵"
+      info: "ℹ️"
+    
+    format: "markdown"
+    
+  # Rate limiting
+  max_comments_per_file: 5   # Don't spam with too many comments
+  max_total_comments: 50     # Total comment limit per PR
+
+# Optimization priorities
+priorities:
+  # Order in which optimizations are applied
+  - security_fixes           # Security issues first
+  - critical_bugs           # Critical bugs
+  - auto_fixes              # Safe auto-fixes
+  - code_quality            # Code quality improvements
+  - dead_code_removal       # Remove unused code
+  - test_generation         # Generate missing tests
+  - documentation           # Improve documentation
+
+# Branch-specific settings
+branches:
+  dev:
+    auto_commit: true        # Auto-commit changes on dev
+    auto_merge: false        # Don't auto-merge on dev
+    generate_tests: true     # Generate test stubs
+    
+  develop:
+    auto_commit: true
+    auto_merge: false
+    generate_tests: true
+    
+  main:
+    auto_commit: false       # Don't auto-commit on main
+    auto_merge: false        # Never auto-merge main
+    generate_tests: false    # Don't generate tests on main
+    require_review: true     # Always require manual review
+
+# Notifications
+notifications:
+  # Notify when significant changes are made
+  notify_on:
+    - security_issues
+    - dead_code_removed
+    - breaking_changes
+    - test_failures
+  
+  # Who to notify
+  reviewers:
+    - "code-owners"          # Notify code owners
+    
+# Continuous learning
+learning:
+  enabled: true
+  
+  # Track what optimizations are accepted/rejected
+  track_decisions: true
+  
+  # Improve over time based on feedback
+  adapt_rules: true
+  
+  # Store optimization history
+  history_retention_days: 90
+
+# Performance settings
+performance:
+  # Timeout settings
+  max_analysis_time: 30      # Minutes
+  max_fix_time: 10          # Minutes
+  
+  # Parallel processing
+  parallel_jobs: 4
+  
+  # Cache settings
+  cache_results: true
+  cache_duration: 24        # Hours

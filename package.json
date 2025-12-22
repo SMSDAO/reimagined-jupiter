@@ -32,7 +32,9 @@
     "logs": "vercel logs",
     "monitor": "ts-node-esm scripts/monitor-health.ts",
     "cli": "ts-node-esm cli/index.ts",
-    "admin": "ts-node-esm cli/commands/admin.ts"
+    "admin": "ts-node-esm cli/commands/admin.ts",
+    "optimize": "bash scripts/local-optimize.sh",
+    "optimize:fix": "eslint 'src/**/*.ts' 'api/**/*.ts' 'scripts/**/*.ts' --fix && cd webapp && eslint . --fix"
   },
   "keywords": [
     "solana",

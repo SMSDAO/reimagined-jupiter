@@ -23,3 +23,6 @@ webapp/.turbo
 # CI/CD artifacts (local only)
 *.bak
 .github/workflows/*.bak
+
+# Local optimization reports
+local-optimization-reports/
