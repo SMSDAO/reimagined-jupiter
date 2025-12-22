@@ -185,6 +185,23 @@ analyzePortfolio(walletAddress: string): Promise<PortfolioAnalysis>
 - Portfolio health tracking
 - Export for external analysis
 
+#### 3. Audit Logs Viewer (`webapp/components/AuditLogsViewer.tsx`)
+
+**Features**:
+- Real-time audit log display
+- Auto-refresh toggle (5-second intervals)
+- Export logs as JSON or CSV
+- Statistics summary (total ops, success rate, avg duration)
+- Operation type color coding
+- Success/failure indicators
+- Scrollable table with sticky header
+
+**Usage**:
+- Monitor all portfolio analysis operations
+- Track system performance and reliability
+- Export logs for compliance or debugging
+- View operation details and error messages
+
 ## Data Sources & APIs
 
 ### 1. Jupiter APIs
@@ -217,6 +234,37 @@ analyzePortfolio(walletAddress: string): Promise<PortfolioAnalysis>
 **Status**: Implemented with fallback
 **Usage**: Enhanced transaction analysis when API key provided
 **Fallback**: On-chain queries via Solana RPC
+
+### 4. Audit Logs API
+
+**Endpoint**: `/api/admin/audit-logs`
+
+**Query Parameters**:
+- `action`: `recent` (default), `stats`, `export-json`, `export-csv`
+- `limit`: Number of logs to return (default: 100)
+
+**Actions**:
+1. **recent**: Get recent audit logs with statistics
+2. **stats**: Get statistics only (no logs)
+3. **export-json**: Download all logs as JSON file
+4. **export-csv**: Download all logs as CSV file
+
+**Response Format** (recent):
+```json
+{
+  "success": true,
+  "logs": [...],
+  "stats": {
+    "totalOperations": 150,
+    "successRate": 98.67,
+    "avgDuration": 1234,
+    "operationCounts": {...},
+    "failureReasons": {...}
+  },
+  "count": 50,
+  "timestamp": "2024-12-22T..."
+}
+```
 
 ## Fallback Mechanisms
 
@@ -344,6 +392,41 @@ All scoring operations are logged with:
 - Score and tier
 - Data sources used
 - Errors encountered
+- Operation duration
+- Success/failure status
+
+**Audit Logger Features**:
+- In-memory storage (10,000 most recent entries)
+- Real-time statistics calculation
+- Export as JSON or CSV
+- Console logging with colored output
+- Privacy-preserving address masking
+
+**Audit Operations Tracked**:
+1. `wallet-analysis` - Individual wallet scoring
+2. `batch-scoring` - Multiple wallet analysis
+3. `export` - Data export operations
+4. `admin-action` - Administrative actions
+
+**Statistics Available**:
+- Total operations count
+- Success rate percentage
+- Average operation duration
+- Operation type breakdown
+- Failure reason tracking
+
+### Audit Logs UI (`webapp/components/AuditLogsViewer.tsx`)
+
+**Features**:
+- Real-time log viewing with auto-refresh
+- Export logs as JSON or CSV
+- Statistics dashboard
+- Operation type filtering
+- Success/failure indicators
+- Searchable and sortable table
+- Last 50 entries displayed by default
+
+**Access**: Available in admin panel at `/admin`
 
 ### Performance Metrics
 

@@ -5,6 +5,7 @@ import { useWallet, useConnection } from '@solana/wallet-adapter-react';
 import { PublicKey } from '@solana/web3.js';
 import { motion } from 'framer-motion';
 import PortfolioAnalyticsDashboard from '@/components/PortfolioAnalyticsDashboard';
+import AuditLogsViewer from '@/components/AuditLogsViewer';
 
 interface BotStatus {
   running: boolean;
@@ -575,6 +576,11 @@ export default function AdminPage() {
         {/* Portfolio Analytics Dashboard */}
         <div className="mt-8">
           <PortfolioAnalyticsDashboard />
+        </div>
+
+        {/* Audit Logs Viewer */}
+        <div className="mt-8">
+          <AuditLogsViewer />
         </div>
       </motion.div>
     </div>
