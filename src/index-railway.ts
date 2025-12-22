@@ -13,6 +13,25 @@ import { logger } from '../lib/logger.js';
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Global error handlers to prevent unhandled rejections
+process.on('unhandledRejection', (reason: unknown, promise: Promise<unknown>) => {
+  logger.error('Unhandled Promise Rejection', {
+    reason: reason instanceof Error ? reason.message : String(reason),
+    promise: promise.toString(),
+  });
+});
+
+process.on('uncaughtException', (error: Error) => {
+  logger.error('Uncaught Exception', {
+    error: error.message,
+    stack: error.stack,
+  });
+  // Give logger time to flush before exiting
+  setTimeout(() => {
+    process.exit(1);
+  }, 1000);
+});
+
 // Bot state
 let isRunning = false;
 let isPaused = false;
@@ -266,7 +285,7 @@ function sleep(ms: number): Promise<void> {
 }
 
 /**
- * Graceful shutdown
+ * Graceful shutdown handlers
  */
 process.on('SIGTERM', () => {
   logger.info('SIGTERM received, shutting down gracefully...');
@@ -292,39 +311,49 @@ process.on('SIGINT', () => {
  * Start server and monitoring
  */
 async function start() {
-  logger.info('🚀 GXQ Studio - Railway Continuous Mode');
-  logger.info(`Environment: ${process.env.NODE_ENV || 'production'}`);
-  logger.info(`Port: ${PORT}`);
-  
-  // Start Express server
-  app.listen(PORT, () => {
-    logger.info(`Server started on port ${PORT}`);
-  });
-  
-  // Initialize Solana connection and wallet
-  const initialized = await initialize();
-  
-  if (!initialized) {
-    logger.error('Initialization failed, running in degraded mode');
-    return;
-  }
-  
-  // Auto-start monitoring
-  isRunning = true;
-  logger.info('Auto-starting monitoring...');
-  
-  // Start monitoring loop (non-blocking)
-  monitoringLoop().catch(error => {
-    logger.error('Monitoring loop crashed', {
-      error: error instanceof Error ? error.message : 'Unknown error',
+  try {
+    logger.info('🚀 GXQ Studio - Railway Continuous Mode');
+    logger.info(`Environment: ${process.env.NODE_ENV || 'production'}`);
+    logger.info(`Port: ${PORT}`);
+    
+    // Start Express server
+    app.listen(PORT, () => {
+      logger.info(`Server started on port ${PORT}`);
     });
-  });
+    
+    // Initialize Solana connection and wallet
+    const initialized = await initialize();
+    
+    if (!initialized) {
+      logger.error('Initialization failed, running in degraded mode');
+      return;
+    }
+    
+    // Auto-start monitoring
+    isRunning = true;
+    logger.info('Auto-starting monitoring...');
+    
+    // Start monitoring loop (non-blocking)
+    monitoringLoop().catch(error => {
+      logger.error('Monitoring loop crashed', {
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+      });
+    });
+  } catch (error) {
+    logger.error('Application startup error', {
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+    process.exit(1);
+  }
 }
 
 // Start the application
 start().catch(error => {
-  logger.error('Application startup failed', {
-    error: error instanceof Error ? error.message : 'Unknown error',
+  logger.error('Fatal application error', {
+    error: error instanceof Error ? error.message : String(error),
+    stack: error instanceof Error ? error.stack : undefined,
   });
   process.exit(1);
 });
