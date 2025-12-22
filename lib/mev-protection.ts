@@ -170,7 +170,6 @@ export function buildJitoTipInstruction(
   tipLamports: number,
   config: JitoConfig = DEFAULT_JITO_CONFIG
 ): TransactionInstruction {
-  const { SystemProgram, PublicKey } = require('@solana/web3.js');
   
   logger.debug('Building Jito tip instruction', {
     from: from.publicKey.toString(),
