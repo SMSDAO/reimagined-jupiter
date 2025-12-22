@@ -11,7 +11,6 @@ import {
   Transaction,
   TransactionInstruction,
   PublicKey,
-  SystemProgram,
   ComputeBudgetProgram,
   VersionedTransaction,
   TransactionMessage,
