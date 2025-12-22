@@ -18,7 +18,7 @@ The most advanced Solana DeFi platform with flash loan arbitrage, sniper bot, to
 - ✅ **Enhanced Security**: Rate limiting, input sanitization, and authentication validation
 - ✅ **Complete Documentation**: Comprehensive guides for API, validation, deployment, and configuration
 
-📖 **[Quick Start Guide](./docs/QUICK_START.md)** | **[API Validation](./docs/API_VALIDATION.md)** | **[Deployment Guide](./docs/DEPLOYMENT_AUTOMATION.md)**
+📖 **[Quick Start Guide](./docs/QUICK_START.md)** | **[API Validation](./docs/API_VALIDATION.md)** | **[Deployment Guide](./docs/DEPLOYMENT_AUTOMATION.md)** | **[Wallet Governance](./WALLET_GOVERNANCE.md)**
 
 ## 🌐 Web Application (NEW!)
 
@@ -31,8 +31,25 @@ The most advanced Solana DeFi platform with flash loan arbitrage, sniper bot, to
 - 🎁 **Airdrop Checker** - Wallet scoring and auto-claim with Jupiter integration
 - 💎 **Staking** - Marinade, Lido, Jito, Kamino integration
 - ⚡ **Flash Loan Arbitrage** - Real-time opportunity scanning and execution
+- 🔐 **Wallet Governance** - Secure sub-wallet management with GXQ-ending keys
 - 📱 **Responsive Design** - Mobile, tablet, and desktop optimized
 - 🎨 **Modern UI** - Solana-themed with purple, blue, green gradients and 3D effects
+
+### Wallet Governance System (NEW!)
+
+**Secure management of arbitrage sub-wallets with comprehensive audit logging.**
+
+Key Features:
+- ✅ Up to 3 sub-wallets per user with GXQ-ending public keys
+- ✅ AES-256-GCM encryption for private keys (secure enclave)
+- ✅ Wallet-based authentication with signature verification
+- ✅ Comprehensive audit logging for all operations
+- ✅ Pre-execution balance checks
+- ✅ Admin dashboard for monitoring and compliance
+- ✅ Device fingerprinting and IP tracking (hashed)
+- ✅ Full RBAC enforcement
+
+📖 **[Full Documentation](./WALLET_GOVERNANCE.md)** | **[Security Guide](./SECURITY_GUIDE.md)**
 
 ### Quick Deploy to Vercel
 
