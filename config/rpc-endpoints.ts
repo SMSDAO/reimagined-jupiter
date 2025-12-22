@@ -1,6 +1,12 @@
 /**
  * RPC endpoint configuration with backup nodes
- * Provides fallback endpoints for high availability
+ * Provides fallback endpoints for high availability on Solana mainnet-beta
+ * 
+ * PRODUCTION CONFIGURATION:
+ * - All endpoints target mainnet-beta for live trading
+ * - Premium RPC providers (QuickNode, Helius, Triton) recommended
+ * - Free tier endpoints available as fallback only
+ * - Configure via environment variables for production deployment
  */
 
 export interface RpcEndpoint {
@@ -61,7 +67,10 @@ export const MAINNET_RPC_ENDPOINTS: RpcEndpoint[] = [
 ].filter(endpoint => endpoint.url); // Remove endpoints without URLs
 
 /**
- * Devnet RPC endpoints for testing
+ * Devnet RPC endpoints (for development/testing only)
+ * 
+ * WARNING: Devnet is for testing only and should NOT be used in production
+ * Use mainnet-beta endpoints for all production deployments
  */
 export const DEVNET_RPC_ENDPOINTS: RpcEndpoint[] = [
   {
@@ -82,10 +91,20 @@ export const DEVNET_RPC_ENDPOINTS: RpcEndpoint[] = [
 
 /**
  * Get RPC endpoints for the current environment
+ * 
+ * PRODUCTION: Always uses mainnet-beta unless explicitly set to devnet
+ * Set SOLANA_NETWORK=devnet only for development/testing
  */
 export function getRpcEndpoints(): RpcEndpoint[] {
-  const isDevnet = process.env.SOLANA_NETWORK === 'devnet';
-  return isDevnet ? DEVNET_RPC_ENDPOINTS : MAINNET_RPC_ENDPOINTS;
+  const network = process.env.SOLANA_NETWORK || 'mainnet-beta';
+  
+  if (network === 'devnet') {
+    console.warn('⚠️  WARNING: Using DEVNET - this is for testing only!');
+    console.warn('⚠️  Set SOLANA_NETWORK=mainnet-beta for production');
+    return DEVNET_RPC_ENDPOINTS;
+  }
+  
+  return MAINNET_RPC_ENDPOINTS;
 }
 
 /**

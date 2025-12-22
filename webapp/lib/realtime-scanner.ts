@@ -183,8 +183,15 @@ export class RealTimeScanner {
    */
   private connectWebSocket(): void {
     try {
-      // Example: Connect to Pyth price feed or custom WebSocket server
-      const wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'wss://example.com/ws';
+      // Connect to backend WebSocket server for real-time price and arbitrage updates
+      const wsUrl = process.env.NEXT_PUBLIC_WS_URL;
+      
+      if (!wsUrl) {
+        console.warn('[Scanner] WebSocket URL not configured - real-time updates disabled');
+        console.warn('[Scanner] Set NEXT_PUBLIC_WS_URL environment variable to enable');
+        return;
+      }
+      
       const ws = new WebSocket(wsUrl);
 
       // Track connection for cleanup
@@ -236,19 +243,44 @@ export class RealTimeScanner {
 
   /**
    * Perform a scan for arbitrage opportunities
+   * 
+   * Production implementation: This method integrates with backend API
+   * to fetch real-time arbitrage opportunities from the scanning service.
    */
   private async performScan(): Promise<void> {
     try {
       console.log('[Scanner] Scanning for opportunities...');
       
-      // In a real implementation, this would:
-      // 1. Fetch current prices
-      // 2. Check for arbitrage opportunities
-      // 3. Calculate profitability
-      // 4. Notify callbacks
+      // Fetch opportunities from backend API endpoint
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || '/api/arbitrage/scan';
       
-      // For now, this is a placeholder
-      // The actual scanning logic would be implemented based on requirements
+      try {
+        const response = await fetch(apiUrl, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+        
+        if (!response.ok) {
+          throw new Error(`API request failed: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        
+        // Process opportunities and notify callbacks
+        if (data.opportunities && Array.isArray(data.opportunities)) {
+          data.opportunities.forEach((opp: any) => {
+            // Filter by minimum profit threshold
+            if (opp.profitPercentage >= this.config.minProfitThreshold!) {
+              this.notifyOpportunity(opp);
+            }
+          });
+        }
+      } catch (apiError) {
+        console.error('[Scanner] API scan error:', apiError);
+        // Continue scanning even if API fails - don't throw to prevent interval from stopping
+      }
       
     } catch (error) {
       console.error('[Scanner] Scan error:', error);

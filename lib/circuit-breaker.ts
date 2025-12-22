@@ -210,7 +210,22 @@ export class CircuitBreaker {
       state: this.state,
     });
     
-    // TODO: Send alert notification (Discord/Telegram)
+    // PRODUCTION: Implement alert notification system
+    // Options:
+    // 1. Discord webhook: POST to webhook URL with formatted message
+    // 2. Telegram bot: Use Telegram Bot API to send alerts
+    // 3. Email: Use SendGrid/AWS SES for email notifications
+    // 4. SMS: Use Twilio for critical alerts
+    // 
+    // Example Discord webhook:
+    // await fetch(DISCORD_WEBHOOK_URL, {
+    //   method: 'POST',
+    //   headers: { 'Content-Type': 'application/json' },
+    //   body: JSON.stringify({
+    //     content: `🚨 CIRCUIT BREAKER OPENED: ${reason}`,
+    //     embeds: [{ title: 'Trading Halted', description: reason }]
+    //   })
+    // });
   }
   
   /**
