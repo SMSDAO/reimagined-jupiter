@@ -191,7 +191,7 @@ jobs:
           JEST_TIMEOUT: 30000
           
       - name: Upload backend coverage
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         if: matrix.node-version == 20
         with:
           name: backend-coverage
@@ -201,7 +201,7 @@ jobs:
           
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: backend-test-results-node-${{ matrix.node-version }}
           path: |
@@ -248,7 +248,7 @@ jobs:
           NODE_ENV: test
           
       - name: Upload webapp coverage
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         if: matrix.node-version == 20
         with:
           name: webapp-coverage
@@ -382,7 +382,7 @@ jobs:
         run: npm run build:backend
         
       - name: Upload backend build artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         if: matrix.node-version == 20
         with:
           name: backend-dist
@@ -405,7 +405,7 @@ jobs:
           NEXT_PUBLIC_RPC_URL: ${{ secrets.NEXT_PUBLIC_RPC_URL || 'https://api.mainnet-beta.solana.com' }}
           
       - name: Upload webapp build artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         if: matrix.node-version == 20
         with:
           name: webapp-build

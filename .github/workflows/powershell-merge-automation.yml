@@ -139,7 +139,7 @@ jobs:
 
       - name: Upload Merge Logs
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: merge-logs-${{ github.run_number }}-${{ github.run_attempt }}
           path: scripts/merge-log-*.txt
