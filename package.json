@@ -11,6 +11,8 @@
     "start": "node dist/src/index.js",
     "start:railway": "node dist/src/index-railway.js",
     "dev": "ts-node-esm src/index.ts",
+    "demo": "ts-node-esm scripts/demo-arbitrage.ts",
+    "demo:arbitrage": "ts-node-esm scripts/demo-arbitrage.ts",
     "test": "jest --ci --coverage",
     "test:webapp": "cd webapp && npm test -- --ci --coverage || echo 'No webapp tests configured yet'",
     "test:coverage": "jest --coverage",

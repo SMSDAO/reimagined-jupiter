@@ -7,6 +7,9 @@ import {
   KaminoProvider,
   PortFinanceProvider,
   SaveFinanceProvider,
+  TulipProvider,
+  DriftProvider,
+  JetProvider,
 } from '../providers/flashLoan.js';
 import { config, FLASH_LOAN_FEES } from '../config/index.js';
 
@@ -33,10 +36,13 @@ export class ProviderManager {
     this.preferredProviders = preferredProviders || [
       'marginfi',
       'solend',
-      'kamino',
-      'mango',
-      'portFinance',
       'saveFinance',
+      'kamino',
+      'tulip',
+      'drift',
+      'mango',
+      'jet',
+      'portFinance',
     ];
     
     this.initializeProviders();
@@ -98,6 +104,33 @@ export class ProviderManager {
           this.connection,
           config.flashLoanProviders.saveFinance,
           FLASH_LOAN_FEES.saveFinance
+        )
+      );
+      
+      this.providers.set(
+        'tulip',
+        new TulipProvider(
+          this.connection,
+          config.flashLoanProviders.tulip,
+          FLASH_LOAN_FEES.tulip
+        )
+      );
+      
+      this.providers.set(
+        'drift',
+        new DriftProvider(
+          this.connection,
+          config.flashLoanProviders.drift,
+          FLASH_LOAN_FEES.drift
+        )
+      );
+      
+      this.providers.set(
+        'jet',
+        new JetProvider(
+          this.connection,
+          config.flashLoanProviders.jet,
+          FLASH_LOAN_FEES.jet
         )
       );
       

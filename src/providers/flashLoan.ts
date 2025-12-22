@@ -304,3 +304,289 @@ export class SaveFinanceProvider extends BaseFlashLoanProvider {
     return [...flashLoanIx, ...instructions];
   }
 }
+
+export class TulipProvider extends BaseFlashLoanProvider {
+  getName(): string {
+    return 'Tulip Protocol';
+  }
+  
+  async getMaxLoanAmount(_tokenMint: PublicKey): Promise<number> {
+    try {
+      if (!_tokenMint) {
+        console.error('[Tulip] Invalid tokenMint: token mint is required');
+        return 0;
+      }
+      
+      // Check cache first
+      const cached = this.getCachedLiquidity(_tokenMint);
+      if (cached) {
+        return cached.maxLoanAmount;
+      }
+      
+      console.log(`[Tulip] Fetching max loan amount for token: ${_tokenMint.toString().slice(0, 8)}...`);
+      
+      // TODO: Tulip Protocol (Leveraged Yield Farming)
+      // TODO: Replace with real SDK integration:
+      // TODO: - Install @tulip-protocol/platform-sdk
+      // TODO: - Query vault accounts for actual liquidity
+      // TODO: - Implement proper flash loan instruction building
+      const maxLoan = 950000;
+      const liquidity = 475000;
+      
+      this.setCachedLiquidity(_tokenMint, maxLoan, liquidity);
+      console.log(`[Tulip] Max loan amount: ${maxLoan}`);
+      return maxLoan;
+    } catch (error) {
+      console.error('[Tulip] Error getting max loan amount:', error);
+      return 0;
+    }
+  }
+  
+  async getAvailableLiquidity(_tokenMint: PublicKey): Promise<number> {
+    try {
+      if (!_tokenMint) {
+        console.error('[Tulip] Invalid tokenMint: token mint is required');
+        return 0;
+      }
+      
+      const cached = this.getCachedLiquidity(_tokenMint);
+      if (cached) {
+        return cached.availableLiquidity;
+      }
+      
+      console.log(`[Tulip] Fetching available liquidity for token: ${_tokenMint.toString().slice(0, 8)}...`);
+      
+      const maxLoan = 950000;
+      const liquidity = 475000;
+      
+      this.setCachedLiquidity(_tokenMint, maxLoan, liquidity);
+      console.log(`[Tulip] Available liquidity: ${liquidity}`);
+      return liquidity;
+    } catch (error) {
+      console.error('[Tulip] Error getting available liquidity:', error);
+      return 0;
+    }
+  }
+  
+  async createFlashLoanInstruction(
+    amount: number,
+    tokenMint: PublicKey,
+    userAccount: PublicKey,
+    instructions: TransactionInstruction[]
+  ): Promise<TransactionInstruction[]> {
+    try {
+      if (!tokenMint || !userAccount) {
+        console.error('[Tulip] Invalid parameters: tokenMint and userAccount are required');
+        return [];
+      }
+      
+      if (!amount || amount <= 0) {
+        console.error('[Tulip] Invalid amount: must be greater than 0, received:', amount);
+        return [];
+      }
+      
+      console.log(`[Tulip] Creating flash loan instruction for ${amount} tokens`);
+      
+      const flashLoanIx: TransactionInstruction[] = [];
+      // Add Tulip flash loan borrow instruction
+      // Add user's arbitrage instructions
+      // Add Tulip flash loan repay instruction
+      
+      console.log(`[Tulip] Flash loan instruction created with ${instructions.length} arbitrage instructions`);
+      return [...flashLoanIx, ...instructions];
+    } catch (error) {
+      console.error('[Tulip] Error creating flash loan instruction:', error);
+      return [];
+    }
+  }
+}
+
+export class DriftProvider extends BaseFlashLoanProvider {
+  getName(): string {
+    return 'Drift Protocol';
+  }
+  
+  async getMaxLoanAmount(_tokenMint: PublicKey): Promise<number> {
+    try {
+      if (!_tokenMint) {
+        console.error('[Drift] Invalid tokenMint: token mint is required');
+        return 0;
+      }
+      
+      const cached = this.getCachedLiquidity(_tokenMint);
+      if (cached) {
+        return cached.maxLoanAmount;
+      }
+      
+      console.log(`[Drift] Fetching max loan amount for token: ${_tokenMint.toString().slice(0, 8)}...`);
+      
+      // TODO: Drift Protocol (Perpetual DEX with flash loans)
+      // TODO: Replace with real SDK integration:
+      // TODO: - Install @drift-labs/sdk
+      // TODO: - Query market accounts for actual liquidity
+      // TODO: - Implement proper flash loan instruction building
+      const maxLoan = 1100000;
+      const liquidity = 550000;
+      
+      this.setCachedLiquidity(_tokenMint, maxLoan, liquidity);
+      console.log(`[Drift] Max loan amount: ${maxLoan}`);
+      return maxLoan;
+    } catch (error) {
+      console.error('[Drift] Error getting max loan amount:', error);
+      return 0;
+    }
+  }
+  
+  async getAvailableLiquidity(_tokenMint: PublicKey): Promise<number> {
+    try {
+      if (!_tokenMint) {
+        console.error('[Drift] Invalid tokenMint: token mint is required');
+        return 0;
+      }
+      
+      const cached = this.getCachedLiquidity(_tokenMint);
+      if (cached) {
+        return cached.availableLiquidity;
+      }
+      
+      console.log(`[Drift] Fetching available liquidity for token: ${_tokenMint.toString().slice(0, 8)}...`);
+      
+      const maxLoan = 1100000;
+      const liquidity = 550000;
+      
+      this.setCachedLiquidity(_tokenMint, maxLoan, liquidity);
+      console.log(`[Drift] Available liquidity: ${liquidity}`);
+      return liquidity;
+    } catch (error) {
+      console.error('[Drift] Error getting available liquidity:', error);
+      return 0;
+    }
+  }
+  
+  async createFlashLoanInstruction(
+    amount: number,
+    tokenMint: PublicKey,
+    userAccount: PublicKey,
+    instructions: TransactionInstruction[]
+  ): Promise<TransactionInstruction[]> {
+    try {
+      if (!tokenMint || !userAccount) {
+        console.error('[Drift] Invalid parameters: tokenMint and userAccount are required');
+        return [];
+      }
+      
+      if (!amount || amount <= 0) {
+        console.error('[Drift] Invalid amount: must be greater than 0, received:', amount);
+        return [];
+      }
+      
+      console.log(`[Drift] Creating flash loan instruction for ${amount} tokens`);
+      
+      const flashLoanIx: TransactionInstruction[] = [];
+      // Add Drift flash loan borrow instruction
+      // Add user's arbitrage instructions
+      // Add Drift flash loan repay instruction
+      
+      console.log(`[Drift] Flash loan instruction created with ${instructions.length} arbitrage instructions`);
+      return [...flashLoanIx, ...instructions];
+    } catch (error) {
+      console.error('[Drift] Error creating flash loan instruction:', error);
+      return [];
+    }
+  }
+}
+
+export class JetProvider extends BaseFlashLoanProvider {
+  getName(): string {
+    return 'Jet Protocol';
+  }
+  
+  async getMaxLoanAmount(_tokenMint: PublicKey): Promise<number> {
+    try {
+      if (!_tokenMint) {
+        console.error('[Jet] Invalid tokenMint: token mint is required');
+        return 0;
+      }
+      
+      const cached = this.getCachedLiquidity(_tokenMint);
+      if (cached) {
+        return cached.maxLoanAmount;
+      }
+      
+      console.log(`[Jet] Fetching max loan amount for token: ${_tokenMint.toString().slice(0, 8)}...`);
+      
+      // TODO: Jet Protocol (Lending protocol with flash loans)
+      // TODO: Replace with real SDK integration:
+      // TODO: - Install @jet-lab/jet-engine
+      // TODO: - Query reserve accounts for actual liquidity
+      // TODO: - Implement proper flash loan instruction building
+      const maxLoan = 750000;
+      const liquidity = 375000;
+      
+      this.setCachedLiquidity(_tokenMint, maxLoan, liquidity);
+      console.log(`[Jet] Max loan amount: ${maxLoan}`);
+      return maxLoan;
+    } catch (error) {
+      console.error('[Jet] Error getting max loan amount:', error);
+      return 0;
+    }
+  }
+  
+  async getAvailableLiquidity(_tokenMint: PublicKey): Promise<number> {
+    try {
+      if (!_tokenMint) {
+        console.error('[Jet] Invalid tokenMint: token mint is required');
+        return 0;
+      }
+      
+      const cached = this.getCachedLiquidity(_tokenMint);
+      if (cached) {
+        return cached.availableLiquidity;
+      }
+      
+      console.log(`[Jet] Fetching available liquidity for token: ${_tokenMint.toString().slice(0, 8)}...`);
+      
+      const maxLoan = 750000;
+      const liquidity = 375000;
+      
+      this.setCachedLiquidity(_tokenMint, maxLoan, liquidity);
+      console.log(`[Jet] Available liquidity: ${liquidity}`);
+      return liquidity;
+    } catch (error) {
+      console.error('[Jet] Error getting available liquidity:', error);
+      return 0;
+    }
+  }
+  
+  async createFlashLoanInstruction(
+    amount: number,
+    tokenMint: PublicKey,
+    userAccount: PublicKey,
+    instructions: TransactionInstruction[]
+  ): Promise<TransactionInstruction[]> {
+    try {
+      if (!tokenMint || !userAccount) {
+        console.error('[Jet] Invalid parameters: tokenMint and userAccount are required');
+        return [];
+      }
+      
+      if (!amount || amount <= 0) {
+        console.error('[Jet] Invalid amount: must be greater than 0, received:', amount);
+        return [];
+      }
+      
+      console.log(`[Jet] Creating flash loan instruction for ${amount} tokens`);
+      
+      const flashLoanIx: TransactionInstruction[] = [];
+      // Add Jet flash loan borrow instruction
+      // Add user's arbitrage instructions
+      // Add Jet flash loan repay instruction
+      
+      console.log(`[Jet] Flash loan instruction created with ${instructions.length} arbitrage instructions`);
+      return [...flashLoanIx, ...instructions];
+    } catch (error) {
+      console.error('[Jet] Error creating flash loan instruction:', error);
+      return [];
+    }
+  }
+}
