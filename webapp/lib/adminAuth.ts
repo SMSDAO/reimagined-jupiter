@@ -18,9 +18,22 @@ import { NextRequest, NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 
-// Database functions (will be imported when database is connected)
-// For now, we'll use environment-based fallback auth
-import type { AdminUser, AdminPermission } from '../../db/adminDatabase.js';
+// Type definitions (avoiding database module import for webapp build)
+export interface AdminUser {
+  id: string;
+  username: string;
+  email: string;
+  roles: string[];
+  permissions: string[];
+}
+
+export interface AdminPermission {
+  id: string;
+  name: string;
+  resource: string;
+  action: string;
+  isDangerous: boolean;
+}
 
 // JWT configuration
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
@@ -528,7 +541,16 @@ export function validateInput<T>(
   const errors: string[] = [];
   const data: any = {};
   
-  for (const [key, rules] of Object.entries(schema)) {
+  for (const [key, rulesObj] of Object.entries(schema)) {
+    const rules = rulesObj as {
+      type: 'string' | 'number' | 'boolean' | 'array' | 'object';
+      required?: boolean;
+      min?: number;
+      max?: number;
+      pattern?: RegExp;
+      enum?: any[];
+      custom?: (value: any) => boolean;
+    };
     const value = input[key];
     
     // Check required

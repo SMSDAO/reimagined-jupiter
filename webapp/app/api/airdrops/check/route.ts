@@ -47,7 +47,12 @@ export async function GET(request: NextRequest) {
     // Currently checks wallet eligibility based on balance and activity
     // Future: Integrate with specific airdrop programs (Jupiter, Jito, Pyth, etc.)
     
-    const eligibleAirdrops = [];
+    const eligibleAirdrops: Array<{
+      protocol: string;
+      status: string;
+      estimatedAmount?: string;
+      claimDate?: string;
+    }> = [];
 
     // Basic eligibility check based on wallet activity
     // A wallet with transactions and balance may be eligible for various airdrops
@@ -76,7 +81,7 @@ export async function GET(request: NextRequest) {
       balance: balance / 1e9,
       transactionCount: txCount,
       eligibleAirdrops,
-      totalValue: eligibleAirdrops.reduce((sum, a) => sum + a.amount, 0),
+      totalValue: 0, // Will be calculated when airdrops are detected
       timestamp: Date.now(),
       rpcEndpoint: resilientConnection.getCurrentEndpoint(),
     });
