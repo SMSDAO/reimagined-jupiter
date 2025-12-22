@@ -128,7 +128,7 @@ jobs:
           
       - name: Upload artifacts
         if: matrix.retry == 1
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: build-artifacts
           path: |
@@ -252,7 +252,7 @@ jobs:
         run: npm run setup-monitoring
         
       - name: Upload monitoring configs
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: monitoring-configs
           path: monitoring/
