@@ -325,8 +325,11 @@ export class TulipProvider extends BaseFlashLoanProvider {
       
       console.log(`[Tulip] Fetching max loan amount for token: ${_tokenMint.toString().slice(0, 8)}...`);
       
-      // Tulip Protocol (Leveraged Yield Farming)
-      // Would fetch from Tulip vault accounts
+      // TODO: Tulip Protocol (Leveraged Yield Farming)
+      // TODO: Replace with real SDK integration:
+      // TODO: - Install @tulip-protocol/platform-sdk
+      // TODO: - Query vault accounts for actual liquidity
+      // TODO: - Implement proper flash loan instruction building
       const maxLoan = 950000;
       const liquidity = 475000;
       
@@ -417,8 +420,11 @@ export class DriftProvider extends BaseFlashLoanProvider {
       
       console.log(`[Drift] Fetching max loan amount for token: ${_tokenMint.toString().slice(0, 8)}...`);
       
-      // Drift Protocol (Perpetual DEX with flash loans)
-      // Would fetch from Drift market accounts
+      // TODO: Drift Protocol (Perpetual DEX with flash loans)
+      // TODO: Replace with real SDK integration:
+      // TODO: - Install @drift-labs/sdk
+      // TODO: - Query market accounts for actual liquidity
+      // TODO: - Implement proper flash loan instruction building
       const maxLoan = 1100000;
       const liquidity = 550000;
       
@@ -509,8 +515,11 @@ export class JetProvider extends BaseFlashLoanProvider {
       
       console.log(`[Jet] Fetching max loan amount for token: ${_tokenMint.toString().slice(0, 8)}...`);
       
-      // Jet Protocol (Lending protocol with flash loans)
-      // Would fetch from Jet reserve accounts
+      // TODO: Jet Protocol (Lending protocol with flash loans)
+      // TODO: Replace with real SDK integration:
+      // TODO: - Install @jet-lab/jet-engine
+      // TODO: - Query reserve accounts for actual liquidity
+      // TODO: - Implement proper flash loan instruction building
       const maxLoan = 750000;
       const liquidity = 375000;
       

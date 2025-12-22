@@ -105,6 +105,8 @@ export class MultiHopArbitrageEngine {
     return viableRoutes;
   }
   
+  private readonly MAX_LOSS_PER_HOP_THRESHOLD = 0.5; // Skip hops that lose >50% value
+  
   /**
    * Search for routes with specific hop count using DFS
    */
@@ -176,8 +178,8 @@ export class MultiHopArbitrageEngine {
         }
         
         // Check liquidity (ensure we got reasonable output)
-        if (hop.expectedOutput < currentAmount * 0.5) {
-          // Lost more than 50% in this hop, skip
+        if (hop.expectedOutput < currentAmount * this.MAX_LOSS_PER_HOP_THRESHOLD) {
+          // Lost more than threshold in this hop, skip
           continue;
         }
         
