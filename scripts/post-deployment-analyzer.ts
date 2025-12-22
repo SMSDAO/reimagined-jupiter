@@ -3,7 +3,7 @@
  * Analyzes logs, detects patterns, generates fixes, and auto-deploys
  */
 
-import { readFileSync, existsSync } from 'fs';
+import { readFileSync, existsSync, writeFileSync } from 'fs';
 import { resolve } from 'path';
 import { execSync } from 'child_process';
 import { Octokit } from '@octokit/rest';
@@ -274,7 +274,6 @@ function applyFixes(fixes: CodeFix[]): { applied: number; failed: number } {
       // Check if AUTO_FIX_ENABLED is true before writing
       if (process.env.AUTO_FIX_ENABLED === 'true') {
         // Actual fix application - write to file
-        const { writeFileSync } = await import('fs');
         writeFileSync(filePath, newContent, 'utf-8');
         console.log(`✅ Applied fix to ${fix.file}:`);
         console.log(`  Description: ${fix.description}`);

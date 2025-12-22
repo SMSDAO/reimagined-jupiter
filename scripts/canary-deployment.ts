@@ -480,5 +480,3 @@ if (isMainModule) {
     }
   })();
 }
-
-export { CanaryDeployment };

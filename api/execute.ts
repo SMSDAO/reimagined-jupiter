@@ -28,7 +28,7 @@ interface ExecutionResult {
   error?: string;
 }
 
-interface ExecuteResponse {
+export interface ExecuteResponse {
   success: boolean;
   tradesExecuted: number;
   successCount: number;
@@ -206,7 +206,7 @@ async function fetchPendingOpportunities(): Promise<Opportunity[]> {
  */
 async function validateOpportunity(
   opp: Opportunity,
-  connection: Connection
+  _connection: Connection
 ): Promise<boolean> {
   try {
     // Check if opportunity is too old (> 30 seconds)

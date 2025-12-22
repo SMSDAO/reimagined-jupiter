@@ -25,7 +25,7 @@ interface BotStatus {
   lastActionTime: number;
 }
 
-interface ControlResponse {
+export interface ControlResponse {
   success: boolean;
   message: string;
   currentStatus: BotStatus;

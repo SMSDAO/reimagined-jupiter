@@ -7,7 +7,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { verifyToken } from './auth.js';
 import { getBotStatus } from './control.js';
 
-interface MetricsResponse {
+export interface MetricsResponse {
   success: boolean;
   metrics: {
     profitToday: number;

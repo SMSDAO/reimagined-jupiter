@@ -3,7 +3,7 @@
  * Schedule: Every 1 minute via Vercel cron
  */
 
-import { Connection, PublicKey } from '@solana/web3.js';
+import { Connection } from '@solana/web3.js';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 // Verify Vercel cron user-agent
@@ -33,7 +33,7 @@ interface Opportunity {
   timestamp: number;
 }
 
-interface MonitorResponse {
+export interface MonitorResponse {
   success: boolean;
   opportunitiesFound: number;
   topOpportunity: Opportunity | null;
@@ -125,7 +125,7 @@ export default async function handler(
 /**
  * Scan Jupiter aggregator and DEXs for arbitrage opportunities
  */
-async function scanOpportunities(connection: Connection): Promise<Opportunity[]> {
+async function scanOpportunities(_connection: Connection): Promise<Opportunity[]> {
   const opportunities: Opportunity[] = [];
   
   try {
@@ -156,7 +156,7 @@ async function scanOpportunities(connection: Connection): Promise<Opportunity[]>
       try {
         // Simulate opportunity detection
         // In production, this would call Jupiter API v6 for real routes
-        const jupiterApiUrl = 'https://api.jup.ag/v6/quote';
+        // const jupiterApiUrl = 'https://api.jup.ag/v6/quote';
         
         // Check if opportunity exists (simplified for serverless constraints)
         const hasOpportunity = Math.random() > 0.7; // 30% chance
@@ -194,6 +194,7 @@ async function scanOpportunities(connection: Connection): Promise<Opportunity[]>
 // In production, use Redis or Vercel KV
 const rateLimitStore = new Map<string, { count: number; resetTime: number }>();
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function checkRateLimit(identifier: string, maxRequests: number, windowMs: number): boolean {
   const now = Date.now();
   const record = rateLimitStore.get(identifier);

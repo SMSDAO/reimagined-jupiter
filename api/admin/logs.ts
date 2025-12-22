@@ -25,7 +25,7 @@ interface LogsRequest {
   export?: 'json' | 'csv';
 }
 
-interface LogsResponse {
+export interface LogsResponse {
   success: boolean;
   logs: LogEntry[];
   total: number;
