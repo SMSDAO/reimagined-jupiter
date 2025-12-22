@@ -243,6 +243,118 @@ CREATE TABLE trading_history (
 );
 
 -- =====================================================
+-- 9. AIRDROP ELIGIBILITY TABLE
+-- =====================================================
+CREATE TABLE airdrop_eligibility (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  wallet_address VARCHAR(44) NOT NULL,
+  protocol VARCHAR(50) NOT NULL,
+  
+  -- Eligibility details
+  is_eligible BOOLEAN DEFAULT FALSE,
+  amount DECIMAL(20, 9),
+  token_mint VARCHAR(44),
+  
+  -- Claim status
+  claimed BOOLEAN DEFAULT FALSE,
+  claim_deadline TIMESTAMP,
+  claim_start_time TIMESTAMP,
+  
+  -- On-chain verification
+  merkle_proof TEXT, -- JSON array of proof hashes
+  merkle_root VARCHAR(64),
+  claim_index INTEGER,
+  
+  -- Metadata
+  eligibility_criteria JSONB, -- Store flexible eligibility rules
+  api_response JSONB, -- Cache full API response
+  
+  -- Timestamps
+  checked_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  
+  -- Unique constraint
+  UNIQUE(wallet_address, protocol)
+);
+
+-- =====================================================
+-- 10. AIRDROP CLAIMS TABLE (Audit Log)
+-- =====================================================
+CREATE TABLE airdrop_claims (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  wallet_address VARCHAR(44) NOT NULL,
+  protocol VARCHAR(50) NOT NULL,
+  
+  -- Claim details
+  amount DECIMAL(20, 9) NOT NULL,
+  token_mint VARCHAR(44) NOT NULL,
+  
+  -- Transaction details
+  transaction_signature VARCHAR(88),
+  status VARCHAR(20) NOT NULL CHECK (status IN ('pending', 'success', 'failed', 'simulated')),
+  error_message TEXT,
+  
+  -- Donation tracking
+  donation_amount DECIMAL(20, 9), -- 10% of claimed amount
+  donation_sent BOOLEAN DEFAULT FALSE,
+  donation_signature VARCHAR(88),
+  dev_wallet VARCHAR(44),
+  
+  -- Execution metadata
+  slot_number BIGINT,
+  block_time TIMESTAMP,
+  compute_units_consumed INTEGER,
+  priority_fee BIGINT,
+  
+  -- User context
+  user_ip_address VARCHAR(45),
+  user_agent TEXT,
+  
+  -- Timestamps
+  initiated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  completed_at TIMESTAMP,
+  
+  -- Foreign key
+  FOREIGN KEY (wallet_address) REFERENCES wallet_analysis(wallet_address) ON DELETE CASCADE
+);
+
+-- =====================================================
+-- 11. AIRDROP PROGRAMS TABLE
+-- =====================================================
+CREATE TABLE airdrop_programs (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  protocol VARCHAR(50) UNIQUE NOT NULL,
+  
+  -- Program details
+  program_id VARCHAR(44),
+  token_mint VARCHAR(44) NOT NULL,
+  distributor_account VARCHAR(44),
+  
+  -- Claim configuration
+  claim_start_time TIMESTAMP,
+  claim_end_time TIMESTAMP,
+  total_allocation DECIMAL(20, 9),
+  total_claimed DECIMAL(20, 9) DEFAULT 0,
+  
+  -- API endpoints
+  eligibility_api_url TEXT,
+  claim_api_url TEXT,
+  
+  -- Status
+  is_active BOOLEAN DEFAULT TRUE,
+  requires_merkle_proof BOOLEAN DEFAULT TRUE,
+  
+  -- Metadata
+  description TEXT,
+  website_url TEXT,
+  documentation_url TEXT,
+  
+  -- Timestamps
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- =====================================================
 -- INDEXES FOR PERFORMANCE
 -- =====================================================
 
@@ -290,6 +402,25 @@ CREATE INDEX idx_trade_wallet ON trading_history(wallet_address);
 CREATE INDEX idx_trade_executed_at ON trading_history(executed_at);
 CREATE INDEX idx_trade_type ON trading_history(trade_type);
 
+-- Airdrop Eligibility indexes
+CREATE INDEX idx_airdrop_eligibility_wallet ON airdrop_eligibility(wallet_address);
+CREATE INDEX idx_airdrop_eligibility_protocol ON airdrop_eligibility(protocol);
+CREATE INDEX idx_airdrop_eligibility_claimed ON airdrop_eligibility(claimed);
+CREATE INDEX idx_airdrop_eligibility_deadline ON airdrop_eligibility(claim_deadline);
+CREATE INDEX idx_airdrop_eligibility_checked_at ON airdrop_eligibility(checked_at);
+
+-- Airdrop Claims indexes
+CREATE INDEX idx_airdrop_claims_wallet ON airdrop_claims(wallet_address);
+CREATE INDEX idx_airdrop_claims_protocol ON airdrop_claims(protocol);
+CREATE INDEX idx_airdrop_claims_status ON airdrop_claims(status);
+CREATE INDEX idx_airdrop_claims_initiated_at ON airdrop_claims(initiated_at);
+CREATE INDEX idx_airdrop_claims_signature ON airdrop_claims(transaction_signature);
+
+-- Airdrop Programs indexes
+CREATE INDEX idx_airdrop_programs_protocol ON airdrop_programs(protocol);
+CREATE INDEX idx_airdrop_programs_active ON airdrop_programs(is_active);
+CREATE INDEX idx_airdrop_programs_claim_times ON airdrop_programs(claim_start_time, claim_end_time);
+
 -- =====================================================
 -- FUNCTIONS AND TRIGGERS
 -- =====================================================
@@ -309,6 +440,12 @@ CREATE TRIGGER update_wallet_analysis_updated_at BEFORE UPDATE
 
 CREATE TRIGGER update_farcaster_profiles_updated_at BEFORE UPDATE
     ON farcaster_profiles FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_airdrop_eligibility_updated_at BEFORE UPDATE
+    ON airdrop_eligibility FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_airdrop_programs_updated_at BEFORE UPDATE
+    ON airdrop_programs FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- =====================================================
 -- VIEWS FOR COMMON QUERIES
