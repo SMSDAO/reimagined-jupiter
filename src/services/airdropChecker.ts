@@ -35,20 +35,21 @@ export class AirdropChecker {
     this.connection = connection;
     this.userPublicKey = userPublicKey;
     
-    // Dev wallet from env - REQUIRED for production
+    // Dev wallet from env - REQUIRED for production donations
     const devWalletAddress = process.env.DEV_FEE_WALLET;
     if (!devWalletAddress) {
-      console.warn('[AirdropChecker] DEV_FEE_WALLET not set - donations will be disabled');
-      // Use a well-known burn address as fallback to make missing config obvious
-      this.devWallet = new PublicKey('1nc1nerator11111111111111111111111111111111'); // Incinerator (burn address)
-    } else {
-      try {
-        this.devWallet = new PublicKey(devWalletAddress);
-        console.log(`[AirdropChecker] Dev wallet configured: ${this.devWallet.toString().slice(0, 8)}...`);
-      } catch (error) {
-        console.error('[AirdropChecker] Invalid DEV_FEE_WALLET address format');
-        throw new Error('Invalid DEV_FEE_WALLET configuration - must be a valid Solana public key');
-      }
+      const errorMsg = 'DEV_FEE_WALLET environment variable is required for airdrop donations. Set it to a valid Solana public key address.';
+      console.error(`[AirdropChecker] ${errorMsg}`);
+      throw new Error(errorMsg);
+    }
+    
+    try {
+      this.devWallet = new PublicKey(devWalletAddress);
+      console.log(`[AirdropChecker] Dev wallet configured: ${this.devWallet.toString().slice(0, 8)}...`);
+    } catch (error) {
+      const errorMsg = `Invalid DEV_FEE_WALLET format: ${devWalletAddress}. Must be a valid Solana public key (44 characters, base58 encoded).`;
+      console.error(`[AirdropChecker] ${errorMsg}`);
+      throw new Error(errorMsg);
     }
     
     this.devFeePercentage = parseFloat(process.env.DEV_FEE_PERCENTAGE || '0.10');

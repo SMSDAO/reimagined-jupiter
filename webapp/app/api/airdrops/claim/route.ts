@@ -26,6 +26,23 @@ export async function POST(request: NextRequest) {
     console.log(`   Protocol: ${protocol}`);
     console.log(`   Wallet: ${walletAddress}`);
 
+    // Validate that this is not a placeholder transaction
+    if (signedTransaction === 'PLACEHOLDER_PENDING_SDK_INTEGRATION' || signedTransaction === '') {
+      console.log('⚠️  SDK Integration Required');
+      console.log('   This endpoint is ready but requires actual transaction building');
+      console.log('   The transaction framework is in place, pending protocol SDK integration');
+      
+      return NextResponse.json({
+        success: false,
+        message: 'SDK Integration Required',
+        error: 'Claim execution requires protocol-specific SDK integration',
+        note: 'The transaction building framework is ready. Integrate Jupiter, Jito, Pyth, Kamino, or Marginfi SDKs to enable actual claims.',
+        protocol,
+        walletAddress,
+        timestamp: Date.now(),
+      });
+    }
+
     // In a production environment, this endpoint would:
     // 1. Validate the signed transaction
     // 2. Verify eligibility from database/on-chain
@@ -39,12 +56,18 @@ export async function POST(request: NextRequest) {
     console.log('   The transaction should be built and signed on the client');
     console.log('   This endpoint can be used to log the claim attempt');
 
-    // Get user IP and User-Agent for audit logging
-    // Note: IP addresses are logged for fraud prevention (legitimate interest under GDPR)
-    // Ensure compliance with privacy regulations in your jurisdiction
-    const userIpAddress = request.headers.get('x-forwarded-for') || 
-                          request.headers.get('x-real-ip') || 
-                          'unknown';
+    // Get user IP address for audit logging (fraud prevention - GDPR legitimate interest)
+    // Note: Ensure your proxy/load balancer properly sets these headers
+    // Validate IP extraction method matches your deployment architecture
+    const forwardedFor = request.headers.get('x-forwarded-for');
+    const realIp = request.headers.get('x-real-ip');
+    
+    // X-Forwarded-For may contain multiple IPs (client, proxy1, proxy2, ...)
+    // Take the first IP which is typically the original client
+    const userIpAddress = forwardedFor 
+      ? forwardedFor.split(',')[0].trim()
+      : realIp || 'unknown';
+    
     const userAgent = request.headers.get('user-agent') || 'unknown';
 
     // Log audit information securely (avoid exposing in production logs)
