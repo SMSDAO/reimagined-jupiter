@@ -366,6 +366,240 @@ ORDER BY gm_count DESC;
 -- VALUES ('DevWalletAddress123...', 85, 'DEGEN', 18, 19, 12, 15, 14, 13, 5, 5000.00);
 
 -- =====================================================
+-- 9. ADMIN USERS TABLE (RBAC)
+-- =====================================================
+CREATE TABLE admin_users (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  username VARCHAR(100) UNIQUE NOT NULL,
+  email VARCHAR(255) UNIQUE,
+  password_hash VARCHAR(255) NOT NULL,
+  
+  -- Role-based access control
+  role VARCHAR(20) NOT NULL CHECK (role IN ('admin', 'operator', 'viewer')),
+  
+  -- Permissions
+  can_control_bot BOOLEAN DEFAULT FALSE,
+  can_modify_config BOOLEAN DEFAULT FALSE,
+  can_execute_trades BOOLEAN DEFAULT FALSE,
+  can_view_logs BOOLEAN DEFAULT TRUE,
+  can_view_metrics BOOLEAN DEFAULT TRUE,
+  
+  -- Account status
+  is_active BOOLEAN DEFAULT TRUE,
+  is_locked BOOLEAN DEFAULT FALSE,
+  failed_login_attempts INTEGER DEFAULT 0,
+  last_failed_login TIMESTAMP,
+  
+  -- Session tracking
+  last_login_at TIMESTAMP,
+  last_login_ip VARCHAR(45),
+  
+  -- Timestamps
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  created_by UUID REFERENCES admin_users(id),
+  
+  -- Security
+  mfa_enabled BOOLEAN DEFAULT FALSE,
+  mfa_secret VARCHAR(32)
+);
+
+-- =====================================================
+-- 10. ADMIN SESSIONS TABLE
+-- =====================================================
+CREATE TABLE admin_sessions (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID NOT NULL REFERENCES admin_users(id) ON DELETE CASCADE,
+  
+  -- JWT tokens
+  access_token_hash VARCHAR(255) NOT NULL,
+  refresh_token_hash VARCHAR(255),
+  
+  -- Session info
+  ip_address VARCHAR(45),
+  user_agent TEXT,
+  
+  -- Expiration
+  expires_at TIMESTAMP NOT NULL,
+  is_valid BOOLEAN DEFAULT TRUE,
+  
+  -- Timestamps
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  revoked_at TIMESTAMP,
+  revoked_reason VARCHAR(255)
+);
+
+-- =====================================================
+-- 11. ADMIN AUDIT LOGS TABLE
+-- =====================================================
+CREATE TABLE admin_audit_logs (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID REFERENCES admin_users(id) ON DELETE SET NULL,
+  username VARCHAR(100),
+  
+  -- Action details
+  action VARCHAR(100) NOT NULL,
+  resource VARCHAR(100),
+  resource_id VARCHAR(100),
+  
+  -- Request info
+  method VARCHAR(10),
+  endpoint VARCHAR(255),
+  ip_address VARCHAR(45),
+  user_agent TEXT,
+  
+  -- Data
+  request_data JSONB,
+  response_data JSONB,
+  
+  -- Status
+  status VARCHAR(20) CHECK (status IN ('success', 'failure', 'error')),
+  error_message TEXT,
+  
+  -- Timestamp
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  
+  -- Indexes
+  INDEX idx_audit_user_id (user_id),
+  INDEX idx_audit_action (action),
+  INDEX idx_audit_created_at (created_at),
+  INDEX idx_audit_status (status)
+);
+
+-- =====================================================
+-- 12. ADMIN CONFIGURATION TABLE
+-- =====================================================
+CREATE TABLE admin_config (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  key VARCHAR(100) UNIQUE NOT NULL,
+  value JSONB NOT NULL,
+  
+  -- Metadata
+  category VARCHAR(50) NOT NULL CHECK (category IN ('rpc', 'fees', 'dao', 'bot', 'security', 'general')),
+  description TEXT,
+  
+  -- Security
+  is_sensitive BOOLEAN DEFAULT FALSE,
+  requires_admin BOOLEAN DEFAULT FALSE,
+  
+  -- Version control
+  version INTEGER DEFAULT 1,
+  previous_value JSONB,
+  
+  -- Audit
+  updated_by UUID REFERENCES admin_users(id),
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  
+  -- Indexes
+  INDEX idx_config_key (key),
+  INDEX idx_config_category (category)
+);
+
+-- =====================================================
+-- 13. ADMIN API KEYS TABLE
+-- =====================================================
+CREATE TABLE admin_api_keys (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID NOT NULL REFERENCES admin_users(id) ON DELETE CASCADE,
+  
+  -- API Key
+  key_hash VARCHAR(255) NOT NULL UNIQUE,
+  key_prefix VARCHAR(10) NOT NULL,
+  name VARCHAR(100) NOT NULL,
+  
+  -- Permissions
+  scopes JSONB NOT NULL DEFAULT '[]'::jsonb,
+  
+  -- Rate limiting
+  rate_limit INTEGER DEFAULT 100,
+  rate_limit_window INTEGER DEFAULT 60,
+  
+  -- Status
+  is_active BOOLEAN DEFAULT TRUE,
+  last_used_at TIMESTAMP,
+  
+  -- Expiration
+  expires_at TIMESTAMP,
+  
+  -- Timestamps
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  revoked_at TIMESTAMP,
+  revoked_reason VARCHAR(255),
+  
+  -- Indexes
+  INDEX idx_api_key_hash (key_hash),
+  INDEX idx_api_key_user (user_id)
+);
+
+-- =====================================================
+-- INDEXES FOR ADMIN TABLES
+-- =====================================================
+
+-- Admin Users indexes
+CREATE INDEX idx_admin_username ON admin_users(username);
+CREATE INDEX idx_admin_email ON admin_users(email);
+CREATE INDEX idx_admin_role ON admin_users(role);
+CREATE INDEX idx_admin_is_active ON admin_users(is_active);
+
+-- Admin Sessions indexes
+CREATE INDEX idx_session_user_id ON admin_sessions(user_id);
+CREATE INDEX idx_session_expires_at ON admin_sessions(expires_at);
+CREATE INDEX idx_session_is_valid ON admin_sessions(is_valid);
+CREATE INDEX idx_session_created_at ON admin_sessions(created_at);
+
+-- Admin Config indexes (already in table definition as INDEX)
+
+-- =====================================================
+-- FUNCTIONS FOR ADMIN TABLES
+-- =====================================================
+
+-- Function to update admin_users updated_at
+CREATE TRIGGER update_admin_users_updated_at BEFORE UPDATE
+    ON admin_users FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Function to update admin_config updated_at
+CREATE TRIGGER update_admin_config_updated_at BEFORE UPDATE
+    ON admin_config FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Function to clean expired sessions
+CREATE OR REPLACE FUNCTION clean_expired_sessions()
+RETURNS void AS $$
+BEGIN
+  UPDATE admin_sessions
+  SET is_valid = FALSE,
+      revoked_at = CURRENT_TIMESTAMP,
+      revoked_reason = 'expired'
+  WHERE expires_at < CURRENT_TIMESTAMP
+    AND is_valid = TRUE;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Function to lock user after failed attempts
+CREATE OR REPLACE FUNCTION check_lock_user()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.failed_login_attempts >= 5 THEN
+    NEW.is_locked = TRUE;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER check_user_lock BEFORE UPDATE
+    ON admin_users FOR EACH ROW EXECUTE FUNCTION check_lock_user();
+
+-- =====================================================
+-- INITIAL ADMIN USER (Development Only)
+-- =====================================================
+
+-- Insert default admin user (password should be changed immediately)
+-- Password: Admin123! (bcrypt hash)
+-- INSERT INTO admin_users (username, email, password_hash, role, can_control_bot, can_modify_config, can_execute_trades, can_view_logs, can_view_metrics)
+-- VALUES ('admin', 'admin@gxqstudio.com', '$2b$10$rKVqQ5J8c.XN1C2qVb.jjO4xP7J6qh4XY8TgS9Y1j2xYpQ9Z3w4jm', 'admin', TRUE, TRUE, TRUE, TRUE, TRUE);
+
+-- =====================================================
 -- GRANT PERMISSIONS (adjust as needed)
 -- =====================================================
 
