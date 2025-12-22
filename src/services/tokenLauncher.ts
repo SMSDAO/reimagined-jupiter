@@ -63,7 +63,7 @@ export interface TokenLaunchResult {
   tokenAccount: string;
   metadataAccount?: string;
   liquidityPoolAddress?: string;
-  transaction Signature: string;
+  transactionSignature: string;
   circulatingSupply: number;
   airdropSupply: number;
   deploymentCost: number;
