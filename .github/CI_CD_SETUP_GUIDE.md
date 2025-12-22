@@ -60,9 +60,22 @@ The CI pipeline runs on every PR and push to `main`/`develop`:
 ### Workflows
 
 - **ci.yml** - Main CI pipeline
+- **self-optimize.yml** - Continuous self-optimization (NEW!)
 - **deploy-preview.yml** - Vercel preview deployments  
 - **codeql-analysis.yml** - Security code scanning
 - **auto-merge.yml** - Automated PR merging (existing)
+
+### Self-Optimization Workflow (NEW!)
+
+Automatically analyzes and optimizes PRs:
+- Auto-fixes ESLint issues
+- Detects and reports dead code
+- Analyzes code complexity
+- Identifies test coverage gaps
+- Flags security issues
+- Posts inline PR comments
+
+See [Self-Optimization Guide](SELF_OPTIMIZATION_GUIDE.md) for details.
 
 ### Dependabot
 

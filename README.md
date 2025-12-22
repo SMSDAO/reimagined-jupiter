@@ -362,6 +362,51 @@ Cryptocurrency trading and arbitrage involve significant risks:
 
 MIT License - see LICENSE file for details
 
+## 🤖 Continuous Self-Optimization
+
+**NEW!** Every PR is automatically analyzed and optimized by our self-optimization workflow:
+
+### Automated Actions
+- ✅ **Auto-fix ESLint Issues**: Formatting, imports, and style violations
+- ✅ **Dead Code Detection**: Finds unused exports, imports, and unreachable code
+- ✅ **Complexity Analysis**: Identifies functions that need refactoring
+- ✅ **Test Coverage Gaps**: Detects untested code and generates test templates
+- ✅ **Security Scanning**: Flags risky patterns like `eval()`, type safety issues
+- ✅ **Inline PR Comments**: Contextual recommendations on specific code lines
+
+### What Gets Automatically Fixed
+- Code formatting and style
+- Unused imports
+- Simple ESLint violations
+- Type inference improvements
+
+### What Gets Flagged for Review
+- High complexity functions (cyclomatic complexity > 10)
+- Security risks (eval, innerHTML, etc.)
+- Excessive `any` type usage
+- TODO/FIXME in production code
+- Low test coverage (<80%)
+- Mock/placeholder implementations
+
+See **[Self-Optimization Guide](.github/SELF_OPTIMIZATION_GUIDE.md)** for complete documentation.
+
+### Developer Commands
+
+```bash
+# Run all optimizations locally
+npm run optimize
+
+# Fix linting issues
+npm run lint:fix
+npm run lint:webapp:fix
+
+# Analyze dead code
+npm run dead-code:analyze
+
+# Analyze test coverage gaps
+npm run coverage:analyze
+```
+
 ## 📚 Documentation
 
 ### Getting Started
@@ -377,6 +422,7 @@ MIT License - see LICENSE file for details
 - **[Deployment Automation](./docs/DEPLOYMENT_AUTOMATION.md)** - CI/CD workflows and automation
 - **[Vercel Deployment](./VERCEL_DEPLOY.md)** - Vercel-specific instructions
 - **[Enhanced Scanner](./ENHANCED_SCANNER.md)** - Real-time arbitrage scanning
+- **[Self-Optimization](.github/SELF_OPTIMIZATION_GUIDE.md)** - Automated code quality workflow
 
 ### Features & Guides
 - **[Flash Loan Enhancements](./FLASH_LOAN_ENHANCEMENTS.md)** - Flash loan system details
