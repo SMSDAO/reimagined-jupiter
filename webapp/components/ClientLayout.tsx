@@ -12,7 +12,7 @@ export default function ClientLayout({
 }: {
   children: React.ReactNode;
 }) {
-  // Initialize API health monitoring on client side
+  // Initialize API health monitoring and global error handlers on client side
   useEffect(() => {
     // Start health checks every 60 seconds
     startAPIHealthMonitoring(60000);
@@ -21,8 +21,66 @@ export default function ClientLayout({
     if (process.env.NODE_ENV === 'development') {
       console.log('[GXQ Studio] API health monitoring started');
     }
+
+    // Add global error handlers for browser environment
+    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+      // Log unhandled promise rejections
+      const error = {
+        message: event.reason?.message || String(event.reason),
+        name: 'UnhandledPromiseRejection',
+        timestamp: new Date().toISOString(),
+      };
+
+      // Send to error logging endpoint
+      fetch('/api/errors', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(error),
+      }).catch(() => {
+        // Silently fail if error logging fails
+      });
+
+      // Prevent default behavior (console error) in production
+      if (process.env.NODE_ENV === 'production') {
+        event.preventDefault();
+      }
+    };
+
+    const handleError = (event: ErrorEvent) => {
+      // Log global errors
+      const error = {
+        message: event.message,
+        name: event.error?.name || 'Error',
+        timestamp: new Date().toISOString(),
+        filename: event.filename,
+        lineno: event.lineno,
+        colno: event.colno,
+      };
+
+      // Send to error logging endpoint
+      fetch('/api/errors', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(error),
+      }).catch(() => {
+        // Silently fail if error logging fails
+      });
+
+      // Prevent default behavior (console error) in production
+      if (process.env.NODE_ENV === 'production') {
+        event.preventDefault();
+      }
+    };
+
+    // Register global error handlers
+    window.addEventListener('unhandledrejection', handleUnhandledRejection);
+    window.addEventListener('error', handleError);
     
-    // Cleanup is handled by the health checker itself
+    // Cleanup is handled by the health checker itself and error handlers on unmount
+    return () => {
+      window.removeEventListener('unhandledrejection', handleUnhandledRejection);
+      window.removeEventListener('error', handleError);
+    };
   }, []);
 
   return (
