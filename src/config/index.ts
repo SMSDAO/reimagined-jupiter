@@ -26,6 +26,9 @@ export const config: Config = {
     kamino: new PublicKey(process.env.KAMINO_PROGRAM_ID || 'KLend2g3cP87fffoy8q1mQqGKjrxjC8boSyAYavgmjD'),
     portFinance: new PublicKey(process.env.PORT_FINANCE_PROGRAM_ID || 'Port7uDYB3wk6GJAw4KT1WpTeMtSu9bTcChBHkX2LfR'),
     saveFinance: new PublicKey(process.env.SAVE_FINANCE_PROGRAM_ID || 'SAVEg4Je7HZcJk2X1FTr1vfLhQqrpXPTvAWmYnYY1Wy'),
+    tulip: new PublicKey(process.env.TULIP_PROGRAM_ID || 'TuLipcqtGVXP9XR62wM8WWCm6a9vhLs7T1uoWBk6FDs'),
+    drift: new PublicKey(process.env.DRIFT_PROGRAM_ID || 'dRiftyHA39MWEi3m9aunc5MzRF1JYuBsbn6VPcn33UH'),
+    jet: new PublicKey(process.env.JET_PROGRAM_ID || 'JPv1rCqrhagNNmJVM5J1he7msQ5ybtvE1nNuHpDHMNU'),
   },
   dexPrograms: {
     raydium: new PublicKey('675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8'),
@@ -132,4 +135,7 @@ export const FLASH_LOAN_FEES = {
   kamino: 0.12,
   portFinance: 0.20,
   saveFinance: 0.11,
+  tulip: 0.13,
+  drift: 0.14,
+  jet: 0.16,
 };

@@ -203,15 +203,22 @@ async function checkArbitrageOpportunity(
     const profit = (effectiveOutput - inputAmount) / 1e9; // Convert to SOL
 
     if (profit >= minProfit) {
+      // Calculate confidence based on liquidity and price stability
+      const routePlanLength = quote.routePlan?.length || 1;
+      const priceImpact = Math.abs(parseFloat(quote.priceImpactPct || '0'));
+      const confidence = Math.max(50, Math.min(95, 
+        90 - (priceImpact * 10) - (routePlanLength * 2)
+      ));
+
       return {
-        id: `arb_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        id: `arb_${Date.now()}_${Buffer.from(`${pair.input}${pair.output}${Date.now()}`).toString('base64').slice(0, 9)}`,
         type: 'arbitrage',
         inputToken: pair.input,
         outputToken: pair.output,
         route: quote.routePlan?.map((r: any) => r.swapInfo?.label || 'Unknown') || [pair.symbol],
         estimatedProfit: profit,
         dexPath: ['Jupiter', 'Raydium'],
-        confidence: 75 + Math.floor(Math.random() * 20),
+        confidence: Math.floor(confidence),
         timestamp: Date.now(),
         metadata: {
           inputSymbol: pair.symbol.split('/')[0],
@@ -266,15 +273,21 @@ async function checkFlashLoanOpportunity(
     const profit = (outputAmount - flashLoanAmount) / 1e9 - (flashLoanAmount / 1e9 * flashLoanFee);
 
     if (profit >= minProfit) {
+      // Calculate confidence based on liquidity depth and profit margin
+      const profitMargin = profit / (flashLoanAmount / 1e9);
+      const confidence = Math.max(60, Math.min(90, 
+        75 + (profitMargin * 100)
+      ));
+
       return {
-        id: `flash_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        id: `flash_${Date.now()}_${Buffer.from(`${pair.input}${pair.output}${Date.now()}`).toString('base64').slice(0, 9)}`,
         type: 'flash-loan',
         inputToken: pair.input,
         outputToken: pair.output,
         route: [pair.symbol],
         estimatedProfit: profit,
         dexPath: ['Marginfi', 'Jupiter'],
-        confidence: 70 + Math.floor(Math.random() * 15),
+        confidence: Math.floor(confidence),
         timestamp: Date.now(),
       };
     }
