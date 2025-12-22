@@ -116,6 +116,18 @@ interface DailyVolume {
   volume: number;
 }
 
+/**
+ * Maximum priority fee allowed (10M lamports = 0.01 SOL)
+ * This is enforced throughout the system for mainnet safety
+ */
+const MAX_PRIORITY_FEE_LAMPORTS = 10_000_000;
+
+/**
+ * Jito tip account address for MEV protection
+ * This is the official Jito tip account on mainnet
+ */
+const JITO_TIP_ACCOUNT = '96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5';
+
 export class EnhancedSniperBot {
   private connection: Connection;
   private config: SniperConfig;
@@ -566,8 +578,8 @@ export class EnhancedSniperBot {
     const transaction = new Transaction();
 
     // Add compute budget instruction for priority fee
-    // Cap at 10M lamports (0.01 SOL) as per requirements
-    const priorityFee = Math.min(this.config.priorityFeeLamports, 10_000_000);
+    // Cap at MAX_PRIORITY_FEE_LAMPORTS (0.01 SOL) as per requirements
+    const priorityFee = Math.min(this.config.priorityFeeLamports, MAX_PRIORITY_FEE_LAMPORTS);
     
     transaction.add(
       ComputeBudgetProgram.setComputeUnitPrice({
@@ -577,8 +589,8 @@ export class EnhancedSniperBot {
 
     // Add Jito tip if enabled
     if (this.config.useJito) {
-      // Jito tip transfer to tip account
-      const jitoTipAccount = new PublicKey('96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5'); // Jito tip account
+      // Jito tip transfer to official tip account
+      const jitoTipAccount = new PublicKey(JITO_TIP_ACCOUNT);
       
       transaction.add(
         SystemProgram.transfer({

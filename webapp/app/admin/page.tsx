@@ -5,6 +5,12 @@ import { useWallet, useConnection } from '@solana/wallet-adapter-react';
 import { PublicKey } from '@solana/web3.js';
 import { motion } from 'framer-motion';
 
+/**
+ * Maximum priority fee allowed (10M lamports = 0.01 SOL)
+ * This constant ensures consistency across the application
+ */
+const MAX_PRIORITY_FEE_LAMPORTS = 10_000_000;
+
 interface BotStatus {
   running: boolean;
   uptime: number;
@@ -636,10 +642,10 @@ export default function AdminPage() {
                   <input
                     type="number"
                     value={sniperConfig.priorityFeeLamports}
-                    onChange={(e) => setSniperConfig({ ...sniperConfig, priorityFeeLamports: Math.min(parseInt(e.target.value), 10000000) })}
+                    onChange={(e) => setSniperConfig({ ...sniperConfig, priorityFeeLamports: Math.min(parseInt(e.target.value), MAX_PRIORITY_FEE_LAMPORTS) })}
                     step="100000"
                     min="0"
-                    max="10000000"
+                    max={MAX_PRIORITY_FEE_LAMPORTS}
                     className="w-full bg-white/10 text-white px-4 py-2 rounded-lg border border-white/10 focus:border-purple-500 outline-none"
                   />
                   <div className="text-xs text-gray-400 mt-1">{(sniperConfig.priorityFeeLamports / 1e9).toFixed(4)} SOL (max 0.01)</div>
