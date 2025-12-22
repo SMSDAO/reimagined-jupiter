@@ -12,6 +12,39 @@ import { RouteTemplateManager } from './services/routeTemplates.js';
 import { EnhancedArbitrageScanner } from './services/enhancedScanner.js';
 import { ArbitrageDatabase } from './services/database.js';
 import { RealTimeArbitrageScanner } from './services/realTimeArbitrageScanner.js';
+import { Logger } from './utils/logger.js';
+
+const logger = new Logger('GXQStudio');
+
+// Global error handlers to prevent unhandled rejections and exceptions
+process.on('unhandledRejection', (reason: unknown, promise: Promise<unknown>) => {
+  logger.error('Unhandled Promise Rejection', reason instanceof Error ? reason : new Error(String(reason)), {
+    promise: promise.toString(),
+  });
+});
+
+process.on('uncaughtException', (error: Error) => {
+  logger.error('Uncaught Exception', error);
+  // Give logger time to flush before exiting
+  setTimeout(() => {
+    process.exit(1);
+  }, 1000);
+});
+
+// Graceful shutdown handlers
+process.on('SIGTERM', () => {
+  logger.info('SIGTERM received, shutting down gracefully...');
+  setTimeout(() => {
+    process.exit(0);
+  }, 2000);
+});
+
+process.on('SIGINT', () => {
+  logger.info('SIGINT received, shutting down gracefully...');
+  setTimeout(() => {
+    process.exit(0);
+  }, 2000);
+});
 
 class GXQStudio {
   private connection: Connection;
@@ -58,22 +91,27 @@ class GXQStudio {
           this.quicknode
         );
       } catch (error) {
-        console.warn('Invalid wallet private key, running in read-only mode');
+        logger.warn('Invalid wallet private key, running in read-only mode', error);
       }
     }
   }
   
   async initialize(): Promise<void> {
-    console.log('🚀 Initializing GXQ STUDIO...');
-    console.log('The most advanced Solana flash loan arbitrage system\n');
+    logger.info('🚀 Initializing GXQ STUDIO...');
+    logger.info('The most advanced Solana flash loan arbitrage system');
     
-    await this.presetManager.initialize();
-    await this.addressBook.initialize();
-    await this.routeTemplates.initialize();
-    await this.database.initialize();
-    
-    console.log('✅ Initialization complete\n');
-    this.printSystemInfo();
+    try {
+      await this.presetManager.initialize();
+      await this.addressBook.initialize();
+      await this.routeTemplates.initialize();
+      await this.database.initialize();
+      
+      logger.info('✅ Initialization complete');
+      this.printSystemInfo();
+    } catch (error) {
+      logger.error('Initialization failed', error);
+      throw error;
+    }
   }
   
   private printSystemInfo(): void {
@@ -104,19 +142,19 @@ class GXQStudio {
   
   async checkAirdrops(): Promise<void> {
     if (!this.airdropChecker) {
-      console.error('Airdrop checker not available (wallet not configured)');
+      logger.error('Airdrop checker not available (wallet not configured)');
       return;
     }
     
-    console.log('🎁 Checking for available airdrops...\n');
+    logger.info('🎁 Checking for available airdrops...');
     const airdrops = await this.airdropChecker.checkAllAirdrops();
     
     if (airdrops.length === 0) {
-      console.log('No claimable airdrops found.');
+      logger.info('No claimable airdrops found');
       return;
     }
     
-    console.log(`Found ${airdrops.length} claimable airdrops:\n`);
+    logger.info(`Found ${airdrops.length} claimable airdrops`, { count: airdrops.length });
     for (const airdrop of airdrops) {
       console.log(`  ${airdrop.protocol}: ${airdrop.amount} ${airdrop.tokenMint.slice(0, 8)}...`);
     }
@@ -124,14 +162,14 @@ class GXQStudio {
   
   async autoClaimAirdrops(): Promise<void> {
     if (!this.airdropChecker || !this.userKeypair) {
-      console.error('Airdrop auto-claim not available (wallet not configured)');
+      logger.error('Airdrop auto-claim not available (wallet not configured)');
       return;
     }
     
-    console.log('🎁 Auto-claiming airdrops...\n');
+    logger.info('🎁 Auto-claiming airdrops...');
     const results = await this.airdropChecker.autoClaimAll(this.userKeypair);
     
-    console.log('\nClaim Results:');
+    logger.info('Claim Results:');
     for (const [protocol, signature] of results.entries()) {
       const status = signature ? '✅' : '❌';
       console.log(`  ${status} ${protocol}: ${signature || 'Failed'}`);
@@ -189,24 +227,34 @@ class GXQStudio {
   
   async startAutoExecution(): Promise<void> {
     if (!this.autoExecutionEngine) {
-      console.error('Auto-execution not available (wallet not configured)');
+      logger.error('Auto-execution not available (wallet not configured)');
       return;
     }
     
-    console.log('⚡ Starting auto-execution engine...');
-    console.log('Press Ctrl+C to stop\n');
+    logger.info('⚡ Starting auto-execution engine...');
+    logger.info('Press Ctrl+C to stop');
     
-    await this.autoExecutionEngine.start();
+    try {
+      await this.autoExecutionEngine.start();
+    } catch (error) {
+      logger.error('Auto-execution engine failed', error);
+      throw error;
+    }
   }
   
   async manualExecution(): Promise<void> {
     if (!this.autoExecutionEngine) {
-      console.error('Manual execution not available (wallet not configured)');
+      logger.error('Manual execution not available (wallet not configured)');
       return;
     }
     
-    console.log('🔧 Manual Execution Mode\n');
-    await this.autoExecutionEngine.manualExecute();
+    logger.info('🔧 Manual Execution Mode');
+    try {
+      await this.autoExecutionEngine.manualExecute();
+    } catch (error) {
+      logger.error('Manual execution failed', error);
+      throw error;
+    }
   }
   
   async showFlashLoanProviders(): Promise<void> {
@@ -226,25 +274,30 @@ class GXQStudio {
     
     const walletAddress = address || this.userKeypair?.publicKey.toString();
     if (!walletAddress) {
-      console.error('No wallet address provided or configured');
+      logger.error('No wallet address provided or configured');
       return;
     }
     
-    const publicKey = new PublicKey(walletAddress);
-    const score = await this.walletScoring.analyzeWallet(publicKey);
-    
-    console.log(`Wallet: ${score.address.slice(0, 8)}...${score.address.slice(-8)}`);
-    console.log(`\n🏆 Tier: ${score.tier}`);
-    console.log(`📈 Total Score: ${score.totalScore}/100`);
-    console.log(`\n💎 Factor Breakdown:`);
-    console.log(`   Balance: ${score.factors.balance}/20`);
-    console.log(`   Transactions: ${score.factors.transactionCount}/20`);
-    console.log(`   NFT Holdings: ${score.factors.nftHoldings}/15`);
-    console.log(`   DeFi Activity: ${score.factors.defiActivity}/15`);
-    console.log(`   Age & Consistency: ${score.factors.ageAndConsistency}/15`);
-    console.log(`   Diversification: ${score.factors.diversification}/15`);
-    console.log(`\n🎁 Airdrop Priority: ${score.airdropPriority}/5`);
-    console.log(`💰 Estimated Airdrop Value: $${score.estimatedAirdropValue.toLocaleString()}`);
+    try {
+      const publicKey = new PublicKey(walletAddress);
+      const score = await this.walletScoring.analyzeWallet(publicKey);
+      
+      console.log(`Wallet: ${score.address.slice(0, 8)}...${score.address.slice(-8)}`);
+      console.log(`\n🏆 Tier: ${score.tier}`);
+      console.log(`📈 Total Score: ${score.totalScore}/100`);
+      console.log(`\n💎 Factor Breakdown:`);
+      console.log(`   Balance: ${score.factors.balance}/20`);
+      console.log(`   Transactions: ${score.factors.transactionCount}/20`);
+      console.log(`   NFT Holdings: ${score.factors.nftHoldings}/15`);
+      console.log(`   DeFi Activity: ${score.factors.defiActivity}/15`);
+      console.log(`   Age & Consistency: ${score.factors.ageAndConsistency}/15`);
+      console.log(`   Diversification: ${score.factors.diversification}/15`);
+      console.log(`\n🎁 Airdrop Priority: ${score.airdropPriority}/5`);
+      console.log(`💰 Estimated Airdrop Value: $${score.estimatedAirdropValue.toLocaleString()}`);
+    } catch (error) {
+      logger.error('Wallet analysis failed', error);
+      throw error;
+    }
   }
   
   async manageAddressBook(action?: string, ..._args: string[]): Promise<void> {
@@ -488,96 +541,104 @@ class GXQStudio {
 
 // CLI Interface
 async function main() {
-  const studio = new GXQStudio();
-  await studio.initialize();
-  
-  const args = process.argv.slice(2);
-  const command = args[0];
-  
-  switch (command) {
-    case 'airdrops':
-      await studio.checkAirdrops();
-      break;
-    case 'claim':
-      await studio.autoClaimAirdrops();
-      break;
-    case 'presets':
-      await studio.listPresets();
-      break;
-    case 'scan':
-      await studio.scanOpportunities();
-      break;
-    case 'start':
-      await studio.startAutoExecution();
-      break;
-    case 'manual':
-      await studio.manualExecution();
-      break;
-    case 'providers':
-      await studio.showFlashLoanProviders();
-      break;
-    case 'analyze':
-      await studio.analyzeWallet(args[1]);
-      break;
-    case 'addresses':
-      await studio.manageAddressBook(args[1], ...args.slice(2));
-      break;
-    case 'templates':
-      await studio.manageRouteTemplates();
-      break;
-    case 'export':
-      await studio.exportConfig(args[1] || 'presets');
-      break;
-    case 'sync':
-      await studio.syncToCloud();
-      break;
-    case 'enhanced-scan':
-      await studio.startEnhancedScanner(args[1] ? parseInt(args[1]) : undefined);
-      break;
-    case 'scanner-stats':
-      await studio.showScannerStats();
-      break;
-    case 'db-stats':
-      await studio.showDatabaseStats();
-      break;
-    case 'history':
-      await studio.showHistoricalAnalysis(args[1] ? parseInt(args[1]) : undefined);
-      break;
-    case 'realtime-scan':
-      await studio.startRealTimeScanner(args.slice(1));
-      break;
-    case 'realtime-once':
-      await studio.scanRealTimeOnce(args.slice(1));
-      break;
-    default:
-      console.log('Usage:');
-      console.log('  npm start airdrops    - Check for claimable airdrops');
-      console.log('  npm start claim       - Auto-claim all airdrops');
-      console.log('  npm start presets     - List available presets');
-      console.log('  npm start scan        - Scan for arbitrage opportunities');
-      console.log('  npm start start       - Start auto-execution engine');
-      console.log('  npm start manual      - Manual execution mode (review opportunities)');
-      console.log('  npm start providers   - Show flash loan providers');
-      console.log('');
-      console.log('Enhanced Scanner:');
-      console.log('  npm start enhanced-scan [interval]  - Start enhanced scanner (1s default)');
-      console.log('  npm start scanner-stats             - Show scanner statistics');
-      console.log('  npm start db-stats                  - Show database statistics');
-      console.log('  npm start history [days]            - Historical analysis (7 days default)');
-      console.log('');
-      console.log('Real-Time Arbitrage Scanner (NEW):');
-      console.log('  npm start realtime-scan [tokens...] - Start real-time scanner (all tokens default)');
-      console.log('  npm start realtime-once [tokens...] - One-time scan for opportunities');
-      console.log('  Example: npm start realtime-scan SOL USDC USDT');
-      console.log('');
-      console.log('Phase 2 Features:');
-      console.log('  npm start analyze [address]  - Analyze wallet score and tier');
-      console.log('  npm start addresses [action] - Manage address book');
-      console.log('  npm start templates          - View route templates');
-      console.log('  npm start export [type]      - Export config (presets/templates/addresses)');
-      console.log('  npm start sync               - Sync presets to QuickNode KV');
-      break;
+  try {
+    const studio = new GXQStudio();
+    await studio.initialize();
+    
+    const args = process.argv.slice(2);
+    const command = args[0];
+    
+    switch (command) {
+      case 'airdrops':
+        await studio.checkAirdrops();
+        break;
+      case 'claim':
+        await studio.autoClaimAirdrops();
+        break;
+      case 'presets':
+        await studio.listPresets();
+        break;
+      case 'scan':
+        await studio.scanOpportunities();
+        break;
+      case 'start':
+        await studio.startAutoExecution();
+        break;
+      case 'manual':
+        await studio.manualExecution();
+        break;
+      case 'providers':
+        await studio.showFlashLoanProviders();
+        break;
+      case 'analyze':
+        await studio.analyzeWallet(args[1]);
+        break;
+      case 'addresses':
+        await studio.manageAddressBook(args[1], ...args.slice(2));
+        break;
+      case 'templates':
+        await studio.manageRouteTemplates();
+        break;
+      case 'export':
+        await studio.exportConfig(args[1] || 'presets');
+        break;
+      case 'sync':
+        await studio.syncToCloud();
+        break;
+      case 'enhanced-scan':
+        await studio.startEnhancedScanner(args[1] ? parseInt(args[1]) : undefined);
+        break;
+      case 'scanner-stats':
+        await studio.showScannerStats();
+        break;
+      case 'db-stats':
+        await studio.showDatabaseStats();
+        break;
+      case 'history':
+        await studio.showHistoricalAnalysis(args[1] ? parseInt(args[1]) : undefined);
+        break;
+      case 'realtime-scan':
+        await studio.startRealTimeScanner(args.slice(1));
+        break;
+      case 'realtime-once':
+        await studio.scanRealTimeOnce(args.slice(1));
+        break;
+      default:
+        console.log('Usage:');
+        console.log('  npm start airdrops    - Check for claimable airdrops');
+        console.log('  npm start claim       - Auto-claim all airdrops');
+        console.log('  npm start presets     - List available presets');
+        console.log('  npm start scan        - Scan for arbitrage opportunities');
+        console.log('  npm start start       - Start auto-execution engine');
+        console.log('  npm start manual      - Manual execution mode (review opportunities)');
+        console.log('  npm start providers   - Show flash loan providers');
+        console.log('');
+        console.log('Enhanced Scanner:');
+        console.log('  npm start enhanced-scan [interval]  - Start enhanced scanner (1s default)');
+        console.log('  npm start scanner-stats             - Show scanner statistics');
+        console.log('  npm start db-stats                  - Show database statistics');
+        console.log('  npm start history [days]            - Historical analysis (7 days default)');
+        console.log('');
+        console.log('Real-Time Arbitrage Scanner (NEW):');
+        console.log('  npm start realtime-scan [tokens...] - Start real-time scanner (all tokens default)');
+        console.log('  npm start realtime-once [tokens...] - One-time scan for opportunities');
+        console.log('  Example: npm start realtime-scan SOL USDC USDT');
+        console.log('');
+        console.log('Phase 2 Features:');
+        console.log('  npm start analyze [address]  - Analyze wallet score and tier');
+        console.log('  npm start addresses [action] - Manage address book');
+        console.log('  npm start templates          - View route templates');
+        console.log('  npm start export [type]      - Export config (presets/templates/addresses)');
+        console.log('  npm start sync               - Sync presets to QuickNode KV');
+        break;
+    }
+  } catch (error) {
+    logger.error('Application error', error instanceof Error ? error : new Error(String(error)));
+    process.exit(1);
   }
 }
 
-main().catch(console.error);
+main().catch((error: unknown) => {
+  logger.error('Fatal application error', error instanceof Error ? error : new Error(String(error)));
+  process.exit(1);
+});
