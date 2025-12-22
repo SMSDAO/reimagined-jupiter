@@ -34,8 +34,16 @@ export class AirdropChecker {
   constructor(connection: Connection, userPublicKey: PublicKey) {
     this.connection = connection;
     this.userPublicKey = userPublicKey;
-    // Dev wallet from env or default
-    this.devWallet = new PublicKey(process.env.DEV_FEE_WALLET || 'monads.solana'); 
+    
+    // Dev wallet from env - must be valid Solana address
+    const devWalletAddress = process.env.DEV_FEE_WALLET || '11111111111111111111111111111111'; 
+    try {
+      this.devWallet = new PublicKey(devWalletAddress);
+    } catch (error) {
+      console.error('[AirdropChecker] Invalid DEV_FEE_WALLET address, using system program as fallback');
+      this.devWallet = new PublicKey('11111111111111111111111111111111'); // System program as safe fallback
+    }
+    
     this.devFeePercentage = parseFloat(process.env.DEV_FEE_PERCENTAGE || '0.10');
   }
   

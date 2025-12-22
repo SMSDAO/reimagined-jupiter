@@ -60,6 +60,24 @@ interface Airdrop {
   eligibilityReason?: string;
 }
 
+// Constants for value calculations
+const PLACEHOLDER_TOKEN_VALUE_USD = 0.5; // Placeholder USD value per token for estimation
+
+// Helper function to calculate total claimable value
+function calculateTotalClaimableValue(airdrops: Airdrop[]): number {
+  return airdrops
+    .filter((a) => a.claimable && !a.claimed)
+    .reduce((sum, a) => {
+      const numericValue = parseFloat(a.value.replace(/[^\d.]/g, '') || '0');
+      return sum + numericValue;
+    }, 0);
+}
+
+// Helper function to parse token amount from formatted string
+function parseTokenAmount(amountStr: string): number {
+  return parseFloat(amountStr.replace(/[^\d.]/g, '') || '0');
+}
+
 export default function AirdropPage() {
   const { publicKey } = useWallet();
   const { connection } = useConnection();
@@ -147,7 +165,7 @@ export default function AirdropPage() {
           const mappedAirdrops = airdropData.airdrops.map((a: any) => ({
             protocol: a.protocol,
             amount: `${a.amount.toLocaleString()} tokens`,
-            value: `$${(a.amount * 0.5).toFixed(2)}`, // Placeholder value
+            value: `$${(a.amount * PLACEHOLDER_TOKEN_VALUE_USD).toFixed(2)}`, // Using constant
             claimable: a.claimable && !a.claimed,
             claimed: a.claimed,
             claimDeadline: a.claimDeadline,
@@ -185,13 +203,13 @@ export default function AirdropPage() {
     }
     
     // Show donation acknowledgment
-    const donationAmount = parseFloat(airdrop.amount.replace(/[^\d.]/g, '')) * 0.10;
+    const donationAmount = parseTokenAmount(airdrop.amount) * 0.10;
     const confirmed = confirm(
       `🎁 Claim ${airdrop.protocol} Airdrop\n\n` +
       `Amount: ${airdrop.amount}\n` +
       `Value: ${airdrop.value}\n\n` +
       `📢 IMPORTANT: 10% Donation to Dev Wallet\n` +
-      `Donation: ${donationAmount.toLocaleString()} tokens (~$${(donationAmount * 0.5).toFixed(2)})\n\n` +
+      `Donation: ${donationAmount.toLocaleString()} tokens (~$${(donationAmount * PLACEHOLDER_TOKEN_VALUE_USD).toFixed(2)})\n\n` +
       `Dev wallet: monads.solana\n\n` +
       `This helps support the development of GXQ Studio.\n\n` +
       `Do you want to proceed with the claim?`
@@ -259,14 +277,10 @@ export default function AirdropPage() {
       return;
     }
     
-    // Calculate total donation
-    const totalAmount = claimable.reduce((sum, a) => {
-      return sum + parseFloat(a.amount.replace(/[^\d.]/g, ''));
-    }, 0);
+    // Calculate total donation using helper function
+    const totalAmount = claimable.reduce((sum, a) => sum + parseTokenAmount(a.amount), 0);
     const totalDonation = totalAmount * 0.10;
-    const totalValue = claimable.reduce((sum, a) => {
-      return sum + parseFloat(a.value.replace(/[^\d.]/g, ''));
-    }, 0);
+    const totalValue = calculateTotalClaimableValue(airdrops);
     
     // Show comprehensive claim confirmation
     const confirmed = confirm(
@@ -276,7 +290,7 @@ export default function AirdropPage() {
       `Total Tokens: ${totalAmount.toLocaleString()}\n` +
       `Total Value: $${totalValue.toFixed(2)}\n\n` +
       `📢 DONATION TO DEV WALLET\n` +
-      `10% of all claims: ${totalDonation.toLocaleString()} tokens (~$${(totalDonation * 0.5).toFixed(2)})\n` +
+      `10% of all claims: ${totalDonation.toLocaleString()} tokens (~$${(totalDonation * PLACEHOLDER_TOKEN_VALUE_USD).toFixed(2)})\n` +
       `Dev wallet: monads.solana\n\n` +
       `This supports the continued development of GXQ Studio.\n\n` +
       `Proceed with batch claim?`
@@ -701,7 +715,7 @@ export default function AirdropPage() {
                   <div>
                     <div className="text-sm text-gray-300 mb-1">Total Value</div>
                     <div className="text-2xl font-bold text-green-400">
-                      ${airdrops.filter((a) => a.claimable && !a.claimed).reduce((sum, a) => sum + parseFloat(a.value.replace(/[^\d.]/g, '') || '0'), 0).toFixed(2)}
+                      ${calculateTotalClaimableValue(airdrops).toFixed(2)}
                     </div>
                   </div>
                 </div>
@@ -709,7 +723,7 @@ export default function AirdropPage() {
                   <div className="flex justify-between items-center text-sm">
                     <span className="text-gray-300">💰 Dev Fee (10%):</span>
                     <span className="text-yellow-400 font-bold">
-                      ${(airdrops.filter((a) => a.claimable && !a.claimed).reduce((sum, a) => sum + parseFloat(a.value.replace(/[^\d.]/g, '') || '0'), 0) * 0.10).toFixed(2)}
+                      ${(calculateTotalClaimableValue(airdrops) * 0.10).toFixed(2)}
                     </span>
                   </div>
                 </div>

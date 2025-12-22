@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createResilientConnection } from '@/lib/solana/connection';
 import { PublicKey, Connection } from '@solana/web3.js';
-import { AirdropChecker } from '@/../../src/services/airdropChecker';
+
+// Use dynamic import to avoid build-time path resolution issues
+// This is a temporary workaround until proper TypeScript path aliases are configured
+// TODO: Configure tsconfig path alias: "@backend/*": ["../src/*"]
+const getAirdropChecker = async () => {
+  const module = await import('../../../../../src/services/airdropChecker.js');
+  return module.AirdropChecker;
+};
 
 /**
  * GET /api/airdrops/check
@@ -31,6 +38,9 @@ export async function GET(request: NextRequest) {
   try {
     // Verify wallet address
     const pubkey = new PublicKey(walletAddress);
+    
+    // Dynamically import AirdropChecker to avoid path resolution issues
+    const AirdropChecker = await getAirdropChecker();
     
     // Create AirdropChecker instance
     const connection = new Connection(

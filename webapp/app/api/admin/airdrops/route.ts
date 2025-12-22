@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import * as db from '@/../../db/database';
+
+// Use dynamic import to avoid build-time path resolution issues
+// TODO: Configure tsconfig path alias: "@backend/*": ["../src/*"]
+const getDbModule = async () => {
+  return await import('../../../../../db/database.js');
+};
 
 /**
  * GET /api/admin/airdrops
@@ -31,6 +36,9 @@ export async function GET(request: NextRequest) {
     console.log(`   Status filter: ${status || 'all'}`);
     console.log(`   Limit: ${limit}`);
     console.log(`   Wallet filter: ${wallet || 'all'}`);
+
+    // Dynamically import database module
+    const db = await getDbModule();
 
     let claims;
     if (wallet) {
