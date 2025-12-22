@@ -29,7 +29,8 @@ export async function sendJitoBundle(
   connection: Connection,
   transactions: (Transaction | VersionedTransaction)[],
   signers: Keypair[],
-  config: JitoConfig = DEFAULT_JITO_CONFIG
+  config: JitoConfig = DEFAULT_JITO_CONFIG,
+  transactionValue: number = 0
 ): Promise<{ success: boolean; bundleId?: string; error?: string }> {
   try {
     logger.info('Sending transaction via Jito bundle', {
@@ -37,9 +38,15 @@ export async function sendJitoBundle(
       blockEngineUrl: config.blockEngineUrl,
     });
     
+    // Get network congestion level (0-1 scale)
+    const recentPerformanceSamples = await connection.getRecentPerformanceSamples(1);
+    const networkCongestion = recentPerformanceSamples.length > 0
+      ? Math.min(1, recentPerformanceSamples[0].numTransactions / recentPerformanceSamples[0].samplePeriodSecs / 2000)
+      : 0.5;
+    
     // Add tip transaction to bundle
-    const tipAmount = calculateJitoTip(config);
-    logger.debug('Adding Jito tip', { tipAmount });
+    const tipAmount = calculateJitoTip(config, transactionValue, networkCongestion);
+    logger.debug('Adding Jito tip', { tipAmount, transactionValue, networkCongestion });
     
     // Serialize transactions
     const serializedTxs = transactions.map(tx => {
@@ -95,17 +102,24 @@ export async function sendJitoBundle(
 }
 
 /**
- * Calculate dynamic Jito tip based on transaction value
+ * Calculate dynamic Jito tip based on transaction value and network conditions
  */
-function calculateJitoTip(config: JitoConfig): number {
-  // For now, use a simple random value between min and max
-  // In production, calculate based on:
-  // - Transaction value
-  // - Network congestion
-  // - Expected profit
+function calculateJitoTip(config: JitoConfig, transactionValue: number = 0, networkCongestion: number = 0.5): number {
+  // Calculate base tip as a percentage of transaction value
+  // If no transaction value provided, use midpoint of range
   
+  if (transactionValue > 0) {
+    // Calculate tip as 0.01% - 0.05% of transaction value
+    const tipPercentage = 0.0001 + (networkCongestion * 0.0004);
+    const calculatedTip = Math.floor(transactionValue * tipPercentage);
+    
+    // Ensure within configured bounds
+    return Math.max(config.minTipLamports, Math.min(config.maxTipLamports, calculatedTip));
+  }
+  
+  // Fallback: Use network congestion to determine tip within range
   const range = config.maxTipLamports - config.minTipLamports;
-  const tip = config.minTipLamports + Math.floor(Math.random() * range);
+  const tip = config.minTipLamports + Math.floor(range * networkCongestion);
   
   return Math.min(tip, config.maxTipLamports);
 }

@@ -237,6 +237,11 @@ export class ArbitrageDatabase {
   }
   
   private generateId(): string {
-    return `opp_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+    // Generate a unique ID using timestamp and a hash
+    const timestamp = Date.now();
+    const randomPart = Buffer.from(
+      `${timestamp}-${process.hrtime.bigint()}`
+    ).toString('base64').slice(0, 8);
+    return `opp_${timestamp}_${randomPart}`;
   }
 }
