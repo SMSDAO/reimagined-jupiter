@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useWallet, useConnection } from '@solana/wallet-adapter-react';
 import { PublicKey } from '@solana/web3.js';
 import { motion } from 'framer-motion';
+import PortfolioAnalyticsDashboard from '@/components/PortfolioAnalyticsDashboard';
 
 interface BotStatus {
   running: boolean;
@@ -569,6 +570,11 @@ export default function AdminPage() {
               </div>
             </div>
           )}
+        </div>
+
+        {/* Portfolio Analytics Dashboard */}
+        <div className="mt-8">
+          <PortfolioAnalyticsDashboard />
         </div>
       </motion.div>
     </div>
