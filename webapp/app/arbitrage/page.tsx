@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { motion } from 'framer-motion';
 import RPCHealthIndicator from '@/components/RPCHealthIndicator';
+import AdvancedArbitrageControls, { AdvancedArbitrageSettings } from '@/components/AdvancedArbitrageControls';
 
 interface ArbitrageOpportunity {
   id: string;
@@ -21,13 +22,17 @@ export default function ArbitragePage() {
   const [autoExecute, setAutoExecute] = useState(false);
   const [minProfit, setMinProfit] = useState(0.5);
   const [scanning, setScanning] = useState(false);
+  const [advancedSettings, setAdvancedSettings] = useState<AdvancedArbitrageSettings | null>(null);
 
   const flashProviders = [
     { name: 'Marginfi', fee: 0.09, liquidity: '$250M' },
     { name: 'Solend', fee: 0.10, liquidity: '$180M' },
     { name: 'Kamino', fee: 0.12, liquidity: '$150M' },
+    { name: 'Tulip', fee: 0.13, liquidity: '$120M' },
+    { name: 'Drift', fee: 0.14, liquidity: '$100M' },
     { name: 'Mango', fee: 0.15, liquidity: '$90M' },
-    { name: 'Save', fee: 0.18, liquidity: '$45M' },
+    { name: 'Jet', fee: 0.16, liquidity: '$60M' },
+    { name: 'Port Finance', fee: 0.20, liquidity: '$45M' },
   ];
 
   const startScanning = async () => {
@@ -138,8 +143,18 @@ export default function ArbitragePage() {
       >
         <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-2">⚡ Flash Loan Arbitrage</h1>
         <p className="text-sm sm:text-base text-gray-300 mb-6 sm:mb-8">
-          5-10 providers with 0.09%-0.20% fees across 8+ DEXs
+          9 providers (Marginfi, Solend, Kamino, Tulip, Drift, Mango, Jet, Port Finance, Save) • 0.09%-0.20% fees • 10+ DEXs
         </p>
+        
+        {/* Advanced Settings */}
+        <div className="mb-6">
+          <AdvancedArbitrageControls 
+            onSettingsChange={(settings) => {
+              setAdvancedSettings(settings);
+              console.log('[Arbitrage] Settings updated:', settings);
+            }} 
+          />
+        </div>
 
         {/* Configuration */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
@@ -195,8 +210,57 @@ export default function ArbitragePage() {
           </div>
 
           <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 sm:p-6 border border-white/10">
-            <h3 className="text-lg sm:text-xl font-bold text-white mb-4">🛡️ MEV Protection</h3>
+            <h3 className="text-lg sm:text-xl font-bold text-white mb-4">🛡️ Live Parameters</h3>
             <div className="space-y-2 text-sm">
+              {advancedSettings && (
+                <>
+                  <div className="flex justify-between">
+                    <span className="text-gray-300">Jito MEV:</span>
+                    <span className={`font-bold ${advancedSettings.jitoEnabled ? 'text-green-400' : 'text-gray-400'}`}>
+                      {advancedSettings.jitoEnabled ? '✅ ENABLED' : '❌ DISABLED'}
+                    </span>
+                  </div>
+                  {advancedSettings.jitoEnabled && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-300">Jito Tip Range:</span>
+                      <span className="text-white font-mono text-xs">
+                        {(advancedSettings.jitoMinTipLamports / 1e9).toFixed(6)}-{(advancedSettings.jitoMaxTipLamports / 1e9).toFixed(6)} SOL
+                      </span>
+                    </div>
+                  )}
+                  <div className="flex justify-between">
+                    <span className="text-gray-300">Max Slippage:</span>
+                    <span className="text-white font-bold">{(advancedSettings.maxSlippageBps / 100).toFixed(2)}%</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-300">Priority Fee:</span>
+                    <span className="text-white font-mono text-xs">
+                      {(advancedSettings.priorityFeeLamports / 1e9).toFixed(6)} SOL
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-300">Compute Units:</span>
+                    <span className="text-white font-bold">{advancedSettings.computeUnits.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-300">Route Hops:</span>
+                    <span className="text-white font-bold">{advancedSettings.minHops}-{advancedSettings.maxHops}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-300">Simulation:</span>
+                    <span className={`font-bold ${advancedSettings.simulateBeforeExecute ? 'text-green-400' : 'text-red-400'}`}>
+                      {advancedSettings.simulateBeforeExecute ? 'ON' : 'OFF'}
+                    </span>
+                  </div>
+                </>
+              )}
+              {!advancedSettings && (
+                <div className="text-center text-gray-400 py-4">
+                  Loading settings...
+                </div>
+              )}
+            </div>
+          </div>
               <div className="flex items-center gap-2">
                 <span className="w-3 h-3 bg-green-500 rounded-full"></span>
                 <span className="text-white">Jito Bundles Active</span>
