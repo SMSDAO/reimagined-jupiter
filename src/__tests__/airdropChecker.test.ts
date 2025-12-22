@@ -209,16 +209,21 @@ describe('AirdropChecker', () => {
       amount: 1000,
       claimable: true,
       claimed: false,
+      merkleProof: ['proof1', 'proof2'],
+      claimIndex: 0,
     };
 
-    it('should attempt to claim Jupiter airdrop', async () => {
+    it('should return ClaimResult structure for Jupiter airdrop', async () => {
       const result = await airdropChecker.claimAirdrop(mockAirdrop, mockKeypair);
 
-      // Current implementation returns null (placeholder)
-      expect(result).toBeNull();
+      // Current implementation returns error (SDK integration pending)
+      expect(result).toHaveProperty('success');
+      expect(result).toHaveProperty('error');
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('Jupiter');
     });
 
-    it('should attempt to claim Jito airdrop', async () => {
+    it('should return ClaimResult structure for Jito airdrop', async () => {
       const jitoAirdrop = {
         ...mockAirdrop,
         protocol: 'Jito',
@@ -227,8 +232,11 @@ describe('AirdropChecker', () => {
 
       const result = await airdropChecker.claimAirdrop(jitoAirdrop, mockKeypair);
 
-      // Current implementation returns null (placeholder)
-      expect(result).toBeNull();
+      // Current implementation returns error (SDK integration pending)
+      expect(result).toHaveProperty('success');
+      expect(result).toHaveProperty('error');
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('Jito');
     });
 
     it('should handle unknown protocol gracefully', async () => {
@@ -239,19 +247,35 @@ describe('AirdropChecker', () => {
 
       const result = await airdropChecker.claimAirdrop(unknownAirdrop, mockKeypair);
 
-      expect(result).toBeNull();
+      expect(result).toHaveProperty('success');
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('Unknown protocol');
     });
 
-    it('should handle errors during claim', async () => {
-      const mockAirdropWithError = {
+    it('should reject claim outside claim window', async () => {
+      const expiredAirdrop = {
         ...mockAirdrop,
-        protocol: 'Pyth',
+        claimDeadline: new Date('2020-01-01'), // Past deadline
       };
 
-      const result = await airdropChecker.claimAirdrop(mockAirdropWithError, mockKeypair);
+      const result = await airdropChecker.claimAirdrop(expiredAirdrop, mockKeypair);
 
-      // Should not throw, returns null
-      expect(result).toBeNull();
+      expect(result).toHaveProperty('success');
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('Claim window');
+    });
+
+    it('should handle missing merkle proof', async () => {
+      const noProofAirdrop = {
+        ...mockAirdrop,
+        merkleProof: undefined,
+        claimIndex: undefined,
+      };
+
+      const result = await airdropChecker.claimAirdrop(noProofAirdrop, mockKeypair);
+
+      expect(result).toHaveProperty('success');
+      expect(result.success).toBe(false);
     });
   });
 
@@ -274,6 +298,10 @@ describe('AirdropChecker', () => {
       expect(results.size).toBeGreaterThanOrEqual(2);
       expect(results.has('Jupiter')).toBe(true);
       expect(results.has('Jito')).toBe(true);
+      
+      // Results should be ClaimResult objects
+      const jupiterResult = results.get('Jupiter');
+      expect(jupiterResult).toHaveProperty('success');
     });
 
     it('should handle no available airdrops', async () => {
