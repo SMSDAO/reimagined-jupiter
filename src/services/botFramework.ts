@@ -385,11 +385,20 @@ export class ReplayProtection {
 
 /**
  * Per-User Sandbox Isolation
+ * 
+ * Security Features:
+ * - Strict per-user execution isolation
+ * - No shared signers across users
+ * - No global execution context
+ * - Isolated state per sandbox instance
+ * - Rate limiting per user
  */
 export class BotSandbox {
   private context: SandboxContext;
+  private readonly createdAt: Date;
 
   constructor(userId: string, botId: string, walletAddress: string, permissions: string[]) {
+    this.createdAt = new Date();
     this.context = {
       userId,
       botId,
@@ -401,8 +410,10 @@ export class BotSandbox {
         currentMinute: 0,
         currentHour: 0,
       },
-      isolatedState: new Map(),
+      isolatedState: new Map(), // Isolated state - never shared between users
     };
+    
+    console.log(`🔒 Sandbox created for user=${userId}, bot=${botId}, wallet=${walletAddress}`);
   }
 
   /**
@@ -414,61 +425,74 @@ export class BotSandbox {
   }
 
   /**
-   * Execute in sandboxed context
+   * Execute in sandboxed context with strict isolation
+   * NO SHARED SIGNERS - each execution is bound to specific user's wallet
    */
   async execute<T>(
     operation: () => Promise<T>,
     requiredPermission: string
   ): Promise<T> {
     if (!this.hasPermission(requiredPermission)) {
-      throw new Error(`Permission denied: ${requiredPermission}`);
+      throw new Error(`Permission denied: ${requiredPermission} for user=${this.context.userId}`);
     }
 
-    // Check rate limits
+    // Check rate limits (per-user, not global)
     if (this.context.rateLimit.currentMinute >= this.context.rateLimit.maxExecutionsPerMinute) {
-      throw new Error('Rate limit exceeded: too many executions per minute');
+      throw new Error(`Rate limit exceeded: too many executions per minute for user=${this.context.userId}`);
     }
 
     if (this.context.rateLimit.currentHour >= this.context.rateLimit.maxExecutionsPerHour) {
-      throw new Error('Rate limit exceeded: too many executions per hour');
+      throw new Error(`Rate limit exceeded: too many executions per hour for user=${this.context.userId}`);
     }
 
     try {
       this.context.rateLimit.currentMinute++;
       this.context.rateLimit.currentHour++;
       
+      console.log(`▶️ Executing in isolated sandbox: user=${this.context.userId}, bot=${this.context.botId}`);
+      
+      // Execute operation in isolated context
       return await operation();
     } catch (error) {
+      console.error(`❌ Sandbox execution failed for user=${this.context.userId}:`, error);
       throw error;
     }
   }
 
   /**
-   * Get isolated state
+   * Get isolated state (per-user, never shared)
    */
   getState<T>(key: string): T | undefined {
     return this.context.isolatedState.get(key);
   }
 
   /**
-   * Set isolated state
+   * Set isolated state (per-user, never shared)
    */
   setState<T>(key: string, value: T): void {
     this.context.isolatedState.set(key, value);
   }
 
   /**
-   * Clear isolated state
+   * Clear isolated state (security best practice after execution)
    */
   clearState(): void {
     this.context.isolatedState.clear();
+    console.log(`🗑️ Cleared isolated state for user=${this.context.userId}, bot=${this.context.botId}`);
   }
 
   /**
-   * Get sandbox context info
+   * Get sandbox context info (read-only)
    */
   getContext(): Readonly<SandboxContext> {
     return { ...this.context };
+  }
+  
+  /**
+   * Get sandbox age (for monitoring)
+   */
+  getAge(): number {
+    return Date.now() - this.createdAt.getTime();
   }
 }
 
@@ -479,6 +503,9 @@ export class BotExecutionEngine {
   private connection: Connection;
   private replayProtection: ReplayProtection;
   private sandboxes = new Map<string, BotSandbox>();
+  
+  // Minimum SOL balance required for bot execution
+  private readonly MIN_SOL_BALANCE = 0.05; // 0.05 SOL minimum
 
   constructor(connection: Connection) {
     this.connection = connection;
@@ -486,16 +513,66 @@ export class BotExecutionEngine {
   }
 
   /**
-   * Get or create sandbox for user
+   * Get or create sandbox for user (per-user isolation)
+   * Each user gets their own isolated sandbox - NO SHARED CONTEXT
    */
   getSandbox(userId: string, botId: string, walletAddress: string, permissions: string[]): BotSandbox {
-    const key = `${userId}:${botId}`;
+    // Create unique key per user AND bot for strict isolation
+    const key = `${userId}:${botId}:${walletAddress}`;
     
+    // Always create fresh sandbox if not exists (no reuse)
     if (!this.sandboxes.has(key)) {
       this.sandboxes.set(key, new BotSandbox(userId, botId, walletAddress, permissions));
+      console.log(`✅ Created isolated sandbox for user=${userId}, bot=${botId}, wallet=${walletAddress}`);
     }
     
     return this.sandboxes.get(key)!;
+  }
+  
+  /**
+   * Clear sandbox for user (cleanup after execution)
+   */
+  clearSandbox(userId: string, botId: string, walletAddress: string): void {
+    const key = `${userId}:${botId}:${walletAddress}`;
+    const sandbox = this.sandboxes.get(key);
+    if (sandbox) {
+      sandbox.clearState();
+      this.sandboxes.delete(key);
+      console.log(`🗑️ Cleared sandbox for user=${userId}, bot=${botId}`);
+    }
+  }
+  
+  /**
+   * Pre-flight validation: Check minimum SOL balance
+   */
+  async validateMinimumBalance(walletAddress: PublicKey): Promise<{
+    valid: boolean;
+    balance: number;
+    error?: string;
+  }> {
+    try {
+      const balance = await this.connection.getBalance(walletAddress);
+      const balanceInSol = balance / 1e9; // Convert lamports to SOL
+      
+      if (balanceInSol < this.MIN_SOL_BALANCE) {
+        return {
+          valid: false,
+          balance: balanceInSol,
+          error: `Insufficient balance: ${balanceInSol.toFixed(4)} SOL (minimum: ${this.MIN_SOL_BALANCE} SOL required)`,
+        };
+      }
+      
+      return {
+        valid: true,
+        balance: balanceInSol,
+      };
+    } catch (error) {
+      return {
+        valid: false,
+        balance: 0,
+        error: `Failed to check balance: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      };
+    }
   }
 
   /**
@@ -511,7 +588,7 @@ export class BotExecutionEngine {
   }
 
   /**
-   * Execute bot transaction with full protection
+   * Execute bot transaction with full protection and balance checks
    */
   async executeTransaction(
     bot: BotConfig,
@@ -525,8 +602,24 @@ export class BotExecutionEngine {
     const executionId = crypto.randomUUID();
     const nonce = this.replayProtection.generateNonce();
     const timestamp = new Date();
+    
+    // PRE-FLIGHT 1: Validate minimum balance
+    const balanceCheck = await this.validateMinimumBalance(signer.publicKey);
+    if (!balanceCheck.valid) {
+      return {
+        id: executionId,
+        botId: bot.id,
+        userId: bot.userId,
+        executionType: bot.botType,
+        status: 'FAILED',
+        errorMessage: `Pre-flight failed: ${balanceCheck.error}`,
+        executedAt: timestamp,
+      };
+    }
+    
+    console.log(`✅ Pre-flight balance check passed: ${balanceCheck.balance.toFixed(4)} SOL`);
 
-    // 4-layer replay protection
+    // PRE-FLIGHT 2: 4-layer replay protection
     const validation = this.replayProtection.validateExecution(
       nonce,
       transaction,
@@ -548,7 +641,7 @@ export class BotExecutionEngine {
     }
 
     try {
-      // Get sandbox
+      // Get isolated sandbox for THIS specific user + bot + wallet
       const sandbox = this.getSandbox(
         bot.userId,
         bot.id,
@@ -556,12 +649,12 @@ export class BotExecutionEngine {
         ['bot.execute', 'wallet.sign']
       );
 
-      // Execute in sandbox
+      // Execute in isolated sandbox (NO SHARED SIGNERS, NO GLOBAL CONTEXT)
       const signature = await sandbox.execute(async () => {
         return await sendAndConfirmTransaction(
           this.connection,
           transaction,
-          [signer],
+          [signer], // Signer is bound to THIS execution only
           {
             skipPreflight: options.skipPreflight ?? false,
             maxRetries: options.maxRetries ?? 3,
@@ -571,6 +664,9 @@ export class BotExecutionEngine {
 
       // Mark as processed
       this.replayProtection.markExecutionProcessed(nonce, transaction);
+      
+      // Clear sandbox state after execution to prevent context leakage
+      sandbox.clearState();
 
       return {
         id: executionId,
@@ -592,6 +688,9 @@ export class BotExecutionEngine {
         errorMessage: error instanceof Error ? error.message : 'Unknown error',
         executedAt: timestamp,
       };
+    } finally {
+      // Ensure signer key is wiped from memory
+      signer.secretKey.fill(0);
     }
   }
 

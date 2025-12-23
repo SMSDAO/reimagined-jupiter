@@ -5,11 +5,14 @@
 
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 interface AuthRequest {
   username: string;
   password: string;
+  walletAddress?: string;
+  deviceFingerprint?: string;
 }
 
 export interface AuthResponse {
@@ -26,6 +29,13 @@ const rateLimitStore = new Map<string, { attempts: number; resetTime: number }>(
 // Rate limit: 5 attempts per 15 minutes
 const MAX_ATTEMPTS = 5;
 const WINDOW_MS = 15 * 60 * 1000;
+
+/**
+ * Hash sensitive data using SHA-256 for privacy-safe audit logging
+ */
+function hashData(data: string): string {
+  return crypto.createHash('sha256').update(data).digest('hex');
+}
 
 function checkRateLimit(ip: string): { allowed: boolean; remaining: number } {
   const now = Date.now();
@@ -80,7 +90,7 @@ export default async function handler(
     
     // Parse request body
     const body = req.body as AuthRequest;
-    const { username, password } = body;
+    const { username, password, walletAddress, deviceFingerprint } = body;
     
     if (!username || !password) {
       return res.status(400).json({
@@ -88,6 +98,10 @@ export default async function handler(
         error: 'Username and password are required',
       });
     }
+    
+    // Hash IP and fingerprint for privacy-safe audit logging
+    const ipAddressHash = hashData(ip);
+    const fingerprintHash = deviceFingerprint ? hashData(deviceFingerprint) : undefined;
     
     // Get admin credentials from environment
     const adminUsername = process.env.ADMIN_USERNAME;
@@ -145,6 +159,36 @@ export default async function handler(
     );
     
     console.log(`✅ Login successful for user: ${username}`);
+    
+    // Audit log: Record login with wallet address and metadata
+    // Note: In production, this should write to the wallet_audit_log table
+    // For now, we log it and it can be integrated with database when available
+    try {
+      const auditEntry = {
+        username,
+        operation: 'LOGIN',
+        walletAddress: walletAddress || 'not_provided',
+        ipAddressHash,
+        fingerprintHash,
+        timestamp: new Date().toISOString(),
+        success: true,
+      };
+      console.log('🔐 Audit Log:', JSON.stringify(auditEntry));
+      
+      // TODO: When database is available, insert into wallet_audit_log:
+      // await insertWalletAuditLog({
+      //   walletId: walletAddress || 'admin_login',
+      //   userId: username,
+      //   operation: 'LOGIN',
+      //   operationData: { username },
+      //   ipAddressHash,
+      //   fingerprintHash,
+      //   success: true,
+      // });
+    } catch (auditError) {
+      // Don't fail login if audit logging fails
+      console.error('⚠️ Audit logging failed:', auditError);
+    }
     
     return res.status(200).json({
       success: true,
