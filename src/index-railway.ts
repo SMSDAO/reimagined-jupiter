@@ -9,6 +9,7 @@ import bs58 from 'bs58';
 import { scanOpportunities } from '../lib/scanner.js';
 import { executeTrade } from '../lib/executor.js';
 import { logger } from '../lib/logger.js';
+import { enforceProductionSafety } from './utils/productionGuardrails.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -40,6 +41,9 @@ async function initialize() {
     
     connection = new Connection(rpcUrl, 'confirmed');
     logger.info('Connected to Solana RPC', { rpcUrl: rpcUrl.split('//')[1]?.split('@')[0] || 'unknown' });
+    
+    // Run production safety checks
+    await enforceProductionSafety(connection);
     
     // Test connection
     const slot = await connection.getSlot();
