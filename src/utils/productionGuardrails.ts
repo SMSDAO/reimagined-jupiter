@@ -46,6 +46,23 @@ export interface EnvironmentConfig {
 /**
  * Validates all production environment variables
  */
+/**
+ * Checks if a password is strong or is a bcrypt hash
+ */
+function isPasswordSecure(password: string): boolean {
+  // Check if it's a bcrypt hash (starts with $2)
+  if (password.startsWith('$2')) {
+    return true;
+  }
+  
+  // Check password strength requirements
+  const hasUpperCase = /[A-Z]/.test(password);
+  const hasLowerCase = /[a-z]/.test(password);
+  const hasNumber = /\d/.test(password);
+  
+  return hasUpperCase && hasLowerCase && hasNumber;
+}
+
 export function validateProductionEnvironment(): ValidationResult {
   const errors: string[] = [];
   const warnings: string[] = [];
@@ -62,9 +79,10 @@ export function validateProductionEnvironment(): ValidationResult {
 
   // Critical: Wallet Private Key
   const walletKey = process.env.WALLET_PRIVATE_KEY;
+  const DEFAULT_WALLET_KEY = 'your_base58_private_key_here';
   if (!walletKey) {
     errors.push('WALLET_PRIVATE_KEY is required');
-  } else if (walletKey === 'your_base58_private_key_here') {
+  } else if (walletKey === DEFAULT_WALLET_KEY) {
     errors.push('WALLET_PRIVATE_KEY must be set to actual private key (not example value)');
   } else if (walletKey.length < 32) {
     errors.push('WALLET_PRIVATE_KEY appears to be invalid (too short)');
@@ -72,31 +90,36 @@ export function validateProductionEnvironment(): ValidationResult {
 
   // Critical: Admin Credentials
   const adminUsername = process.env.ADMIN_USERNAME;
+  const DEFAULT_ADMIN_USERNAME = 'admin';
   if (!adminUsername) {
     errors.push('ADMIN_USERNAME is required');
-  } else if (adminUsername === 'admin') {
+  } else if (adminUsername === DEFAULT_ADMIN_USERNAME) {
     warnings.push('ADMIN_USERNAME is set to default value - consider using a unique username for production');
   }
 
   const adminPassword = process.env.ADMIN_PASSWORD;
+  const DEFAULT_ADMIN_PASSWORD = 'change_me_in_production';
   if (!adminPassword) {
     errors.push('ADMIN_PASSWORD is required');
-  } else if (adminPassword === 'change_me_in_production') {
+  } else if (adminPassword === DEFAULT_ADMIN_PASSWORD) {
     errors.push('ADMIN_PASSWORD must be changed from default value');
   } else if (adminPassword.length < 8) {
     errors.push('ADMIN_PASSWORD must be at least 8 characters');
-  } else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(adminPassword) && !adminPassword.startsWith('$2')) {
+  } else if (!isPasswordSecure(adminPassword)) {
     warnings.push('ADMIN_PASSWORD should contain uppercase, lowercase, and numbers (or use bcrypt hash)');
   }
 
   // Critical: JWT Secret
   const jwtSecret = process.env.JWT_SECRET;
+  const DEFAULT_JWT_SECRET = 'your_32_character_secret_key_here';
+  const MIN_JWT_SECRET_LENGTH = 32;
+  
   if (!jwtSecret) {
     errors.push('JWT_SECRET is required');
-  } else if (jwtSecret === 'your_32_character_secret_key_here') {
+  } else if (jwtSecret === DEFAULT_JWT_SECRET) {
     errors.push('JWT_SECRET must be changed from default value');
-  } else if (jwtSecret.length < 32) {
-    errors.push('JWT_SECRET must be at least 32 characters for security');
+  } else if (jwtSecret.length < MIN_JWT_SECRET_LENGTH) {
+    errors.push(`JWT_SECRET must be at least ${MIN_JWT_SECRET_LENGTH} characters for security`);
   }
 
   // Trading Configuration
@@ -119,15 +142,18 @@ export function validateProductionEnvironment(): ValidationResult {
   // Dev Fee Configuration
   const devFeeEnabled = process.env.DEV_FEE_ENABLED !== 'false';
   const devFeePercentage = parseFloat(process.env.DEV_FEE_PERCENTAGE || '0.10');
+  const MAX_DEV_FEE_PERCENTAGE = 0.5;
+  const DEFAULT_DEV_FEE_WALLET = '11111111111111111111111111111111';
+  
   if (devFeeEnabled) {
-    if (devFeePercentage > 0.5) {
-      errors.push('DEV_FEE_PERCENTAGE must be <= 50% (0.5)');
+    if (devFeePercentage > MAX_DEV_FEE_PERCENTAGE) {
+      errors.push(`DEV_FEE_PERCENTAGE must be <= ${MAX_DEV_FEE_PERCENTAGE * 100}% (${MAX_DEV_FEE_PERCENTAGE})`);
     }
     
     const devFeeWallet = process.env.DEV_FEE_WALLET;
     if (!devFeeWallet) {
       errors.push('DEV_FEE_WALLET is required when DEV_FEE_ENABLED=true');
-    } else if (devFeeWallet === '11111111111111111111111111111111') {
+    } else if (devFeeWallet === DEFAULT_DEV_FEE_WALLET) {
       errors.push('DEV_FEE_WALLET must be set to actual wallet address');
     } else {
       try {
@@ -281,11 +307,13 @@ export function validateMinProfit(profitSol: number): void {
  * Checks if a wallet address is valid and not a placeholder
  */
 export function validateWalletAddress(address: string, fieldName: string): void {
+  const DEFAULT_WALLET_ADDRESS = '11111111111111111111111111111111';
+  
   if (!address) {
     throw new Error(`${fieldName} is required`);
   }
   
-  if (address === '11111111111111111111111111111111') {
+  if (address === DEFAULT_WALLET_ADDRESS) {
     throw new Error(`${fieldName} must be set to actual wallet address (not placeholder)`);
   }
   

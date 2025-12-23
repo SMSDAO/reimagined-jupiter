@@ -10,7 +10,18 @@
  */
 
 import { validateProductionEnvironment, enforceProductionSafety } from '../src/utils/productionGuardrails.js';
-import chalk from 'chalk';
+
+let chalk: any;
+try {
+  chalk = (await import('chalk')).default;
+} catch (error) {
+  // Fallback if chalk is not available
+  chalk = {
+    bold: { cyan: (s: string) => s, green: (s: string) => s, red: (s: string) => s },
+    gray: (s: string) => s,
+    yellow: (s: string) => s,
+  };
+}
 
 console.log(chalk.bold.cyan('\n🔒 GXQ Studio - Production Environment Validation\n'));
 console.log('='.repeat(80));

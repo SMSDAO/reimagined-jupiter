@@ -15,11 +15,16 @@ async function checkWalletAirdrops(connection: Connection, publicKey: PublicKey)
     claimDeadline?: number;
   }> = [];
 
+  // Airdrop API endpoints (configurable via environment)
+  const JUPITER_API = process.env.NEXT_PUBLIC_JUPITER_API || 'https://worker.jup.ag';
+  const JITO_API = process.env.NEXT_PUBLIC_JITO_API || 'https://kobe.mainnet.jito.network';
+  const PYTH_API = process.env.NEXT_PUBLIC_PYTH_API || 'https://api.pyth.network';
+
   try {
     // Check Jupiter airdrop
     try {
       const jupResponse = await axios.get(
-        `https://worker.jup.ag/jup-claim-proof/${publicKey.toString()}`,
+        `${JUPITER_API}/jup-claim-proof/${publicKey.toString()}`,
         { timeout: 5000 }
       );
       
@@ -33,13 +38,14 @@ async function checkWalletAirdrops(connection: Connection, publicKey: PublicKey)
       }
     } catch (err) {
       // Jupiter API may not have allocation for this wallet
-      console.log('No Jupiter airdrop found');
+      const errorMsg = err instanceof Error ? err.message : 'Unknown error';
+      console.log('No Jupiter airdrop found:', errorMsg);
     }
 
     // Check Jito airdrop
     try {
       const jitoResponse = await axios.get(
-        `https://kobe.mainnet.jito.network/api/v1/allocation/${publicKey.toString()}`,
+        `${JITO_API}/api/v1/allocation/${publicKey.toString()}`,
         { timeout: 5000 }
       );
       
@@ -52,13 +58,14 @@ async function checkWalletAirdrops(connection: Connection, publicKey: PublicKey)
         });
       }
     } catch (err) {
-      console.log('No Jito airdrop found');
+      const errorMsg = err instanceof Error ? err.message : 'Unknown error';
+      console.log('No Jito airdrop found:', errorMsg);
     }
 
     // Check Pyth airdrop (if available)
     try {
       const pythResponse = await axios.get(
-        `https://api.pyth.network/claim/${publicKey.toString()}`,
+        `${PYTH_API}/claim/${publicKey.toString()}`,
         { timeout: 5000 }
       );
       
@@ -71,7 +78,8 @@ async function checkWalletAirdrops(connection: Connection, publicKey: PublicKey)
         });
       }
     } catch (err) {
-      console.log('No Pyth airdrop found');
+      const errorMsg = err instanceof Error ? err.message : 'Unknown error';
+      console.log('No Pyth airdrop found:', errorMsg);
     }
 
   } catch (error) {
