@@ -72,6 +72,7 @@ export default function TransactionExecutor({ onSuccess, onError }: TransactionE
    * Execute a transaction using CLIENT_SIDE signing (local wallet adapter)
    * Keys NEVER leave the user's device - signing happens in browser wallet extension
    */
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const executeTransaction = async (
     transaction: Transaction | VersionedTransaction,
     useServerExecution: boolean = false
