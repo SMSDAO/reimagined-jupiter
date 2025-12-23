@@ -13,6 +13,9 @@
     },
     "use-sync-external-store": {
       "react": "$react"
+    },
+    "react-native": {
+      ".": "npm:react-native-web@^0.19.13"
     }
   },
   "scripts": {
@@ -24,18 +27,15 @@
   "dependencies": {
     "@jup-ag/api": "^6.0.45",
     "@pythnetwork/hermes-client": "^2.1.0",
-    "@react-three/drei": "^10.7.6",
-    "@react-three/fiber": "^9.4.0",
     "@solana/wallet-adapter-base": "^0.9.27",
     "@solana/wallet-adapter-react": "^0.15.39",
     "@solana/wallet-adapter-react-ui": "^0.9.39",
     "@solana/wallet-adapter-wallets": "^0.19.37",
     "@solana/web3.js": "^1.98.4",
     "framer-motion": "^12.23.24",
-    "next": "16.1.0",
-    "react": "19.2.3",
-    "react-dom": "19.2.3",
-    "three": "^0.182.0"
+    "next": "^15.1.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
@@ -43,7 +43,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "16.1.0",
+    "eslint-config-next": "^15.1.0",
     "tailwindcss": "^4",
     "typescript": "^5"
   }
