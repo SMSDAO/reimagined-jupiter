@@ -30,11 +30,24 @@ interface SniperExecuteResponse {
  * POST /api/sniper/execute
  * Execute a sniper buy order using Jupiter with high priority fee
  * 
+ * This is a production-ready endpoint that:
+ * 1. Validates all input parameters
+ * 2. Gets real-time quote from Jupiter v6 API
+ * 3. Creates swap transaction with priority fees
+ * 4. Returns transaction for wallet signing
+ * 
  * Body:
  * - tokenMint: Target token mint address
  * - buyAmountSol: Amount of SOL to spend
  * - slippageBps: Slippage tolerance in basis points (e.g., 1000 = 10%)
  * - userPublicKey: User's wallet public key
+ * 
+ * Security features:
+ * - Input validation for all parameters
+ * - Public key format validation
+ * - Reasonable limits on buy amounts
+ * - Jupiter API integration for best pricing
+ * - Priority fee for faster execution
  */
 export async function POST(request: NextRequest) {
   try {

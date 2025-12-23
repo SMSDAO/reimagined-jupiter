@@ -17,6 +17,9 @@ interface Settings {
   apiProviders: APIProvider[];
   rotationEnabled: boolean;
   rotationInterval: number; // in seconds
+  slippageToleranceBps: number; // Slippage in basis points
+  graduationBonusDisplay: boolean; // Show graduation bonus info
+  positionSizeWarning: boolean; // Warning for large positions
 }
 
 const DEFAULT_PROVIDERS: APIProvider[] = [
@@ -33,6 +36,9 @@ export default function SettingsPage() {
     apiProviders: DEFAULT_PROVIDERS,
     rotationEnabled: true,
     rotationInterval: 300,
+    slippageToleranceBps: 1000, // 10% default
+    graduationBonusDisplay: true,
+    positionSizeWarning: true,
   });
   const [newProvider, setNewProvider] = useState<{ name: string; url: string; type: 'rpc' | 'pyth' | 'dex' }>({ name: '', url: '', type: 'rpc' });
   const [saving, setSaving] = useState(false);
@@ -187,6 +193,84 @@ export default function SettingsPage() {
                 <span>1 min</span>
                 <span>1 hour</span>
               </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Trading Settings */}
+        <div className="bg-white/10 backdrop-blur-md rounded-xl p-6 mb-8">
+          <h2 className="text-2xl font-bold text-white mb-4">⚙️ Trading Settings</h2>
+          
+          <div className="space-y-6">
+            {/* Slippage Tolerance */}
+            <div>
+              <label className="text-white font-medium mb-2 block">
+                Slippage Tolerance: {(settings.slippageToleranceBps / 100).toFixed(1)}%
+              </label>
+              <input
+                type="range"
+                value={settings.slippageToleranceBps}
+                onChange={(e) => setSettings(prev => ({ ...prev, slippageToleranceBps: parseInt(e.target.value) }))}
+                min="100"
+                max="5000"
+                step="100"
+                className="w-full accent-purple-600"
+              />
+              <div className="flex justify-between text-xs text-gray-400 mt-1">
+                <span>1% (Low)</span>
+                <span>25% (Medium)</span>
+                <span>50% (High)</span>
+              </div>
+              <div className="text-sm text-gray-400 mt-2">
+                💡 Lower slippage = better price but higher chance of transaction failure
+              </div>
+            </div>
+
+            {/* Graduation Bonus Display */}
+            <div className="flex items-center justify-between bg-white/5 rounded-lg p-4">
+              <div>
+                <div className="text-white font-medium">Show Graduation Bonus Info</div>
+                <div className="text-sm text-gray-400">
+                  Display graduation bonus details on token launches
+                </div>
+              </div>
+              <button
+                onClick={() => setSettings(prev => ({ ...prev, graduationBonusDisplay: !prev.graduationBonusDisplay }))}
+                className={`px-6 py-2 rounded-lg font-bold ${
+                  settings.graduationBonusDisplay ? 'bg-green-600' : 'bg-gray-600'
+                }`}
+              >
+                {settings.graduationBonusDisplay ? 'ON' : 'OFF'}
+              </button>
+            </div>
+
+            {/* Position Size Warning */}
+            <div className="flex items-center justify-between bg-white/5 rounded-lg p-4">
+              <div>
+                <div className="text-white font-medium">Large Position Warnings</div>
+                <div className="text-sm text-gray-400">
+                  Alert when position size exceeds safe limits
+                </div>
+              </div>
+              <button
+                onClick={() => setSettings(prev => ({ ...prev, positionSizeWarning: !prev.positionSizeWarning }))}
+                className={`px-6 py-2 rounded-lg font-bold ${
+                  settings.positionSizeWarning ? 'bg-green-600' : 'bg-gray-600'
+                }`}
+              >
+                {settings.positionSizeWarning ? 'ON' : 'OFF'}
+              </button>
+            </div>
+          </div>
+
+          {/* Info Box */}
+          <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4 text-sm mt-6">
+            <div className="text-blue-400 font-bold mb-2">ℹ️ About Trading Settings</div>
+            <div className="text-gray-300 space-y-1">
+              <div>• Slippage tolerance affects all trades (swaps, snipes, arbitrage)</div>
+              <div>• Graduation bonus tracks token liquidity milestones</div>
+              <div>• Position warnings help prevent over-exposure to single tokens</div>
+              <div>• These settings apply to all trading activities</div>
             </div>
           </div>
         </div>

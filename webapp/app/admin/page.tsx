@@ -5,6 +5,12 @@ import { useWallet, useConnection } from '@solana/wallet-adapter-react';
 import { PublicKey } from '@solana/web3.js';
 import { motion } from 'framer-motion';
 
+/**
+ * Maximum priority fee allowed (10M lamports = 0.01 SOL)
+ * This constant ensures consistency across the application
+ */
+const MAX_PRIORITY_FEE_LAMPORTS = 10_000_000;
+
 interface BotStatus {
   running: boolean;
   uptime: number;
@@ -54,6 +60,22 @@ export default function AdminPage() {
     timestamp: string;
   } | null>(null);
 
+  // Sniper Bot configuration state
+  const [sniperConfig, setSniperConfig] = useState({
+    buyAmount: 0.1,
+    slippageBps: 1000,
+    autoSnipe: false,
+    minLiquiditySOL: 1.0,
+    maxPriceImpact: 0.05,
+    maxPositionSize: 1.0,
+    maxDailyVolume: 10.0,
+    maxOpenPositions: 5,
+    priorityFeeLamports: 5000000,
+    useJito: true,
+  });
+  const [savingSniperConfig, setSavingSniperConfig] = useState(false);
+  const [sniperConfigView, setSniperConfigView] = useState(false);
+
   // Simulate bot uptime counter
   useEffect(() => {
     if (botStatus.running) {
@@ -66,6 +88,54 @@ export default function AdminPage() {
       return () => clearInterval(interval);
     }
   }, [botStatus.running]);
+
+  // Load sniper configuration on mount
+  useEffect(() => {
+    loadSniperConfig();
+  }, []);
+
+  const loadSniperConfig = async () => {
+    try {
+      const response = await fetch('/api/sniper/config');
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.config) {
+          setSniperConfig(data.config);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load sniper config:', error);
+    }
+  };
+
+  const saveSniperConfig = async () => {
+    setSavingSniperConfig(true);
+    
+    try {
+      const response = await fetch('/api/sniper/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(sniperConfig),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          alert('✅ Sniper configuration saved successfully!');
+        } else {
+          throw new Error(data.error || 'Failed to save configuration');
+        }
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to save configuration');
+      }
+    } catch (error) {
+      console.error('Failed to save sniper config:', error);
+      alert(`❌ Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setSavingSniperConfig(false);
+    }
+  };
 
   const toggleBot = () => {
     setBotStatus(prev => ({ ...prev, running: !prev.running }));
@@ -452,6 +522,194 @@ export default function AdminPage() {
             </div>
           </div>
         )}
+
+        {/* Sniper Bot Configuration */}
+        <div className="bg-white/10 backdrop-blur-md rounded-xl p-6 mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-2xl font-bold text-white">🎯 Sniper Bot Configuration</h2>
+            <button
+              onClick={() => setSniperConfigView(!sniperConfigView)}
+              className="bg-purple-600 hover:bg-purple-700 text-white font-bold px-4 py-2 rounded-lg text-sm"
+            >
+              {sniperConfigView ? 'Hide' : 'Show'} Config
+            </button>
+          </div>
+
+          {sniperConfigView && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Buy Amount */}
+                <div>
+                  <label className="text-white text-sm mb-2 block">Buy Amount (SOL)</label>
+                  <input
+                    type="number"
+                    value={sniperConfig.buyAmount}
+                    onChange={(e) => setSniperConfig({ ...sniperConfig, buyAmount: parseFloat(e.target.value) })}
+                    step="0.01"
+                    min="0.01"
+                    max="10"
+                    className="w-full bg-white/10 text-white px-4 py-2 rounded-lg border border-white/10 focus:border-purple-500 outline-none"
+                  />
+                </div>
+
+                {/* Slippage */}
+                <div>
+                  <label className="text-white text-sm mb-2 block">Slippage (bps)</label>
+                  <input
+                    type="number"
+                    value={sniperConfig.slippageBps}
+                    onChange={(e) => setSniperConfig({ ...sniperConfig, slippageBps: parseInt(e.target.value) })}
+                    min="100"
+                    max="5000"
+                    step="100"
+                    className="w-full bg-white/10 text-white px-4 py-2 rounded-lg border border-white/10 focus:border-purple-500 outline-none"
+                  />
+                  <div className="text-xs text-gray-400 mt-1">{(sniperConfig.slippageBps / 100).toFixed(1)}%</div>
+                </div>
+
+                {/* Min Liquidity */}
+                <div>
+                  <label className="text-white text-sm mb-2 block">Min Liquidity (SOL)</label>
+                  <input
+                    type="number"
+                    value={sniperConfig.minLiquiditySOL}
+                    onChange={(e) => setSniperConfig({ ...sniperConfig, minLiquiditySOL: parseFloat(e.target.value) })}
+                    step="0.1"
+                    min="0"
+                    className="w-full bg-white/10 text-white px-4 py-2 rounded-lg border border-white/10 focus:border-purple-500 outline-none"
+                  />
+                </div>
+
+                {/* Max Price Impact */}
+                <div>
+                  <label className="text-white text-sm mb-2 block">Max Price Impact</label>
+                  <input
+                    type="number"
+                    value={sniperConfig.maxPriceImpact}
+                    onChange={(e) => setSniperConfig({ ...sniperConfig, maxPriceImpact: parseFloat(e.target.value) })}
+                    step="0.01"
+                    min="0"
+                    max="1"
+                    className="w-full bg-white/10 text-white px-4 py-2 rounded-lg border border-white/10 focus:border-purple-500 outline-none"
+                  />
+                  <div className="text-xs text-gray-400 mt-1">{(sniperConfig.maxPriceImpact * 100).toFixed(1)}%</div>
+                </div>
+
+                {/* Max Position Size */}
+                <div>
+                  <label className="text-white text-sm mb-2 block">Max Position Size (SOL)</label>
+                  <input
+                    type="number"
+                    value={sniperConfig.maxPositionSize}
+                    onChange={(e) => setSniperConfig({ ...sniperConfig, maxPositionSize: parseFloat(e.target.value) })}
+                    step="0.1"
+                    min="0.1"
+                    max="100"
+                    className="w-full bg-white/10 text-white px-4 py-2 rounded-lg border border-white/10 focus:border-purple-500 outline-none"
+                  />
+                </div>
+
+                {/* Max Daily Volume */}
+                <div>
+                  <label className="text-white text-sm mb-2 block">Max Daily Volume (SOL)</label>
+                  <input
+                    type="number"
+                    value={sniperConfig.maxDailyVolume}
+                    onChange={(e) => setSniperConfig({ ...sniperConfig, maxDailyVolume: parseFloat(e.target.value) })}
+                    step="1"
+                    min="1"
+                    max="1000"
+                    className="w-full bg-white/10 text-white px-4 py-2 rounded-lg border border-white/10 focus:border-purple-500 outline-none"
+                  />
+                </div>
+
+                {/* Max Open Positions */}
+                <div>
+                  <label className="text-white text-sm mb-2 block">Max Open Positions</label>
+                  <input
+                    type="number"
+                    value={sniperConfig.maxOpenPositions}
+                    onChange={(e) => setSniperConfig({ ...sniperConfig, maxOpenPositions: parseInt(e.target.value) })}
+                    min="1"
+                    max="50"
+                    className="w-full bg-white/10 text-white px-4 py-2 rounded-lg border border-white/10 focus:border-purple-500 outline-none"
+                  />
+                </div>
+
+                {/* Priority Fee */}
+                <div>
+                  <label className="text-white text-sm mb-2 block">Priority Fee (lamports)</label>
+                  <input
+                    type="number"
+                    value={sniperConfig.priorityFeeLamports}
+                    onChange={(e) => setSniperConfig({ ...sniperConfig, priorityFeeLamports: Math.min(parseInt(e.target.value), MAX_PRIORITY_FEE_LAMPORTS) })}
+                    step="100000"
+                    min="0"
+                    max={MAX_PRIORITY_FEE_LAMPORTS}
+                    className="w-full bg-white/10 text-white px-4 py-2 rounded-lg border border-white/10 focus:border-purple-500 outline-none"
+                  />
+                  <div className="text-xs text-gray-400 mt-1">{(sniperConfig.priorityFeeLamports / 1e9).toFixed(4)} SOL (max 0.01)</div>
+                </div>
+              </div>
+
+              {/* Toggles */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-white/10">
+                <div className="flex items-center justify-between bg-white/5 rounded-lg p-4">
+                  <span className="text-white font-medium">Auto-Snipe</span>
+                  <button
+                    onClick={() => setSniperConfig({ ...sniperConfig, autoSnipe: !sniperConfig.autoSnipe })}
+                    className={`px-6 py-2 rounded-lg font-bold transition ${
+                      sniperConfig.autoSnipe ? 'bg-green-600' : 'bg-gray-600'
+                    }`}
+                  >
+                    {sniperConfig.autoSnipe ? 'ON' : 'OFF'}
+                  </button>
+                </div>
+
+                <div className="flex items-center justify-between bg-white/5 rounded-lg p-4">
+                  <span className="text-white font-medium">Use Jito MEV Protection</span>
+                  <button
+                    onClick={() => setSniperConfig({ ...sniperConfig, useJito: !sniperConfig.useJito })}
+                    className={`px-6 py-2 rounded-lg font-bold transition ${
+                      sniperConfig.useJito ? 'bg-green-600' : 'bg-gray-600'
+                    }`}
+                  >
+                    {sniperConfig.useJito ? 'ON' : 'OFF'}
+                  </button>
+                </div>
+              </div>
+
+              {/* Save Button */}
+              <div className="flex gap-4 pt-4">
+                <button
+                  onClick={saveSniperConfig}
+                  disabled={savingSniperConfig}
+                  className="flex-1 bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 rounded-lg disabled:opacity-50"
+                >
+                  {savingSniperConfig ? '⏳ Saving...' : '💾 Save Configuration'}
+                </button>
+                <button
+                  onClick={loadSniperConfig}
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 py-3 rounded-lg"
+                >
+                  🔄 Reload
+                </button>
+              </div>
+
+              {/* Info Box */}
+              <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4 text-sm">
+                <div className="text-yellow-400 font-bold mb-2">⚠️ Risk Management</div>
+                <div className="text-gray-300 space-y-1">
+                  <div>• Priority fee is capped at 10M lamports (0.01 SOL) for mainnet safety</div>
+                  <div>• Auto-snipe requires careful configuration and monitoring</div>
+                  <div>• Position limits prevent over-exposure to any single token</div>
+                  <div>• Daily volume limits protect against excessive trading</div>
+                  <div>• Jito MEV protection helps secure transactions from frontrunning</div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* Wallet Scoring System */}
         <div className="bg-white/10 backdrop-blur-md rounded-xl p-6 mb-8">

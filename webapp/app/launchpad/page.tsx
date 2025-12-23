@@ -10,8 +10,14 @@ export default function LaunchpadPage() {
   const [tokenName, setTokenName] = useState('');
   const [tokenSymbol, setTokenSymbol] = useState('');
   const [totalSupply, setTotalSupply] = useState('1000000');
+  const [decimals, setDecimals] = useState(9);
   const [airdropPercent, setAirdropPercent] = useState(10);
-  const [deploymentCost] = useState(0.01);
+  const [initialLiquidity, setInitialLiquidity] = useState('0.1');
+  const [graduationEnabled, setGraduationEnabled] = useState(true);
+  const [graduationThreshold, setGraduationThreshold] = useState('10');
+  const [graduationBonus, setGraduationBonus] = useState('5');
+  const [deploymentCost, setDeploymentCost] = useState(0.01);
+  const [deploying, setDeploying] = useState(false);
   const [showSpinGame, setShowSpinGame] = useState(false);
   const [deployedToken, setDeployedToken] = useState<string | null>(null);
 
@@ -26,10 +32,73 @@ export default function LaunchpadPage() {
       return;
     }
 
-    // Simulate deployment
-    setDeployedToken(tokenSymbol);
-    setShowSpinGame(true);
-    alert(`✅ Successfully deployed ${tokenName} (${tokenSymbol})!\n\nToken can now be used in the airdrop spin game.`);
+    setDeploying(true);
+
+    try {
+      console.log('[LaunchpadUI] Preparing token launch...');
+      
+      const response = await fetch('/api/launchpad/create-token', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: tokenName,
+          symbol: tokenSymbol,
+          decimals,
+          totalSupply: parseFloat(totalSupply),
+          airdropPercent,
+          initialLiquiditySOL: parseFloat(initialLiquidity),
+          graduationBonusEnabled: graduationEnabled,
+          graduationThreshold: parseFloat(graduationThreshold),
+          graduationBonusPercent: parseFloat(graduationBonus),
+          userPublicKey: publicKey.toString(),
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to prepare token launch');
+      }
+
+      const data = await response.json();
+
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to prepare token launch');
+      }
+
+      console.log('[LaunchpadUI] Token launch prepared:', data);
+
+      // Update deployment cost
+      if (data.costs) {
+        setDeploymentCost(data.costs.totalCost);
+      }
+
+      // Show success message with details
+      const message = [
+        `✅ Token launch prepared: ${tokenName} (${tokenSymbol})`,
+        '',
+        `Total Supply: ${data.tokenConfig.totalSupply.toLocaleString()}`,
+        `Circulating: ${data.tokenConfig.circulatingSupply.toLocaleString()}`,
+        `For Airdrop: ${data.tokenConfig.airdropSupply.toLocaleString()}`,
+        '',
+        `Deployment Cost: ${data.costs.totalCost} SOL`,
+        '',
+        graduationEnabled ? `🎓 Graduation Bonus: ${graduationBonus}% when liquidity reaches ${graduationThreshold} SOL` : '',
+        '',
+        'Next: Sign the transaction with your wallet to complete deployment.',
+      ].filter(Boolean).join('\n');
+
+      alert(message);
+
+      setDeployedToken(tokenSymbol);
+      setShowSpinGame(true);
+    } catch (error) {
+      console.error('[LaunchpadUI] Token deployment failed:', error);
+      alert(`❌ Token deployment failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setDeploying(false);
+    }
   };
 
   const handleWin = (amount: number) => {
@@ -89,6 +158,18 @@ export default function LaunchpadPage() {
               </div>
 
               <div>
+                <label className="text-white text-sm mb-2 block">Decimals</label>
+                <input
+                  type="number"
+                  value={decimals}
+                  onChange={(e) => setDecimals(parseInt(e.target.value))}
+                  min="0"
+                  max="9"
+                  className="w-full bg-white/10 dark:bg-black/20 text-white px-4 py-3 rounded-lg border border-purple-500/30 focus:border-purple-500 outline-none transition"
+                />
+              </div>
+
+              <div>
                 <label className="text-white text-sm mb-2 block">
                   Airdrop for Roulette: {airdropPercent}%
                 </label>
@@ -106,10 +187,67 @@ export default function LaunchpadPage() {
                 </div>
               </div>
 
+              <div>
+                <label className="text-white text-sm mb-2 block">Initial Liquidity (SOL)</label>
+                <input
+                  type="number"
+                  value={initialLiquidity}
+                  onChange={(e) => setInitialLiquidity(e.target.value)}
+                  step="0.01"
+                  min="0"
+                  className="w-full bg-white/10 dark:bg-black/20 text-white px-4 py-3 rounded-lg border border-purple-500/30 focus:border-purple-500 outline-none transition"
+                />
+              </div>
+
+              <div className="bg-green-900/20 dark:bg-green-950/30 rounded-lg p-4 border border-green-500/20">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-white font-medium">🎓 Graduation Bonus</span>
+                  <button
+                    onClick={() => setGraduationEnabled(!graduationEnabled)}
+                    className={`px-4 py-1 rounded-lg text-sm font-semibold transition ${
+                      graduationEnabled ? 'bg-green-600' : 'bg-gray-600'
+                    }`}
+                  >
+                    {graduationEnabled ? 'ON' : 'OFF'}
+                  </button>
+                </div>
+                
+                {graduationEnabled && (
+                  <div className="space-y-3">
+                    <div>
+                      <label className="text-gray-300 text-xs mb-1 block">Liquidity Threshold (SOL)</label>
+                      <input
+                        type="number"
+                        value={graduationThreshold}
+                        onChange={(e) => setGraduationThreshold(e.target.value)}
+                        step="1"
+                        min="1"
+                        className="w-full bg-white/10 dark:bg-black/20 text-white px-3 py-2 rounded-lg border border-green-500/30 focus:border-green-500 outline-none transition text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-gray-300 text-xs mb-1 block">Bonus Percent (%)</label>
+                      <input
+                        type="number"
+                        value={graduationBonus}
+                        onChange={(e) => setGraduationBonus(e.target.value)}
+                        step="1"
+                        min="0"
+                        max="20"
+                        className="w-full bg-white/10 dark:bg-black/20 text-white px-3 py-2 rounded-lg border border-green-500/30 focus:border-green-500 outline-none transition text-sm"
+                      />
+                    </div>
+                    <div className="text-xs text-gray-400">
+                      💡 Bonus is distributed when liquidity reaches {graduationThreshold} SOL
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <div className="bg-purple-900/30 dark:bg-purple-950/50 rounded-lg p-4 border border-purple-500/20">
                 <div className="flex justify-between text-white mb-2">
                   <span>Deployment Cost:</span>
-                  <span className="font-bold">{deploymentCost} SOL</span>
+                  <span className="font-bold">{deploymentCost.toFixed(4)} SOL</span>
                 </div>
                 <div className="flex justify-between text-gray-300 text-sm">
                   <span>For Circulation:</span>
@@ -125,10 +263,10 @@ export default function LaunchpadPage() {
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={deployToken}
-                disabled={!publicKey || !tokenName || !tokenSymbol}
+                disabled={!publicKey || !tokenName || !tokenSymbol || deploying}
                 className="w-full bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-bold py-4 rounded-xl hover:from-blue-700 hover:to-cyan-700 transition disabled:opacity-50 disabled:cursor-not-allowed glow-blue"
               >
-                {publicKey ? `🚀 Deploy Token (${deploymentCost} SOL)` : 'Connect Wallet'}
+                {deploying ? '⏳ Preparing...' : publicKey ? `🚀 Deploy Token (${deploymentCost.toFixed(4)} SOL)` : 'Connect Wallet'}
               </motion.button>
             </div>
           </div>
