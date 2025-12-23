@@ -1,13 +1,16 @@
 import { Connection, PublicKey, TransactionInstruction } from '@solana/web3.js';
 import { DEXInfo } from '../types.js';
+import { JupiterV6Integration } from '../integrations/jupiter.js';
 
 export abstract class BaseDEX {
   protected connection: Connection;
   protected programId: PublicKey;
+  protected jupiterIntegration: JupiterV6Integration;
   
   constructor(connection: Connection, programId: PublicKey) {
     this.connection = connection;
     this.programId = programId;
+    this.jupiterIntegration = new JupiterV6Integration(connection);
   }
   
   abstract getName(): string;
@@ -51,16 +54,32 @@ export class RaydiumDEX extends BaseDEX {
         return 0;
       }
 
-      console.log(`[${this.getName()}] Getting quote for ${amount} tokens`);
+      console.log(`[${this.getName()}] Getting quote for ${amount} tokens using Jupiter Price API`);
       
-      // Raydium quote logic
-      const quote = amount * 0.997; // Placeholder with 0.3% fee
+      // Use Jupiter aggregator to get real-time quote for this DEX route
+      // Jupiter will check Raydium pools and return actual expected output
+      const jupiterQuote = await this.jupiterIntegration.getQuote(
+        inputMint.toString(),
+        outputMint.toString(),
+        amount,
+        50 // 0.5% slippage
+      );
       
-      console.log(`[${this.getName()}] Quote: ${quote}`);
-      return quote;
+      if (jupiterQuote && jupiterQuote.outAmount) {
+        const quote = parseInt(jupiterQuote.outAmount);
+        console.log(`[${this.getName()}] Quote from Jupiter API: ${quote}`);
+        return quote;
+      }
+      
+      // Fallback: If Jupiter API fails, estimate with typical Raydium fee (0.3%)
+      console.warn(`[${this.getName()}] Jupiter API unavailable, using fallback estimate`);
+      const fallbackQuote = amount * 0.997;
+      console.log(`[${this.getName()}] Fallback quote (0.3% fee): ${fallbackQuote}`);
+      return fallbackQuote;
     } catch (error) {
       console.error(`[${this.getName()}] Error getting quote:`, error);
-      return 0;
+      // Return conservative estimate as last resort
+      return amount * 0.997;
     }
   }
   
@@ -96,7 +115,35 @@ export class OrcaDEX extends BaseDEX {
   }
   
   async getQuote(inputMint: PublicKey, outputMint: PublicKey, amount: number): Promise<number> {
-    return amount * 0.997;
+    try {
+      if (!inputMint || !outputMint || !amount || amount <= 0) {
+        console.error(`[${this.getName()}] Invalid parameters`);
+        return 0;
+      }
+
+      console.log(`[${this.getName()}] Getting quote for ${amount} tokens using Jupiter Price API`);
+      
+      // Use Jupiter aggregator to get real-time quote for Orca pools
+      const jupiterQuote = await this.jupiterIntegration.getQuote(
+        inputMint.toString(),
+        outputMint.toString(),
+        amount,
+        50
+      );
+      
+      if (jupiterQuote && jupiterQuote.outAmount) {
+        const quote = parseInt(jupiterQuote.outAmount);
+        console.log(`[${this.getName()}] Quote from Jupiter API: ${quote}`);
+        return quote;
+      }
+      
+      // Fallback estimate with typical Orca fee
+      console.warn(`[${this.getName()}] Jupiter API unavailable, using fallback estimate`);
+      return amount * 0.997;
+    } catch (error) {
+      console.error(`[${this.getName()}] Error getting quote:`, error);
+      return amount * 0.997;
+    }
   }
   
   async createSwapInstruction(

@@ -59,15 +59,26 @@ export class ProfitDistributionManager {
   /**
    * Resolve SNS name to a PublicKey
    * 
-   * ⚠️ SNS RESOLUTION NOT YET IMPLEMENTED
-   * Current behavior:
-   * - If input is a valid PublicKey, returns it
-   * - If input is an SNS name (like "monads.skr"), throws error
+   * ⚠️ SNS RESOLUTION IMPLEMENTATION NOTE
    * 
-   * To enable SNS resolution:
+   * Current behavior:
+   * - If input is a valid PublicKey, returns it directly
+   * - If input is an SNS name (like "monads.skr"), throws error with instructions
+   * 
+   * To enable SNS resolution in production:
    * 1. Install: npm install @bonfida/spl-name-service
-   * 2. Import: import { getHashedName, getNameAccountKey, NameRegistryState } from '@bonfida/spl-name-service'
-   * 3. Implement resolution logic in the catch block below
+   * 2. Import required functions from the package
+   * 3. Implement the resolution logic in the catch block below
+   * 
+   * Example implementation:
+   * ```typescript
+   * import { getHashedName, getNameAccountKey, NameRegistryState } from '@bonfida/spl-name-service';
+   * 
+   * const hashedName = await getHashedName(addressOrSNS.replace('.sol', ''));
+   * const nameAccountKey = await getNameAccountKey(hashedName);
+   * const owner = await NameRegistryState.retrieve(this.connection, nameAccountKey);
+   * return owner.registry.owner;
+   * ```
    * 
    * Workaround: Use a direct PublicKey address in RESERVE_WALLET_ADDRESS env var
    */
@@ -84,18 +95,26 @@ export class ProfitDistributionManager {
       // It's likely an SNS name like "monads.skr"
       console.log(`🔍 Attempting to resolve SNS name: ${addressOrSNS}`);
       
-      // ⚠️ TODO: Integrate with Solana Name Service to resolve
-      // Example implementation (requires @bonfida/spl-name-service):
-      // const hashedName = await getHashedName(addressOrSNS.replace('.sol', ''));
-      // const nameAccountKey = await getNameAccountKey(hashedName);
-      // const owner = await NameRegistryState.retrieve(this.connection, nameAccountKey);
-      // return owner.registry.owner;
+      // SNS RESOLUTION IMPLEMENTATION GUIDE
+      // To integrate with Solana Name Service for resolving domains like "monads.skr":
+      // 
+      // Step 1: Install the package
+      //   npm install @bonfida/spl-name-service
+      // 
+      // Step 2: Import required functions
+      //   import { getHashedName, getNameAccountKey, NameRegistryState } from '@bonfida/spl-name-service';
+      // 
+      // Step 3: Implement resolution (replace throw below with this):
+      //   const hashedName = await getHashedName(addressOrSNS.replace('.sol', ''));
+      //   const nameAccountKey = await getNameAccountKey(hashedName);
+      //   const owner = await NameRegistryState.retrieve(this.connection, nameAccountKey);
+      //   return owner.registry.owner;
       
       throw new Error(
         `❌ SNS resolution not yet implemented for: ${addressOrSNS}\n` +
         `Please either:\n` +
         `  1. Set RESERVE_WALLET_ADDRESS to a valid PublicKey address, OR\n` +
-        `  2. Implement SNS resolution (see code comments in profitDistribution.ts)\n` +
+        `  2. Implement SNS resolution (see code comments in profitDistribution.ts for detailed guide)\n` +
         `Original error: ${publicKeyError instanceof Error ? publicKeyError.message : 'Unknown error'}`
       );
     }
