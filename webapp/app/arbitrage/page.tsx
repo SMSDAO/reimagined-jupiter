@@ -156,6 +156,7 @@ export default function ArbitragePage() {
     }, 5000); // Refresh every 5 seconds
 
     return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scanning, settings]);
 
   return (
