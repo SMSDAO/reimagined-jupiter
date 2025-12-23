@@ -357,6 +357,34 @@ WHERE gc.cast_date >= CURRENT_DATE - INTERVAL '30 days'
 GROUP BY gc.wallet_address
 ORDER BY gm_count DESC;
 
+-- Pending approvals view with requester and approver details
+CREATE OR REPLACE VIEW pending_approvals_view AS
+SELECT 
+    pa.id,
+    pa.transaction_hash,
+    pa.transaction_type,
+    pa.value_at_risk,
+    pa.target_program_id,
+    pa.description,
+    pa.requested_by,
+    pa.requested_by_username,
+    pa.approved_by,
+    pa.approved_by_username,
+    pa.status,
+    pa.created_at,
+    pa.approved_at,
+    pa.executed_at,
+    pa.expires_at,
+    req_role.name as requester_role,
+    appr_role.name as approver_role
+FROM pending_approvals pa
+LEFT JOIN user_roles ur_req ON pa.requested_by = ur_req.user_id
+LEFT JOIN roles req_role ON ur_req.role_id = req_role.id
+LEFT JOIN user_roles ur_appr ON pa.approved_by = ur_appr.user_id
+LEFT JOIN roles appr_role ON ur_appr.role_id = appr_role.id
+WHERE pa.status IN ('PENDING', 'APPROVED')
+ORDER BY pa.created_at DESC;
+
 -- =====================================================
 -- INITIAL DATA / SEED DATA
 -- =====================================================
@@ -954,6 +982,57 @@ CREATE TABLE fee_configuration (
 );
 
 -- =====================================================
+-- 29. PENDING APPROVALS (Dual-Approval for Deployments)
+-- =====================================================
+CREATE TABLE pending_approvals (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  
+  -- Transaction details
+  transaction_hash VARCHAR(64) UNIQUE NOT NULL,
+  serialized_transaction TEXT NOT NULL,
+  transaction_type VARCHAR(50) NOT NULL,
+  
+  -- Risk assessment
+  value_at_risk DECIMAL(20, 9) NOT NULL,
+  target_program_id VARCHAR(44),
+  
+  -- Metadata
+  description TEXT,
+  instructions_count INTEGER NOT NULL,
+  
+  -- Requester
+  requested_by UUID NOT NULL,
+  requested_by_username VARCHAR(100) NOT NULL,
+  request_reason TEXT,
+  
+  -- Approver
+  approved_by UUID,
+  approved_by_username VARCHAR(100),
+  approval_signature VARCHAR(88),
+  approval_reason TEXT,
+  
+  -- Status
+  status VARCHAR(50) DEFAULT 'PENDING',
+  
+  -- Execution
+  executed BOOLEAN DEFAULT FALSE,
+  execution_signature VARCHAR(88),
+  execution_error TEXT,
+  
+  -- Timestamps
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  approved_at TIMESTAMP,
+  executed_at TIMESTAMP,
+  expires_at TIMESTAMP NOT NULL,
+  
+  FOREIGN KEY (requested_by) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (approved_by) REFERENCES users(id) ON DELETE SET NULL,
+  
+  CONSTRAINT transaction_type_check CHECK (transaction_type IN ('PROGRAM_DEPLOYMENT', 'PROGRAM_UPGRADE', 'AUTHORITY_TRANSFER', 'CONFIG_UPDATE', 'CRITICAL_OPERATION')),
+  CONSTRAINT status_check CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED', 'EXECUTED', 'FAILED', 'EXPIRED'))
+);
+
+-- =====================================================
 -- ADDITIONAL INDEXES FOR NEW TABLES
 -- =====================================================
 
@@ -1045,6 +1124,15 @@ CREATE INDEX idx_rpc_config_priority ON rpc_configuration(priority);
 CREATE INDEX idx_fee_config_fee_type ON fee_configuration(fee_type);
 CREATE INDEX idx_fee_config_is_active ON fee_configuration(is_active);
 
+-- Pending approvals indexes
+CREATE INDEX idx_pending_approvals_tx_hash ON pending_approvals(transaction_hash);
+CREATE INDEX idx_pending_approvals_status ON pending_approvals(status);
+CREATE INDEX idx_pending_approvals_requested_by ON pending_approvals(requested_by);
+CREATE INDEX idx_pending_approvals_approved_by ON pending_approvals(approved_by);
+CREATE INDEX idx_pending_approvals_created_at ON pending_approvals(created_at);
+CREATE INDEX idx_pending_approvals_expires_at ON pending_approvals(expires_at);
+CREATE INDEX idx_pending_approvals_executed ON pending_approvals(executed);
+
 -- =====================================================
 -- TRIGGERS FOR NEW TABLES
 -- =====================================================
@@ -1074,6 +1162,19 @@ CREATE TRIGGER update_fee_configuration_updated_at BEFORE UPDATE
     ON fee_configuration FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- =====================================================
+-- FUNCTION TO AUTO-EXPIRE PENDING APPROVALS
+-- =====================================================
+CREATE OR REPLACE FUNCTION expire_old_pending_approvals()
+RETURNS void AS $$
+BEGIN
+  UPDATE pending_approvals
+  SET status = 'EXPIRED'
+  WHERE status = 'PENDING'
+    AND expires_at < CURRENT_TIMESTAMP;
+END;
+$$ LANGUAGE plpgsql;
+
+-- =====================================================
 -- SEED DATA FOR RBAC
 -- =====================================================
 
@@ -1099,6 +1200,7 @@ INSERT INTO permissions (name, resource, action, description) VALUES
   ('bot.execute', 'BOT', 'EXECUTE', 'Execute bot trades'),
   ('admin.read', 'ADMIN', 'READ', 'View admin panel'),
   ('admin.configure', 'ADMIN', 'CONFIGURE', 'Configure system settings'),
+  ('admin.approve', 'ADMIN', 'APPROVE', 'Approve pending deployment transactions'),
   ('airdrop.read', 'AIRDROP', 'READ', 'View airdrop eligibility'),
   ('airdrop.claim', 'AIRDROP', 'EXECUTE', 'Claim airdrops'),
   ('token_launcher.create', 'TOKEN_LAUNCHER', 'CREATE', 'Launch new tokens'),

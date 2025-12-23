@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useWallet, useConnection } from '@solana/wallet-adapter-react';
 import { PublicKey } from '@solana/web3.js';
 import { motion } from 'framer-motion';
+import PendingApprovals from '@/components/PendingApprovals';
 
 interface BotStatus {
   running: boolean;
@@ -301,6 +302,11 @@ export default function AdminPage() {
         <p className="text-gray-300 mb-8">
           Live bot control, opportunity finder, and advanced analytics
         </p>
+
+        {/* Pending Approvals Section */}
+        <div className="mb-8">
+          <PendingApprovals />
+        </div>
 
         {/* Bot Status & Control */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
