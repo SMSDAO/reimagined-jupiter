@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { motion } from 'framer-motion';
 import RPCHealthIndicator from '@/components/RPCHealthIndicator';
+import UnifiedTradingPanel from '@/components/Trading/UnifiedTradingPanel';
+import InstructionPanel from '@/components/Trading/InstructionPanel';
 
 interface ArbitrageOpportunity {
   id: string;
@@ -21,6 +23,9 @@ export default function ArbitragePage() {
   const [autoExecute, setAutoExecute] = useState(false);
   const [minProfit, setMinProfit] = useState(0.5);
   const [scanning, setScanning] = useState(false);
+  const [slippage, setSlippage] = useState(1);
+  const [gasLimit, setGasLimit] = useState(400000);
+  const [priorityFee, setPriorityFee] = useState(1000000); // 0.001 SOL
 
   const flashProviders = [
     { name: 'Marginfi', fee: 0.09, liquidity: '$250M' },
@@ -132,20 +137,35 @@ export default function ArbitragePage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4">
+      {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
+        className="mb-6 sm:mb-8"
       >
         <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-2">⚡ Flash Loan Arbitrage</h1>
-        <p className="text-sm sm:text-base text-gray-300 mb-6 sm:mb-8">
+        <p className="text-sm sm:text-base text-gray-300">
           5-10 providers with 0.09%-0.20% fees across 8+ DEXs
         </p>
+      </motion.div>
 
-        {/* Configuration */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
-          <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 sm:p-6 border border-white/10">
-            <h3 className="text-lg sm:text-xl font-bold text-white mb-4">⚙️ Settings</h3>
-            <div className="space-y-4">
+      {/* Two-Column Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 mb-6 sm:mb-8">
+        {/* Left Column: Scanner & Settings */}
+        <UnifiedTradingPanel
+          title="Scanner Settings"
+          description="Configure arbitrage parameters"
+          onExecute={startScanning}
+          executeLabel={scanning ? '🔍 Scanning...' : publicKey ? '🔍 Start Scanning' : 'Connect Wallet'}
+          executeDisabled={scanning || !publicKey}
+          slippage={slippage}
+          onSlippageChange={setSlippage}
+          gasLimit={gasLimit}
+          onGasLimitChange={setGasLimit}
+          priorityFee={priorityFee}
+          onPriorityFeeChange={setPriorityFee}
+          additionalControls={
+            <>
               <div>
                 <label className="text-white text-sm mb-2 block">
                   Min Profit: {minProfit}%
@@ -171,11 +191,12 @@ export default function ArbitragePage() {
                   {autoExecute ? 'ON' : 'OFF'}
                 </button>
               </div>
-            </div>
-          </div>
-
-          <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 sm:p-6 border border-white/10">
-            <h3 className="text-lg sm:text-xl font-bold text-white mb-4">📊 Statistics</h3>
+            </>
+          }
+        >
+          {/* Statistics */}
+          <div className="bg-white/5 rounded-lg p-4">
+            <h3 className="text-lg font-bold text-white mb-3">📊 Statistics</h3>
             <div className="space-y-2">
               <div className="flex justify-between">
                 <span className="text-gray-300">Opportunities Found:</span>
@@ -187,15 +208,12 @@ export default function ArbitragePage() {
                   ${opportunities.reduce((sum, o) => sum + o.profitUSD, 0).toFixed(2)}
                 </span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-gray-300">Today&apos;s Profit:</span>
-                <span className="text-green-400 font-bold">$234.56</span>
-              </div>
             </div>
           </div>
 
-          <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 sm:p-6 border border-white/10">
-            <h3 className="text-lg sm:text-xl font-bold text-white mb-4">🛡️ MEV Protection</h3>
+          {/* MEV Protection */}
+          <div className="bg-white/5 rounded-lg p-4">
+            <h3 className="text-lg font-bold text-white mb-3">🛡️ MEV Protection</h3>
             <div className="space-y-2 text-sm">
               <div className="flex items-center gap-2">
                 <span className="w-3 h-3 bg-green-500 rounded-full"></span>
@@ -211,36 +229,57 @@ export default function ArbitragePage() {
               </div>
             </div>
           </div>
-        </div>
+        </UnifiedTradingPanel>
 
-        {/* Flash Loan Providers */}
-        <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 sm:p-6 mb-6 sm:mb-8 border border-white/10">
-          <h2 className="text-xl sm:text-2xl font-bold text-white mb-4">💰 Flash Loan Providers</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
-            {flashProviders.map((provider) => (
-              <div key={provider.name} className="bg-white/5 rounded-lg p-3 sm:p-4 hover:bg-white/10 transition-colors">
-                <h3 className="text-base sm:text-lg font-bold text-white mb-2">{provider.name}</h3>
-                <div className="text-sm space-y-1">
-                  <div className="text-green-400">{provider.fee}% fee</div>
-                  <div className="text-gray-400">{provider.liquidity}</div>
+        {/* Right Column: Instructions & Info */}
+        <div className="space-y-6">
+          <InstructionPanel
+            steps={[
+              {
+                icon: '🔗',
+                title: 'Connect Wallet',
+                description: 'Connect your Solana wallet to start scanning for arbitrage opportunities',
+              },
+              {
+                icon: '⚙️',
+                title: 'Configure Settings',
+                description: 'Set your minimum profit threshold, slippage tolerance, and gas settings',
+              },
+              {
+                icon: '🔍',
+                title: 'Start Scanning',
+                description: 'Click "Start Scanning" to begin monitoring for profitable arbitrage opportunities',
+              },
+              {
+                icon: '⚡',
+                title: 'Execute Trades',
+                description: 'When opportunities appear, click "Execute" to perform the arbitrage',
+              },
+            ]}
+          />
+
+          {/* Flash Loan Providers */}
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.4 }}
+            className="bg-white/10 backdrop-blur-md rounded-xl p-4 sm:p-6 border border-white/10"
+          >
+            <h2 className="text-xl sm:text-2xl font-bold text-white mb-4">💰 Flash Loan Providers</h2>
+            <div className="grid grid-cols-2 gap-3">
+              {flashProviders.map((provider) => (
+                <div key={provider.name} className="bg-white/5 rounded-lg p-3 hover:bg-white/10 transition-colors">
+                  <h3 className="text-base font-bold text-white mb-1">{provider.name}</h3>
+                  <div className="text-sm space-y-1">
+                    <div className="text-green-400">{provider.fee}% fee</div>
+                    <div className="text-gray-400 text-xs">{provider.liquidity}</div>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          </motion.div>
         </div>
-
-        {/* Scan Button */}
-        <button
-          onClick={startScanning}
-          disabled={scanning || !publicKey}
-          className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold py-3 sm:py-4 rounded-xl hover:from-purple-700 hover:to-pink-700 transition disabled:opacity-50 mb-6 sm:mb-8 text-sm sm:text-base shadow-lg"
-        >
-          {scanning ? (
-            <span className="flex items-center justify-center gap-2">
-              <span className="animate-pulse-glow">🔍</span> Scanning for Opportunities...
-            </span>
-          ) : publicKey ? '🔍 Start Scanning' : 'Connect Wallet'}
-        </button>
+      </div>
 
         {/* Opportunities */}
         {opportunities.length > 0 && (
@@ -302,7 +341,6 @@ export default function ArbitragePage() {
         <div className="mt-6 sm:mt-8 text-center text-xs sm:text-sm text-gray-400">
           💰 10% of profits go to dev wallet: monads.solana
         </div>
-      </motion.div>
       
       {/* RPC Health Indicator */}
       <RPCHealthIndicator />

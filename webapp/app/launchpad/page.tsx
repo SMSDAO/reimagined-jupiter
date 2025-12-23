@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { motion } from 'framer-motion';
 import AirdropSpinGame from '@/components/AirdropSpinGame';
+import UnifiedTradingPanel from '@/components/Trading/UnifiedTradingPanel';
+import InstructionPanel from '@/components/Trading/InstructionPanel';
 
 export default function LaunchpadPage() {
   const { publicKey } = useWallet();
@@ -14,6 +16,10 @@ export default function LaunchpadPage() {
   const [deploymentCost] = useState(0.01);
   const [showSpinGame, setShowSpinGame] = useState(false);
   const [deployedToken, setDeployedToken] = useState<string | null>(null);
+  // Gas settings prepared for future use
+  // const [slippage, setSlippage] = useState(1);
+  // const [gasLimit, setGasLimit] = useState(400000);
+  // const [priorityFee, setPriorityFee] = useState(1000000);
 
   const deployToken = async () => {
     if (!publicKey) {

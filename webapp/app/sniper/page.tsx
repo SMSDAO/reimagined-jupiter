@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { motion } from 'framer-motion';
+import UnifiedTradingPanel from '@/components/Trading/UnifiedTradingPanel';
+import InstructionPanel from '@/components/Trading/InstructionPanel';
 
 interface SniperTarget {
   name: string;
@@ -21,6 +23,9 @@ export default function SniperPage() {
   const [slippage, setSlippage] = useState(10);
   const [monitoring, setMonitoring] = useState(false);
   const [detectedCount, setDetectedCount] = useState(0);
+  // Gas settings prepared for future use
+  // const [gasLimit, setGasLimit] = useState(600000);
+  // const [priorityFee, setPriorityFee] = useState(2000000);
 
   // Listen for pool creation events
   useEffect(() => {
