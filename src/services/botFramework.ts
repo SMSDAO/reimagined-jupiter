@@ -18,8 +18,13 @@ import {
   SystemProgram,
   ComputeBudgetProgram,
   sendAndConfirmTransaction,
+  LAMPORTS_PER_SOL,
 } from '@solana/web3.js';
 import crypto from 'crypto';
+import { ProfitDistributionManager } from '../utils/profitDistribution.js';
+import { getProfitTracker, initializeProfitTracker } from '../../lib/profit-tracker.js';
+import { insertWalletAuditLog } from '../../db/database.js';
+import { config } from '../config/index.js';
 
 export type SigningMode = 'CLIENT_SIDE' | 'SERVER_SIDE' | 'ENCLAVE';
 export type BotType = 'ARBITRAGE' | 'SNIPER' | 'FLASH_LOAN' | 'TRIANGULAR' | 'CUSTOM';
@@ -503,6 +508,8 @@ export class BotExecutionEngine {
   private connection: Connection;
   private replayProtection: ReplayProtection;
   private sandboxes = new Map<string, BotSandbox>();
+  private profitDistributionManager: ProfitDistributionManager;
+  private profitTrackerInitialized = false;
   
   // Minimum SOL balance required for bot execution
   private readonly MIN_SOL_BALANCE = 0.05; // 0.05 SOL minimum
@@ -510,6 +517,7 @@ export class BotExecutionEngine {
   constructor(connection: Connection) {
     this.connection = connection;
     this.replayProtection = new ReplayProtection();
+    this.profitDistributionManager = new ProfitDistributionManager(connection);
   }
 
   /**
@@ -589,6 +597,17 @@ export class BotExecutionEngine {
 
   /**
    * Execute bot transaction with full protection and balance checks
+   * 
+   * Deterministic execution flow:
+   * 1. Pre-flight Balance Check
+   * 2. Replay Protection Validation
+   * 3. Sandbox Isolation
+   * 4. Pre-trade Balance Snapshot
+   * 5. Transaction Submission & Confirmation
+   * 6. Post-trade Balance Snapshot & Profit Calculation
+   * 7. DAO Skim (if applicable)
+   * 8. Telemetry Recording (Database + Profit Tracker)
+   * 9. Sandbox Cleanup & Key Wiping (in finally block)
    */
   async executeTransaction(
     bot: BotConfig,
@@ -603,54 +622,96 @@ export class BotExecutionEngine {
     const nonce = this.replayProtection.generateNonce();
     const timestamp = new Date();
     
-    // PRE-FLIGHT 1: Validate minimum balance
-    const balanceCheck = await this.validateMinimumBalance(signer.publicKey);
-    if (!balanceCheck.valid) {
-      return {
-        id: executionId,
-        botId: bot.id,
-        userId: bot.userId,
-        executionType: bot.botType,
-        status: 'FAILED',
-        errorMessage: `Pre-flight failed: ${balanceCheck.error}`,
-        executedAt: timestamp,
-      };
-    }
+    let sandbox: BotSandbox | undefined;
+    let preTradeBalance = 0;
+    let postTradeBalance = 0;
+    let profitLamports = 0;
+    let gasUsed = 0;
+    let signature: string | undefined;
+    let distributionSignature: string | undefined;
+    let executionSuccess = false;
+    let errorMessage: string | undefined;
     
-    console.log(`✅ Pre-flight balance check passed: ${balanceCheck.balance.toFixed(4)} SOL`);
-
-    // PRE-FLIGHT 2: 4-layer replay protection
-    const validation = this.replayProtection.validateExecution(
-      nonce,
-      transaction,
-      timestamp,
-      bot.userId,
-      10 // max 10 per minute
-    );
-
-    if (!validation.valid) {
-      return {
-        id: executionId,
-        botId: bot.id,
-        userId: bot.userId,
-        executionType: bot.botType,
-        status: 'FAILED',
-        errorMessage: `Replay protection failed: ${validation.errors.join(', ')}`,
-        executedAt: timestamp,
-      };
-    }
-
     try {
-      // Get isolated sandbox for THIS specific user + bot + wallet
-      const sandbox = this.getSandbox(
+      // STEP 1: Pre-flight Balance Check
+      const balanceCheck = await this.validateMinimumBalance(signer.publicKey);
+      if (!balanceCheck.valid) {
+        errorMessage = `Pre-flight failed: ${balanceCheck.error}`;
+        
+        // Log failed pre-flight
+        await this.logExecutionToDatabase(
+          bot,
+          executionId,
+          undefined,
+          undefined,
+          0,
+          0,
+          false,
+          errorMessage
+        );
+        
+        return {
+          id: executionId,
+          botId: bot.id,
+          userId: bot.userId,
+          executionType: bot.botType,
+          status: 'FAILED',
+          errorMessage,
+          executedAt: timestamp,
+        };
+      }
+      
+      console.log(`✅ Pre-flight balance check passed: ${balanceCheck.balance.toFixed(4)} SOL`);
+
+      // STEP 2: Replay Protection Validation
+      const validation = this.replayProtection.validateExecution(
+        nonce,
+        transaction,
+        timestamp,
+        bot.userId,
+        10 // max 10 per minute
+      );
+
+      if (!validation.valid) {
+        errorMessage = `Replay protection failed: ${validation.errors.join(', ')}`;
+        
+        // Log replay protection failure
+        await this.logExecutionToDatabase(
+          bot,
+          executionId,
+          undefined,
+          undefined,
+          0,
+          0,
+          false,
+          errorMessage
+        );
+        
+        return {
+          id: executionId,
+          botId: bot.id,
+          userId: bot.userId,
+          executionType: bot.botType,
+          status: 'FAILED',
+          errorMessage,
+          executedAt: timestamp,
+        };
+      }
+
+      // STEP 3: Sandbox Isolation
+      sandbox = this.getSandbox(
         bot.userId,
         bot.id,
         signer.publicKey.toBase58(),
         ['bot.execute', 'wallet.sign']
       );
 
-      // Execute in isolated sandbox (NO SHARED SIGNERS, NO GLOBAL CONTEXT)
-      const signature = await sandbox.execute(async () => {
+      // STEP 4: Pre-trade Balance Snapshot
+      preTradeBalance = await this.connection.getBalance(signer.publicKey);
+      console.log(`📸 Pre-trade balance snapshot: ${(preTradeBalance / LAMPORTS_PER_SOL).toFixed(6)} SOL`);
+
+      // STEP 5: Transaction Submission & Confirmation
+      signature = await sandbox.execute(async () => {
         return await sendAndConfirmTransaction(
           this.connection,
           transaction,
@@ -665,6 +726,69 @@ export class BotExecutionEngine {
       // Mark as processed
       this.replayProtection.markExecutionProcessed(nonce, transaction);
       
+      console.log(`✅ Transaction confirmed: ${signature}`);
+
+      // STEP 6: Post-trade Balance Snapshot & Profit Calculation
+      postTradeBalance = await this.connection.getBalance(signer.publicKey);
+      console.log(`📸 Post-trade balance snapshot: ${(postTradeBalance / LAMPORTS_PER_SOL).toFixed(6)} SOL`);
+      
+      // Calculate profit (positive means gain, negative means loss)
+      profitLamports = postTradeBalance - preTradeBalance;
+      gasUsed = Math.abs(Math.min(0, profitLamports)); // If negative, it's gas cost
+      
+      console.log(`💰 Profit calculation: ${(profitLamports / LAMPORTS_PER_SOL).toFixed(6)} SOL`);
+
+      // STEP 7: DAO Skim (if applicable)
+      if (profitLamports > 0 && config.profitDistribution.enabled) {
+        console.log(`🏦 Profit detected (${(profitLamports / LAMPORTS_PER_SOL).toFixed(6)} SOL), triggering DAO skim...`);
+        
+        try {
+          // Important: Distribution must happen BEFORE key wipe
+          distributionSignature = await this.profitDistributionManager.distributeSolProfit(
+            profitLamports,
+            signer,
+            signer.publicKey // Calling wallet gets gas/slippage coverage
+          );
+          
+          if (distributionSignature) {
+            console.log(`✅ DAO skim completed: ${distributionSignature}`);
+          } else {
+            console.warn(`⚠️ DAO skim returned null (might have failed silently)`);
+          }
+        } catch (distError) {
+          console.error(`❌ DAO skim failed:`, distError);
+          // Don't fail the whole execution if distribution fails
+        }
+      } else if (profitLamports <= 0) {
+        console.log(`ℹ️ No profit detected (${(profitLamports / LAMPORTS_PER_SOL).toFixed(6)} SOL), skipping DAO skim`);
+      } else {
+        console.log(`ℹ️ Profit distribution disabled in config, skipping DAO skim`);
+      }
+
+      executionSuccess = true;
+      
+      // STEP 8: Telemetry Recording
+      // 8a. Database audit log
+      await this.logExecutionToDatabase(
+        bot,
+        executionId,
+        signature,
+        distributionSignature,
+        profitLamports,
+        gasUsed,
+        true,
+        undefined
+      );
+      
+      // 8b. Profit tracker
+      this.recordTradeInProfitTracker(
+        executionId,
+        bot.botType,
+        profitLamports,
+        gasUsed,
+        signature
+      );
+      
       // Clear sandbox state after execution to prevent context leakage
       sandbox.clearState();
 
@@ -675,22 +799,139 @@ export class BotExecutionEngine {
         executionType: bot.botType,
         status: 'CONFIRMED',
         transactionSignature: signature,
+        profitSol: profitLamports / LAMPORTS_PER_SOL,
+        gasFeeSol: gasUsed / LAMPORTS_PER_SOL,
         executedAt: timestamp,
         confirmedAt: new Date(),
       };
     } catch (error) {
+      executionSuccess = false;
+      errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      
+      console.error(`❌ Transaction execution failed:`, error);
+      
+      // Log failed execution
+      await this.logExecutionToDatabase(
+        bot,
+        executionId,
+        signature,
+        distributionSignature,
+        profitLamports,
+        gasUsed,
+        false,
+        errorMessage
+      );
+      
       return {
         id: executionId,
         botId: bot.id,
         userId: bot.userId,
         executionType: bot.botType,
         status: 'FAILED',
-        errorMessage: error instanceof Error ? error.message : 'Unknown error',
+        errorMessage,
         executedAt: timestamp,
       };
     } finally {
-      // Ensure signer key is wiped from memory
+      // STEP 9: Sandbox Cleanup & Key Wiping
+      // Critical: Key wiping MUST happen after all operations including distribution
+      if (sandbox) {
+        sandbox.clearState();
+      }
+      
+      // Zero out private key from memory
       signer.secretKey.fill(0);
+      
+      console.log(`🔒 Cleanup complete: sandbox cleared, private key wiped`);
+    }
+  }
+  
+  /**
+   * Log execution to database audit log
+   */
+  private async logExecutionToDatabase(
+    bot: BotConfig,
+    executionId: string,
+    signature: string | undefined,
+    distributionSignature: string | undefined,
+    profitLamports: number,
+    gasUsed: number,
+    success: boolean,
+    errorMessage: string | undefined
+  ): Promise<void> {
+    try {
+      await insertWalletAuditLog({
+        walletId: bot.walletId || 'unknown',
+        userId: bot.userId,
+        operation: 'BOT_EXECUTION',
+        operationData: {
+          botId: bot.id,
+          executionId,
+          profit: profitLamports / LAMPORTS_PER_SOL,
+          gas: gasUsed / LAMPORTS_PER_SOL,
+          signature,
+          distributionSignature,
+          status: success ? 'SUCCESS' : 'FAILED',
+        },
+        transactionSignature: signature,
+        success,
+        errorMessage,
+      });
+      
+      console.log(`📊 Execution logged to database: ${executionId}`);
+    } catch (dbError) {
+      console.error(`❌ Failed to log execution to database:`, dbError);
+      // Don't throw - logging failure shouldn't fail the execution
+    }
+  }
+  
+  /**
+   * Record trade in profit tracker
+   */
+  private recordTradeInProfitTracker(
+    executionId: string,
+    botType: BotType,
+    profitLamports: number,
+    gasUsed: number,
+    signature: string | undefined
+  ): void {
+    try {
+      // Initialize profit tracker if not already done
+      if (!this.profitTrackerInitialized) {
+        // Use 1 SOL as default initial capital (can be configured)
+        initializeProfitTracker(1.0);
+        this.profitTrackerInitialized = true;
+      }
+      
+      const tracker = getProfitTracker();
+      const profitSol = profitLamports / LAMPORTS_PER_SOL;
+      const gasSol = gasUsed / LAMPORTS_PER_SOL;
+      
+      // Calculate dev fee if enabled
+      const devFee = config.devFee.enabled && profitSol > 0
+        ? profitSol * config.devFee.percentage
+        : 0;
+      
+      const netProfit = profitSol - gasSol - devFee;
+      
+      tracker.recordTrade({
+        id: executionId,
+        timestamp: Date.now(),
+        type: botType.toLowerCase() as 'arbitrage' | 'flash-loan' | 'triangular',
+        inputToken: 'SOL',
+        outputToken: 'SOL',
+        inputAmount: 0, // Not tracked in this context
+        outputAmount: 0, // Not tracked in this context
+        profit: profitSol,
+        gasUsed: gasSol,
+        netProfit,
+        devFee,
+        signature,
+      });
+      
+      console.log(`📊 Trade recorded in profit tracker: ${executionId}, net profit: ${netProfit.toFixed(6)} SOL`);
+    } catch (trackerError) {
+      console.error(`❌ Failed to record trade in profit tracker:`, trackerError);
+      // Don't throw - tracking failure shouldn't fail the execution
     }
   }
 
