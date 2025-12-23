@@ -453,18 +453,31 @@ MIT License - see LICENSE file for details
 
 ## 📚 Documentation
 
+### Production Deployment
+- **[Production Deployment Guide](./docs/PRODUCTION_DEPLOYMENT_GUIDE.md)** - Complete production deployment with process flows
+- **[Environment Variables Reference](./docs/ENVIRONMENT_VARIABLES.md)** - All environment variables explained
+- **[Risk Management Guide](./docs/RISK_MANAGEMENT.md)** - Trading guardrails and safety mechanisms
+- **[Deployment Ready](./DEPLOYMENT_READY.md)** - Mainnet deployment instructions
+
+### Security & Governance
+- **[Wallet Governance](./docs/WALLET_GOVERNANCE.md)** - AES-256-GCM encryption, GXQ suffix validation
+- **[Admin Security & RBAC](./docs/ADMIN_SECURITY.md)** - JWT auth, multi-sig controls, audit logging
+- **[Bot Framework Guide](./docs/BOT_FRAMEWORK_GUIDE.md)** - Sandboxing, replay protection, offline transaction builder
+- **[Security Guide](./SECURITY_GUIDE.md)** - Security best practices
+
 ### Getting Started
 - **[Quick Start Guide](./docs/QUICK_START.md)** - Fast setup and common tasks
-- **[Deployment Ready](./DEPLOYMENT_READY.md)** - Mainnet deployment instructions
 - **[Implementation Summary](./docs/IMPLEMENTATION_SUMMARY.md)** - Complete feature overview
 
-### API & Validation
+### API & Configuration
 - **[API Validation Guide](./docs/API_VALIDATION.md)** - Input validation and error handling
 - **[Endpoint Configuration](./docs/ENDPOINT_CONFIGURATION.md)** - Endpoint reference and configuration
+- **[Airdrop System](./docs/AIRDROP_SYSTEM.md)** - Airdrop checking and claiming
 
 ### Deployment & Operations
 - **[Deployment Automation](./docs/DEPLOYMENT_AUTOMATION.md)** - CI/CD workflows and automation
 - **[Vercel Deployment](./VERCEL_DEPLOY.md)** - Vercel-specific instructions
+- **[Railway Deployment](./docs/RAILWAY_DEPLOYMENT.md)** - Railway 24/7 backend hosting
 - **[Enhanced Scanner](./ENHANCED_SCANNER.md)** - Real-time arbitrage scanning
 
 ### DevOps & Automation
@@ -474,7 +487,6 @@ MIT License - see LICENSE file for details
 
 ### Features & Guides
 - **[Flash Loan Enhancements](./FLASH_LOAN_ENHANCEMENTS.md)** - Flash loan system details
-- **[Security Guide](./SECURITY_GUIDE.md)** - Security best practices
 - **[Testing Guide](./TESTING.md)** - Testing procedures and coverage
 
 ## 🚀 Production Deployment

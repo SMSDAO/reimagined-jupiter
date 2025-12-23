@@ -12,6 +12,10 @@ import { RouteTemplateManager } from './services/routeTemplates.js';
 import { EnhancedArbitrageScanner } from './services/enhancedScanner.js';
 import { ArbitrageDatabase } from './services/database.js';
 import { RealTimeArbitrageScanner } from './services/realTimeArbitrageScanner.js';
+import { enforceProductionSafety } from './utils/productionGuardrails.js';
+
+// Validate production environment before starting
+enforceProductionSafety();
 
 class GXQStudio {
   private connection: Connection;

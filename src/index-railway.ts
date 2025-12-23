@@ -9,6 +9,10 @@ import bs58 from 'bs58';
 import { scanOpportunities } from '../lib/scanner.js';
 import { executeTrade } from '../lib/executor.js';
 import { logger } from '../lib/logger.js';
+import { enforceProductionSafety } from './utils/productionGuardrails.js';
+
+// Validate production environment before starting
+enforceProductionSafety();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
