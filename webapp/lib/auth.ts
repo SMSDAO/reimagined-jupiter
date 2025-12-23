@@ -6,7 +6,8 @@
 
 // Admin wallet addresses (can be configured via environment variable)
 // This is for UI display purposes only - server-side validation is required for security
-const ADMIN_WALLETS = process.env.NEXT_PUBLIC_ADMIN_WALLETS?.split(',').map(w => w.trim()) || [];
+const rawAdminWallets = process.env.ADMIN_WALLETS;
+const ADMIN_WALLETS = rawAdminWallets ? rawAdminWallets.split(',').map(w => w.trim()) : [];
 
 // Default admin wallet for development
 const DEFAULT_ADMIN = 'monads.solana';
