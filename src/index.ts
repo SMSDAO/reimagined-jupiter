@@ -12,6 +12,7 @@ import { RouteTemplateManager } from './services/routeTemplates.js';
 import { EnhancedArbitrageScanner } from './services/enhancedScanner.js';
 import { ArbitrageDatabase } from './services/database.js';
 import { RealTimeArbitrageScanner } from './services/realTimeArbitrageScanner.js';
+import { enforceProductionSafety } from './utils/productionGuardrails.js';
 
 class GXQStudio {
   private connection: Connection;
@@ -66,6 +67,9 @@ class GXQStudio {
   async initialize(): Promise<void> {
     console.log('🚀 Initializing GXQ STUDIO...');
     console.log('The most advanced Solana flash loan arbitrage system\n');
+    
+    // Run production safety checks
+    await enforceProductionSafety(this.connection);
     
     await this.presetManager.initialize();
     await this.addressBook.initialize();
