@@ -2,16 +2,22 @@
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
+import { useWallet } from '@solana/wallet-adapter-react';
 import { loadUserSettings, saveUserSettings, getDefaultSettings, clearTradeHistory } from '@/lib/storage';
 import { notifySuccess, requestNotificationPermission } from '@/lib/notifications';
+import { isAdmin } from '@/lib/auth';
 
 export default function AdminPanel() {
+  const { publicKey } = useWallet();
   const [isOpen, setIsOpen] = useState(false);
   // Use lazy initialization to avoid useState in useEffect
   const [settings, setSettings] = useState(() => loadUserSettings() || getDefaultSettings());
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>(() => 
     typeof window !== 'undefined' && 'Notification' in window ? Notification.permission : 'default'
   );
+
+  // Check if current user is admin
+  const userIsAdmin = isAdmin(publicKey?.toBase58());
 
   const handleSave = () => {
     saveUserSettings(settings);
@@ -170,26 +176,37 @@ export default function AdminPanel() {
                 </div>
               </div>
 
-              {/* Data Management */}
-              <div className="bg-white/10 backdrop-blur-md rounded-xl p-4">
-                <h3 className="text-xl font-bold text-white mb-4">Data Management</h3>
-                
-                <div className="space-y-3">
-                  <button
-                    onClick={handleClearHistory}
-                    className="w-full bg-red-600 hover:bg-red-700 text-white px-4 py-3 rounded-lg font-bold transition"
-                  >
-                    Clear Trade History
-                  </button>
+              {/* Data Management - Admin Only */}
+              {userIsAdmin && (
+                <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-purple-500/30">
+                  <div className="flex items-center gap-2 mb-4">
+                    <span className="text-xl">🔐</span>
+                    <h3 className="text-xl font-bold text-white">Admin Controls</h3>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    <button
+                      onClick={handleClearHistory}
+                      className="w-full bg-red-600 hover:bg-red-700 text-white px-4 py-3 rounded-lg font-bold transition"
+                    >
+                      Clear Trade History
+                    </button>
 
-                  <button
-                    onClick={handleReset}
-                    className="w-full bg-orange-600 hover:bg-orange-700 text-white px-4 py-3 rounded-lg font-bold transition"
-                  >
-                    Reset All Settings
-                  </button>
+                    <button
+                      onClick={handleReset}
+                      className="w-full bg-orange-600 hover:bg-orange-700 text-white px-4 py-3 rounded-lg font-bold transition"
+                    >
+                      Reset All Settings
+                    </button>
+                  </div>
+
+                  <div className="mt-3 p-2 bg-purple-900/30 rounded-lg">
+                    <p className="text-xs text-purple-200">
+                      ✨ Admin privileges detected
+                    </p>
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Action Buttons */}
               <div className="flex gap-4">
