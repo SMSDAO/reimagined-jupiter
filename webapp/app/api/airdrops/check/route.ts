@@ -1,6 +1,85 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createResilientConnection } from '@/lib/solana/connection';
-import { PublicKey } from '@solana/web3.js';
+import { PublicKey, Connection } from '@solana/web3.js';
+import axios from 'axios';
+
+/**
+ * Check wallet for eligible airdrops across major protocols
+ */
+async function checkWalletAirdrops(connection: Connection, publicKey: PublicKey) {
+  const airdrops: Array<{
+    project: string;
+    amount: number;
+    token: string;
+    claimable: boolean;
+    claimDeadline?: number;
+  }> = [];
+
+  try {
+    // Check Jupiter airdrop
+    try {
+      const jupResponse = await axios.get(
+        `https://worker.jup.ag/jup-claim-proof/${publicKey.toString()}`,
+        { timeout: 5000 }
+      );
+      
+      if (jupResponse.data && jupResponse.data.amount) {
+        airdrops.push({
+          project: 'Jupiter',
+          amount: jupResponse.data.amount / 1e6, // Convert from micro-tokens
+          token: 'JUP',
+          claimable: true,
+        });
+      }
+    } catch (err) {
+      // Jupiter API may not have allocation for this wallet
+      console.log('No Jupiter airdrop found');
+    }
+
+    // Check Jito airdrop
+    try {
+      const jitoResponse = await axios.get(
+        `https://kobe.mainnet.jito.network/api/v1/allocation/${publicKey.toString()}`,
+        { timeout: 5000 }
+      );
+      
+      if (jitoResponse.data && jitoResponse.data.amount) {
+        airdrops.push({
+          project: 'Jito',
+          amount: jitoResponse.data.amount / 1e9,
+          token: 'JTO',
+          claimable: true,
+        });
+      }
+    } catch (err) {
+      console.log('No Jito airdrop found');
+    }
+
+    // Check Pyth airdrop (if available)
+    try {
+      const pythResponse = await axios.get(
+        `https://api.pyth.network/claim/${publicKey.toString()}`,
+        { timeout: 5000 }
+      );
+      
+      if (pythResponse.data && pythResponse.data.amount) {
+        airdrops.push({
+          project: 'Pyth',
+          amount: pythResponse.data.amount / 1e6,
+          token: 'PYTH',
+          claimable: true,
+        });
+      }
+    } catch (err) {
+      console.log('No Pyth airdrop found');
+    }
+
+  } catch (error) {
+    console.error('Error checking airdrops:', error);
+  }
+
+  return airdrops;
+}
 
 /**
  * GET /api/airdrops/check
@@ -43,21 +122,14 @@ export async function GET(request: NextRequest) {
     const txCount = signatures.length;
     console.log(`📊 Recent transactions: ${txCount}`);
 
-    // TODO: Implement actual airdrop checking logic
-    // This would check against various airdrop programs:
-    // - Jupiter, Jito, Pyth, etc.
-    // - Calculate eligibility based on wallet activity
-    // - Check for unclaimed tokens
-
-    const eligibleAirdrops = [
-      {
-        project: 'Example Project',
-        amount: 100,
-        token: 'EXAMPLE',
-        claimable: true,
-        claimDeadline: Date.now() + 30 * 24 * 60 * 60 * 1000, // 30 days
-      }
-    ];
+    // Check against actual airdrop programs using backend service
+    // Note: For full functionality, import and use AirdropChecker from backend
+    // This is a simplified version for API endpoint
+    
+    const eligibleAirdrops = await checkWalletAirdrops(
+      resilientConnection.getConnection(),
+      pubkey
+    );
 
     // Cleanup
     resilientConnection.destroy();
@@ -111,20 +183,20 @@ export async function POST(request: NextRequest) {
     try {
       const pubkey = new PublicKey(walletAddress);
       
-      // TODO: Implement actual airdrop claim logic
-      // This would:
-      // 1. Verify eligibility
-      // 2. Build claim transaction
-      // 3. Execute via resilient connection
-      // 4. Return claim signature
-
+      // Airdrop claiming requires client-side signing with wallet adapter
+      // This endpoint validates the claim request but signing must happen client-side
+      
+      // Verify wallet ownership would happen here
+      // In production, use wallet adapter on frontend for signing
+      
       // Cleanup
       resilientConnection.destroy();
 
       return NextResponse.json({
-        success: true,
-        message: 'Airdrop claim not yet implemented',
+        success: false,
+        message: 'Airdrop claiming must be done through wallet adapter (client-side signing required)',
         airdropId,
+        instructions: 'Use wallet adapter on frontend to sign and submit claim transaction',
       });
     } catch (error) {
       resilientConnection.destroy();

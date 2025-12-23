@@ -22,6 +22,7 @@
     "type-check:webapp": "cd webapp && tsc --noEmit",
     "coverage:report": "bash scripts/merge-coverage.sh",
     "validate": "npm run lint && npm run type-check && npm test",
+    "validate-production": "ts-node-esm scripts/validate-production.ts",
     "setup-env": "bash scripts/setup-env.sh",
     "deploy": "npm run pre-deploy && vercel --prod",
     "deploy:staging": "vercel",
