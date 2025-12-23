@@ -54,6 +54,30 @@ interface Airdrop {
   amount: string;
   value: string;
   claimable: boolean;
+  claimed?: boolean;
+  claimDeadline?: string;
+  onChainVerified?: boolean;
+  eligibilityReason?: string;
+}
+
+// Constants for value calculations
+// TODO: Move to environment variables or configuration file for production
+// This allows updating token values without code changes
+const PLACEHOLDER_TOKEN_VALUE_USD = parseFloat(process.env.NEXT_PUBLIC_TOKEN_VALUE_USD || '0.5');
+
+// Helper function to calculate total claimable value
+function calculateTotalClaimableValue(airdrops: Airdrop[]): number {
+  return airdrops
+    .filter((a) => a.claimable && !a.claimed)
+    .reduce((sum, a) => {
+      const numericValue = parseFloat(a.value.replace(/[^\d.]/g, '') || '0');
+      return sum + numericValue;
+    }, 0);
+}
+
+// Helper function to parse token amount from formatted string
+function parseTokenAmount(amountStr: string): number {
+  return parseFloat(amountStr.replace(/[^\d.]/g, '') || '0');
 }
 
 export default function AirdropPage() {
@@ -133,16 +157,29 @@ export default function AirdropPage() {
       
       setWalletScore(score);
 
-      // Fetch real airdrop data
-      const airdropResponse = await fetch(`/api/airdrops/check/${publicKey.toString()}`);
+      // Fetch real airdrop data using updated API
+      const airdropResponse = await fetch(`/api/airdrops/check?walletAddress=${publicKey.toString()}`);
       
       if (airdropResponse.ok) {
         const airdropData = await airdropResponse.json();
-        if (airdropData.airdrops && Array.isArray(airdropData.airdrops)) {
-          setAirdrops(airdropData.airdrops);
+        if (airdropData.success && airdropData.airdrops && Array.isArray(airdropData.airdrops)) {
+          // Map API response to expected format
+          const mappedAirdrops = airdropData.airdrops.map((a: any) => ({
+            protocol: a.protocol,
+            amount: `${a.amount.toLocaleString()} tokens`,
+            value: `$${(a.amount * PLACEHOLDER_TOKEN_VALUE_USD).toFixed(2)}`, // Using constant
+            claimable: a.claimable && !a.claimed,
+            claimed: a.claimed,
+            claimDeadline: a.claimDeadline,
+            onChainVerified: a.onChainVerified,
+            eligibilityReason: a.eligibilityReason,
+          }));
+          setAirdrops(mappedAirdrops);
+          console.log(`✅ Found ${mappedAirdrops.length} airdrops (${mappedAirdrops.filter((a: any) => a.claimable).length} claimable)`);
         }
       } else {
         // If API fails, show empty array instead of mock data
+        console.warn('Airdrop API failed, showing empty list');
         setAirdrops([]);
       }
     } catch (error) {
@@ -167,32 +204,68 @@ export default function AirdropPage() {
       return;
     }
     
+    // Show donation acknowledgment
+    const donationAmount = parseTokenAmount(airdrop.amount) * 0.10;
+    const confirmed = confirm(
+      `🎁 Claim ${airdrop.protocol} Airdrop\n\n` +
+      `Amount: ${airdrop.amount}\n` +
+      `Value: ${airdrop.value}\n\n` +
+      `📢 IMPORTANT: 10% Donation to Dev Wallet\n` +
+      `Donation: ${donationAmount.toLocaleString()} tokens (~$${(donationAmount * PLACEHOLDER_TOKEN_VALUE_USD).toFixed(2)})\n\n` +
+      `Dev wallet: monads.solana\n\n` +
+      `This helps support the development of GXQ Studio.\n\n` +
+      `Do you want to proceed with the claim?`
+    );
+    
+    if (!confirmed) {
+      console.log('User cancelled claim');
+      return;
+    }
+    
     try {
+      setLoading(true);
+      
+      // Note: In production, this would:
+      // 1. Build the claim transaction on client using wallet adapter
+      // 2. Sign it with the connected wallet
+      // 3. Submit signed transaction to API or RPC
+      // 
+      // Current implementation is a placeholder that demonstrates the flow
+      // without actual transaction execution (requires protocol SDK integration)
+      
       const response = await fetch('/api/airdrops/claim', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           protocol: airdrop.protocol,
           walletAddress: publicKey.toString(),
+          signedTransaction: 'PLACEHOLDER_PENDING_SDK_INTEGRATION',
         }),
       });
-      
-      if (!response.ok) {
-        throw new Error(`Failed to claim airdrop: ${response.statusText}`);
-      }
       
       const result = await response.json();
       
       if (result.success) {
-        alert(`✅ Successfully claimed ${airdrop.amount} from ${airdrop.protocol}!\n\nSignature: ${result.signature}`);
+        alert(
+          `✅ Successfully claimed ${airdrop.amount} from ${airdrop.protocol}!\n\n` +
+          `Transaction: ${result.signature}\n` +
+          `Donation: ${result.donationSignature}\n\n` +
+          `Thank you for supporting GXQ Studio! 🎉`
+        );
         // Refresh airdrops after claiming
         await checkAirdrops();
       } else {
-        alert(`❌ Failed to claim airdrop: ${result.error}`);
+        alert(
+          `⚠️ Claim Status: ${result.message}\n\n` +
+          `${result.note}\n\n` +
+          `Error: ${result.error || 'See console for details'}`
+        );
       }
     } catch (error) {
       console.error('Error claiming airdrop:', error);
       alert(`❌ Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -208,31 +281,65 @@ export default function AirdropPage() {
       return;
     }
     
+    // Calculate total donation using helper function
+    const totalAmount = claimable.reduce((sum, a) => sum + parseTokenAmount(a.amount), 0);
+    const totalDonation = totalAmount * 0.10;
+    const totalValue = calculateTotalClaimableValue(airdrops);
+    
+    // Show comprehensive claim confirmation
+    const confirmed = confirm(
+      `🎁 Claim All Airdrops\n\n` +
+      `Total Claims: ${claimable.length}\n` +
+      `Protocols: ${claimable.map(a => a.protocol).join(', ')}\n` +
+      `Total Tokens: ${totalAmount.toLocaleString()}\n` +
+      `Total Value: $${totalValue.toFixed(2)}\n\n` +
+      `📢 DONATION TO DEV WALLET\n` +
+      `10% of all claims: ${totalDonation.toLocaleString()} tokens (~$${(totalDonation * PLACEHOLDER_TOKEN_VALUE_USD).toFixed(2)})\n` +
+      `Dev wallet: monads.solana\n\n` +
+      `This supports the continued development of GXQ Studio.\n\n` +
+      `Proceed with batch claim?`
+    );
+    
+    if (!confirmed) {
+      console.log('User cancelled batch claim');
+      return;
+    }
+    
     try {
+      setLoading(true);
+      
       const response = await fetch('/api/airdrops/claim-all', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           walletAddress: publicKey.toString(),
+          signedTransactions: [], // Placeholder
+          protocols: claimable.map(a => a.protocol),
         }),
       });
-      
-      if (!response.ok) {
-        throw new Error(`Failed to claim airdrops: ${response.statusText}`);
-      }
       
       const result = await response.json();
       
       if (result.success) {
-        alert(`✅ Successfully claimed ${result.claimed} out of ${claimable.length} airdrops!\n\nCheck your wallet for tokens.`);
+        alert(
+          `✅ Successfully claimed ${result.claimed} out of ${claimable.length} airdrops!\n\n` +
+          `Check your wallet for tokens.\n\n` +
+          `Thank you for supporting GXQ Studio! 🎉`
+        );
         // Refresh airdrops after claiming
         await checkAirdrops();
       } else {
-        alert(`❌ Failed to claim airdrops: ${result.error}`);
+        alert(
+          `⚠️ Batch Claim Status: ${result.message}\n\n` +
+          `${result.note}\n\n` +
+          `Total Claims: ${result.totalClaims || claimable.length}`
+        );
       }
     } catch (error) {
       console.error('Error claiming airdrops:', error);
       alert(`❌ Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -524,49 +631,105 @@ export default function AirdropPage() {
                 <h2 className="text-2xl font-bold text-white">💰 Claimable Airdrops</h2>
                 <button
                   onClick={claimAll}
-                  disabled={!airdrops.some((a) => a.claimable)}
-                  className="bg-gradient-to-r from-green-600 to-emerald-600 text-white px-6 py-3 rounded-lg font-bold hover:from-green-700 hover:to-emerald-700 transition disabled:opacity-50 neon-pulse-green"
+                  disabled={loading || !airdrops.some((a) => a.claimable && !a.claimed)}
+                  className="bg-gradient-to-r from-green-600 to-emerald-600 text-white px-6 py-3 rounded-lg font-bold hover:from-green-700 hover:to-emerald-700 transition disabled:opacity-50 disabled:cursor-not-allowed neon-pulse-green"
                 >
-                  Claim All
+                  {loading ? 'Processing...' : 'Claim All'}
                 </button>
               </div>
 
               <div className="space-y-4">
-                {airdrops.map((airdrop, index) => (
-                  <motion.div
-                    key={airdrop.protocol}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.5 + index * 0.1 }}
-                    className="metadata-card bg-white/5 rounded-xl p-4 flex items-center justify-between"
-                  >
-                    <div className="flex-1">
-                      <h3 className="text-xl font-bold text-white">{airdrop.protocol}</h3>
-                      <div className="flex gap-4 mt-1">
-                        <span className="text-purple-400">{airdrop.amount}</span>
-                        <span className="text-green-400">{airdrop.value}</span>
+                {airdrops.length === 0 ? (
+                  <div className="text-center py-12">
+                    <div className="text-6xl mb-4">🔍</div>
+                    <h3 className="text-xl font-bold text-white mb-2">No Airdrops Found</h3>
+                    <p className="text-gray-400">
+                      This wallet is not currently eligible for any active airdrops.
+                      <br />
+                      Check back later or increase your on-chain activity!
+                    </p>
+                  </div>
+                ) : (
+                  airdrops.map((airdrop, index) => (
+                    <motion.div
+                      key={airdrop.protocol}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.5 + index * 0.1 }}
+                      className={`metadata-card rounded-xl p-4 flex items-center justify-between ${
+                        airdrop.claimable ? 'bg-green-900/20 border border-green-500/30' : 
+                        airdrop.claimed ? 'bg-gray-900/20 border border-gray-500/30' : 
+                        'bg-white/5'
+                      }`}
+                    >
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-xl font-bold text-white">{airdrop.protocol}</h3>
+                          {airdrop.claimed && (
+                            <span className="text-xs bg-gray-700 text-gray-300 px-2 py-1 rounded">✓ Claimed</span>
+                          )}
+                          {airdrop.claimable && !airdrop.claimed && (
+                            <span className="text-xs bg-green-700 text-green-200 px-2 py-1 rounded animate-pulse">● Live</span>
+                          )}
+                          {airdrop.onChainVerified && (
+                            <span className="text-xs bg-blue-700 text-blue-200 px-2 py-1 rounded" title="Verified on-chain">⛓️ Verified</span>
+                          )}
+                        </div>
+                        <div className="flex gap-4 mt-1">
+                          <span className="text-purple-400">💎 {airdrop.amount}</span>
+                          <span className="text-green-400">💵 {airdrop.value}</span>
+                        </div>
+                        {airdrop.eligibilityReason && (
+                          <div className="text-xs text-gray-400 mt-1">
+                            {airdrop.eligibilityReason}
+                          </div>
+                        )}
+                        {airdrop.claimDeadline && (
+                          <div className="text-xs text-orange-400 mt-1">
+                            ⏰ Deadline: {new Date(airdrop.claimDeadline).toLocaleDateString()}
+                          </div>
+                        )}
                       </div>
-                    </div>
-                    {airdrop.claimable ? (
-                      <button
-                        onClick={() => claimAirdrop(airdrop)}
-                        className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-bold transition"
-                      >
-                        Claim
-                      </button>
-                    ) : (
-                      <span className="text-gray-400 px-6 py-3">Not Eligible</span>
-                    )}
-                  </motion.div>
-                ))}
+                      {airdrop.claimable && !airdrop.claimed ? (
+                        <button
+                          onClick={() => claimAirdrop(airdrop)}
+                          disabled={loading}
+                          className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-bold transition disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {loading ? 'Processing...' : 'Claim'}
+                        </button>
+                      ) : airdrop.claimed ? (
+                        <span className="text-gray-500 px-6 py-3 font-bold">✓ Claimed</span>
+                      ) : (
+                        <span className="text-gray-400 px-6 py-3">Not Eligible</span>
+                      )}
+                    </motion.div>
+                  ))
+                )}
               </div>
 
-              <div className="mt-6 p-4 bg-purple-900/30 rounded-lg">
-                <div className="flex justify-between text-white">
-                  <span className="font-bold">Total Claimable Value:</span>
-                  <span className="text-2xl font-bold text-green-400">
-                    ${airdrops.filter((a) => a.claimable).reduce((sum, a) => sum + parseFloat(a.value.replace('$', '')), 0).toFixed(2)}
-                  </span>
+              <div className="mt-6 p-4 bg-purple-900/30 rounded-lg border border-purple-500/30">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <div className="text-sm text-gray-300 mb-1">Claimable Airdrops</div>
+                    <div className="text-2xl font-bold text-white">
+                      {airdrops.filter((a) => a.claimable && !a.claimed).length}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-sm text-gray-300 mb-1">Total Value</div>
+                    <div className="text-2xl font-bold text-green-400">
+                      ${calculateTotalClaimableValue(airdrops).toFixed(2)}
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-4 pt-4 border-t border-white/10">
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-gray-300">💰 Dev Fee (10%):</span>
+                    <span className="text-yellow-400 font-bold">
+                      ${(calculateTotalClaimableValue(airdrops) * 0.10).toFixed(2)}
+                    </span>
+                  </div>
                 </div>
               </div>
             </motion.div>
