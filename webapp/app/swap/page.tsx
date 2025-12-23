@@ -31,9 +31,14 @@ export default function SwapPage() {
         if (response.ok) {
           const data = await response.json();
           if (data.success && data.tokens) {
+            // Type definition for Jupiter token response
+            interface JupiterToken {
+              symbol?: string;
+              address?: string;
+            }
             // Filter for popular tokens
             const popularTokens = data.tokens
-              .filter((t: { symbol?: string; address?: string }) => t.symbol && t.address)
+              .filter((t: JupiterToken) => t.symbol && t.address)
               .slice(0, 50);
             setTokenList(popularTokens);
             console.log('[Swap] Loaded Jupiter token list:', popularTokens.length);

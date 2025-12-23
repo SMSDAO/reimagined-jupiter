@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { motion } from 'framer-motion';
 import { loadUserSettings, saveUserSettings, getDefaultSettings, clearTradeHistory } from '@/lib/storage';
@@ -16,8 +16,8 @@ export default function AdminPanel() {
     typeof window !== 'undefined' && 'Notification' in window ? Notification.permission : 'default'
   );
 
-  // Check if current wallet is admin
-  const userIsAdmin = isAdmin(publicKey?.toString());
+  // Memoize admin check to avoid repeated calculations
+  const userIsAdmin = useMemo(() => isAdmin(publicKey?.toString()), [publicKey]);
 
   const handleSave = () => {
     saveUserSettings(settings);

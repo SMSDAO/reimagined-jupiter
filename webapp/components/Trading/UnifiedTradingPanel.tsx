@@ -139,6 +139,7 @@ export default function UnifiedTradingPanel({
                   <label className="text-white text-sm mb-2 block">
                     Priority Fee: {(priorityFee / 1_000_000).toFixed(3)} SOL
                   </label>
+                  <div className="text-xs text-gray-400 mb-2">Priority fee in lamports (1 SOL = 1,000,000,000 lamports)</div>
                   <input
                     type="range"
                     value={priorityFee}
