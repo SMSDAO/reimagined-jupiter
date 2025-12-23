@@ -129,13 +129,14 @@ export default function SwapPage() {
   };
 
   const getPriorityFeeLamports = (level: string): number => {
-    const fees = {
-      low: 10000,
-      medium: 100000,
-      high: 1000000,
-      critical: 10000000,
+    // Priority fee amounts in lamports
+    const PRIORITY_FEES = {
+      low: 10000,       // ~0.00001 SOL
+      medium: 100000,   // ~0.0001 SOL
+      high: 1000000,    // ~0.001 SOL
+      critical: 10000000, // ~0.01 SOL (max 10M lamports)
     };
-    return fees[level as keyof typeof fees] || fees.medium;
+    return PRIORITY_FEES[level as keyof typeof PRIORITY_FEES] || PRIORITY_FEES.medium;
   };
 
   const getTokenMint = (token: string): string => {
