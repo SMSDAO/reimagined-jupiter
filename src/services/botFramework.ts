@@ -25,6 +25,8 @@ import { ProfitDistributionManager } from '../utils/profitDistribution.js';
 import { getProfitTracker, initializeProfitTracker } from '../../lib/profit-tracker.js';
 import { insertWalletAuditLog } from '../../db/database.js';
 import { config } from '../config/index.js';
+import { OracleService } from './intelligence/OracleService.js';
+import { AnalysisContext } from './intelligence/types.js';
 
 export type SigningMode = 'CLIENT_SIDE' | 'SERVER_SIDE' | 'ENCLAVE';
 export type BotType = 'ARBITRAGE' | 'SNIPER' | 'FLASH_LOAN' | 'TRIANGULAR' | 'CUSTOM';
@@ -510,14 +512,20 @@ export class BotExecutionEngine {
   private sandboxes = new Map<string, BotSandbox>();
   private profitDistributionManager: ProfitDistributionManager;
   private profitTrackerInitialized = false;
+  private oracleService?: OracleService;
   
   // Minimum SOL balance required for bot execution
   private readonly MIN_SOL_BALANCE = 0.05; // 0.05 SOL minimum
 
-  constructor(connection: Connection) {
+  constructor(connection: Connection, oracleService?: OracleService) {
     this.connection = connection;
     this.replayProtection = new ReplayProtection();
     this.profitDistributionManager = new ProfitDistributionManager(connection);
+    this.oracleService = oracleService;
+    
+    if (oracleService) {
+      console.log('✅ Bot Execution Engine initialized with Oracle Intelligence');
+    }
   }
 
   /**
@@ -601,13 +609,14 @@ export class BotExecutionEngine {
    * Deterministic execution flow:
    * 1. Pre-flight Balance Check
    * 2. Replay Protection Validation
-   * 3. Sandbox Isolation
-   * 4. Pre-trade Balance Snapshot
-   * 5. Transaction Submission & Confirmation
-   * 6. Post-trade Balance Snapshot & Profit Calculation
-   * 7. DAO Skim (if applicable)
-   * 8. Telemetry Recording (Database + Profit Tracker)
-   * 9. Sandbox Cleanup & Key Wiping (in finally block)
+   * 3. Pre-execution Intelligence Analysis (Oracle)
+   * 4. Sandbox Isolation
+   * 5. Pre-trade Balance Snapshot
+   * 6. Transaction Submission & Confirmation
+   * 7. Post-trade Balance Snapshot & Profit Calculation
+   * 8. DAO Skim (if applicable)
+   * 9. Telemetry Recording (Database + Profit Tracker)
+   * 10. Sandbox Cleanup & Key Wiping (in finally block)
    */
   async executeTransaction(
     bot: BotConfig,
@@ -616,6 +625,7 @@ export class BotExecutionEngine {
     options: {
       skipPreflight?: boolean;
       maxRetries?: number;
+      analysisContext?: Partial<AnalysisContext>;
     } = {}
   ): Promise<BotExecution> {
     const executionId = crypto.randomUUID();
@@ -698,7 +708,65 @@ export class BotExecutionEngine {
         };
       }
 
-      // STEP 3: Sandbox Isolation
+      // STEP 3: Pre-execution Intelligence Analysis (Oracle)
+      if (this.oracleService) {
+        console.log('🔮 Running Oracle intelligence analysis...');
+        
+        const analysisContext: AnalysisContext = {
+          botId: bot.id,
+          userId: bot.userId,
+          executionId,
+          botType: bot.botType,
+          ...options.analysisContext,
+        };
+        
+        try {
+          const oracleResult = await this.oracleService.analyzeExecution(analysisContext);
+          
+          console.log(`🔮 Oracle recommendation: ${oracleResult.overallRecommendation} (${oracleResult.confidence} confidence)`);
+          
+          // If Oracle recommends ABORT, stop execution
+          if (oracleResult.recommendation === 'ABORT') {
+            errorMessage = `Oracle intelligence blocked execution: ${oracleResult.reasoning}`;
+            
+            // Log Oracle abort
+            await this.logExecutionToDatabase(
+              bot,
+              executionId,
+              undefined,
+              undefined,
+              0,
+              0,
+              false,
+              errorMessage
+            );
+            
+            return {
+              id: executionId,
+              botId: bot.id,
+              userId: bot.userId,
+              executionType: bot.botType,
+              status: 'FAILED',
+              errorMessage,
+              executedAt: timestamp,
+            };
+          }
+          
+          // If Oracle recommends ADJUST, apply adjustments
+          if (oracleResult.recommendation === 'ADJUST' && oracleResult.adjustments) {
+            console.log('🔧 Applying Oracle adjustments:', oracleResult.adjustments);
+            
+            // Adjustments could be applied here if transaction is mutable
+            // For now, log the recommendations
+            console.log('ℹ️ Oracle adjustments logged but not applied to pre-built transaction');
+          }
+        } catch (oracleError) {
+          // Log Oracle error but don't abort execution (fail-safe)
+          console.error('⚠️ Oracle analysis error (proceeding anyway):', oracleError);
+        }
+      }
+
+      // STEP 4: Sandbox Isolation
       sandbox = this.getSandbox(
         bot.userId,
         bot.id,
@@ -706,11 +774,11 @@ export class BotExecutionEngine {
         ['bot.execute', 'wallet.sign']
       );
 
-      // STEP 4: Pre-trade Balance Snapshot
+      // STEP 5: Pre-trade Balance Snapshot
       preTradeBalance = await this.connection.getBalance(signer.publicKey);
       console.log(`📸 Pre-trade balance snapshot: ${(preTradeBalance / LAMPORTS_PER_SOL).toFixed(6)} SOL`);
 
-      // STEP 5: Transaction Submission & Confirmation
+      // STEP 6: Transaction Submission & Confirmation
       signature = await sandbox.execute(async () => {
         return await sendAndConfirmTransaction(
           this.connection,
@@ -728,7 +796,7 @@ export class BotExecutionEngine {
       
       console.log(`✅ Transaction confirmed: ${signature}`);
 
-      // STEP 6: Post-trade Balance Snapshot & Profit Calculation
+      // STEP 7: Post-trade Balance Snapshot & Profit Calculation
       postTradeBalance = await this.connection.getBalance(signer.publicKey);
       console.log(`📸 Post-trade balance snapshot: ${(postTradeBalance / LAMPORTS_PER_SOL).toFixed(6)} SOL`);
       
@@ -738,7 +806,7 @@ export class BotExecutionEngine {
       
       console.log(`💰 Profit calculation: ${(profitLamports / LAMPORTS_PER_SOL).toFixed(6)} SOL`);
 
-      // STEP 7: DAO Skim (if applicable)
+      // STEP 8: DAO Skim (if applicable)
       if (profitLamports > 0 && config.profitDistribution.enabled) {
         console.log(`🏦 Profit detected (${(profitLamports / LAMPORTS_PER_SOL).toFixed(6)} SOL), triggering DAO skim...`);
         
@@ -767,7 +835,7 @@ export class BotExecutionEngine {
 
       executionSuccess = true;
       
-      // STEP 8: Telemetry Recording
+      // STEP 9: Telemetry Recording
       // 8a. Database audit log
       await this.logExecutionToDatabase(
         bot,
@@ -832,7 +900,7 @@ export class BotExecutionEngine {
         executedAt: timestamp,
       };
     } finally {
-      // STEP 9: Sandbox Cleanup & Key Wiping
+      // STEP 10: Sandbox Cleanup & Key Wiping
       // Critical: Key wiping MUST happen after all operations including distribution
       if (sandbox) {
         sandbox.clearState();
