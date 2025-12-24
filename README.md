@@ -411,6 +411,32 @@ See [API Validation Guide](./docs/API_VALIDATION.md) for complete documentation.
 
 See [Deployment Automation Guide](./docs/DEPLOYMENT_AUTOMATION.md) for setup instructions.
 
+## 🧠 Autonomous Oracle - CI/CD Intelligence
+
+The **Autonomous Oracle** continuously analyzes the codebase during CI/CD pipeline execution to ensure code quality, security, and performance optimization.
+
+### Key Capabilities
+- **🏗️ Architecture Analysis**: Detects circular dependencies, god classes, and architectural debt
+- **🔒 Security Scanning**: Identifies vulnerabilities, validates RBAC/encryption usage
+- **⚡ Gas Optimization**: Analyzes compute units and priority fees for Solana efficiency
+- **⚙️ Mainnet Compatibility**: Validates versioned transactions and best practices
+- **🧬 Evolution Intelligence**: Identifies technical debt and suggests modern patterns
+- **🎫 Auto-Ticketing**: Creates GitHub issues for critical findings
+
+### Health Score System
+- **90-100**: Excellent - Deploy with confidence
+- **70-89**: Good - Minor improvements recommended
+- **50-69**: Fair - Address issues before deployment
+- **0-49**: Poor - Critical issues require immediate attention
+
+### Integration
+The oracle runs automatically in CI/CD and blocks deployment if critical issues are detected:
+- ❌ Critical issues = Deployment blocked
+- ⚠️ High issues (>2) = Review required
+- ✅ No blockers = Safe to deploy
+
+See [AUTONOMOUS_ORACLE.md](./AUTONOMOUS_ORACLE.md) for complete documentation.
+
 ## 📊 Flash Loan Provider Comparison
 
 | Provider | Fee | Liquidity | Speed | Best For |
