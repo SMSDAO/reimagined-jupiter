@@ -10,6 +10,23 @@ import jwt from 'jsonwebtoken';
 const JWT_EXPIRATION = '24h';
 const BCRYPT_ROUNDS = 10;
 
+// User roles
+export enum UserRole {
+  USER = 'user',
+  ADMIN = 'admin',
+  SERVICE = 'service',
+}
+
+// JWT payload interface
+export interface JWTPayload {
+  userId?: string;
+  walletAddress?: string;
+  role: UserRole;
+  permissions?: string[];
+  iat?: number;
+  exp?: number;
+}
+
 /**
  * Hash a password using bcrypt
  */
@@ -28,10 +45,10 @@ export async function verifyPassword(
 }
 
 /**
- * Generate a JWT token
+ * Generate a JWT token with role-based scoping
  */
 export function generateToken(
-  payload: Record<string, any>,
+  payload: JWTPayload,
   options?: { expiresIn?: string }
 ): string {
   const jwtSecret = process.env.JWT_SECRET;
@@ -40,11 +57,15 @@ export function generateToken(
     throw new Error('JWT_SECRET not configured');
   }
   
+  // Ensure role is set (default to USER)
+  const tokenPayload: JWTPayload = {
+    ...payload,
+    role: payload.role || UserRole.USER,
+    iat: Math.floor(Date.now() / 1000),
+  };
+  
   return jwt.sign(
-    {
-      ...payload,
-      iat: Math.floor(Date.now() / 1000),
-    },
+    tokenPayload,
     jwtSecret,
     {
       expiresIn: options?.expiresIn || JWT_EXPIRATION,
@@ -53,11 +74,11 @@ export function generateToken(
 }
 
 /**
- * Verify a JWT token
+ * Verify a JWT token with role validation
  */
 export function verifyToken(token: string): {
   valid: boolean;
-  payload?: any;
+  payload?: JWTPayload;
   error?: string;
 } {
   try {
@@ -70,7 +91,15 @@ export function verifyToken(token: string): {
       };
     }
     
-    const payload = jwt.verify(token, jwtSecret);
+    const payload = jwt.verify(token, jwtSecret) as JWTPayload;
+    
+    // Validate role exists
+    if (!payload.role || !Object.values(UserRole).includes(payload.role)) {
+      return {
+        valid: false,
+        error: 'Invalid role in token',
+      };
+    }
     
     return {
       valid: true,
@@ -255,6 +284,130 @@ export function validateApiKey(apiKey: string): boolean {
   return /^gxq_[A-Za-z0-9]{32}$/.test(apiKey);
 }
 
+/**
+ * Check if user has required role
+ */
+export function hasRole(payload: JWTPayload | undefined, requiredRole: UserRole): boolean {
+  if (!payload || !payload.role) {
+    return false;
+  }
+  
+  // Admin has access to everything
+  if (payload.role === UserRole.ADMIN) {
+    return true;
+  }
+  
+  return payload.role === requiredRole;
+}
+
+/**
+ * Check if user has any of the required roles
+ */
+export function hasAnyRole(payload: JWTPayload | undefined, requiredRoles: UserRole[]): boolean {
+  if (!payload || !payload.role) {
+    return false;
+  }
+  
+  // Admin has access to everything
+  if (payload.role === UserRole.ADMIN) {
+    return true;
+  }
+  
+  return requiredRoles.includes(payload.role);
+}
+
+/**
+ * Check if user has specific permission
+ */
+export function hasPermission(payload: JWTPayload | undefined, permission: string): boolean {
+  if (!payload) {
+    return false;
+  }
+  
+  // Admin has all permissions
+  if (payload.role === UserRole.ADMIN) {
+    return true;
+  }
+  
+  return payload.permissions?.includes(permission) || false;
+}
+
+/**
+ * Validate wallet ownership
+ */
+export function validateWalletOwnership(
+  payload: JWTPayload | undefined,
+  walletAddress: string
+): boolean {
+  if (!payload) {
+    return false;
+  }
+  
+  // Admin can access any wallet
+  if (payload.role === UserRole.ADMIN) {
+    return true;
+  }
+  
+  // Check if the wallet address matches the one in the token
+  return payload.walletAddress === walletAddress;
+}
+
+/**
+ * Create authorization middleware result
+ */
+export interface AuthorizationResult {
+  authorized: boolean;
+  error?: string;
+  payload?: JWTPayload;
+}
+
+/**
+ * Authorize request with role check
+ */
+export function authorizeRequest(
+  authHeader: string | undefined,
+  requiredRoles?: UserRole[]
+): AuthorizationResult {
+  const token = extractTokenFromHeader(authHeader);
+  
+  if (!token) {
+    return {
+      authorized: false,
+      error: 'No authorization token provided',
+    };
+  }
+  
+  const verification = verifyToken(token);
+  
+  if (!verification.valid) {
+    return {
+      authorized: false,
+      error: verification.error || 'Invalid token',
+    };
+  }
+  
+  // If no specific roles required, just check if token is valid
+  if (!requiredRoles || requiredRoles.length === 0) {
+    return {
+      authorized: true,
+      payload: verification.payload,
+    };
+  }
+  
+  // Check if user has required role
+  if (!hasAnyRole(verification.payload, requiredRoles)) {
+    return {
+      authorized: false,
+      error: 'Insufficient permissions',
+    };
+  }
+  
+  return {
+    authorized: true,
+    payload: verification.payload,
+  };
+}
+
 export default {
   hashPassword,
   verifyPassword,
@@ -267,4 +420,10 @@ export default {
   authRateLimiter,
   generateApiKey,
   validateApiKey,
+  hasRole,
+  hasAnyRole,
+  hasPermission,
+  validateWalletOwnership,
+  authorizeRequest,
+  UserRole,
 };

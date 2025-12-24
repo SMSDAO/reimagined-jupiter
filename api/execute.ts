@@ -1,11 +1,13 @@
 /**
  * Vercel serverless function for trade execution
  * Schedule: Every 30 seconds via Vercel cron
+ * Enhanced with wallet permission checks
  */
 
 import { Connection, Keypair, VersionedTransaction } from '@solana/web3.js';
 import bs58 from 'bs58';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { authorizeRequest, UserRole } from '../lib/auth';
 
 // Verify Vercel cron authorization
 function isValidCronRequest(req: VercelRequest): boolean {
@@ -45,19 +47,32 @@ export default async function handler(
 ) {
   console.log('⚡ Execute cron triggered');
   
-  // Verify cron authorization
-  if (!isValidCronRequest(req)) {
-    console.warn('⚠️ Unauthorized execute request');
-    return res.status(401).json({
-      success: false,
-      tradesExecuted: 0,
-      successCount: 0,
-      failCount: 0,
-      totalProfit: 0,
-      transactions: [],
-      timestamp: Date.now(),
-      error: 'Unauthorized',
-    });
+  // For cron jobs, verify cron authorization
+  // For API calls, verify JWT authorization
+  const isCron = isValidCronRequest(req);
+  
+  if (!isCron) {
+    // Not a cron job, check for JWT authorization
+    const auth = authorizeRequest(
+      req.headers.authorization as string | undefined,
+      [UserRole.USER, UserRole.ADMIN, UserRole.SERVICE]
+    );
+    
+    if (!auth.authorized) {
+      console.warn('⚠️ Unauthorized execute request');
+      return res.status(401).json({
+        success: false,
+        tradesExecuted: 0,
+        successCount: 0,
+        failCount: 0,
+        totalProfit: 0,
+        transactions: [],
+        timestamp: Date.now(),
+        error: auth.error || 'Unauthorized',
+      });
+    }
+    
+    console.log('✅ Authorized API execution request from:', auth.payload?.userId || 'unknown');
   }
   
   try {
@@ -70,6 +85,7 @@ export default async function handler(
     let keypair: Keypair;
     try {
       // Support both base58 and array formats
+      // SECURITY: Never log the private key
       const privateKey = privateKeyString.includes('[')
         ? Uint8Array.from(JSON.parse(privateKeyString))
         : bs58.decode(privateKeyString);

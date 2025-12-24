@@ -15,6 +15,9 @@ interface UnifiedTradingPanelProps {
 export interface TradingSettings {
   autoExecute: boolean;
   priorityFee: 'low' | 'medium' | 'high' | 'critical';
+  priorityFeeLamports?: number; // Custom priority fee in lamports
+  jitoTip: number; // Jito tip in lamports (0 = disabled)
+  executionSpeed: 'normal' | 'fast' | 'turbo' | 'mev-protected';
   slippage: number;
   customSlippage?: number;
   customRpcUrl?: string;
@@ -46,13 +49,33 @@ export default function UnifiedTradingPanel({
   const [settings, setSettings] = useState<TradingSettings>({
     autoExecute: userSettings.autoExecute,
     priorityFee: 'medium',
+    priorityFeeLamports: undefined,
+    jitoTip: 0,
+    executionSpeed: 'normal',
     slippage: userSettings.slippage,
   });
 
   const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
   const [customSlippageInput, setCustomSlippageInput] = useState('');
+  const [customPriorityFeeInput, setCustomPriorityFeeInput] = useState('');
 
   const slippagePresets = [0.1, 0.5, 1, 5];
+  
+  // Priority fee presets in lamports
+  const priorityFeePresets = {
+    low: 10000, // 0.00001 SOL
+    medium: 100000, // 0.0001 SOL
+    high: 1000000, // 0.001 SOL
+    critical: 10000000, // 0.01 SOL (max 10M lamports)
+  };
+  
+  // Execution speed configurations
+  const executionSpeedInfo = {
+    normal: { label: 'Normal', description: 'Standard execution', color: 'bg-gray-600' },
+    fast: { label: 'Fast', description: 'Higher priority', color: 'bg-blue-600' },
+    turbo: { label: 'Turbo', description: 'Maximum priority', color: 'bg-purple-600' },
+    'mev-protected': { label: 'MEV-Protected', description: 'Jito bundle', color: 'bg-green-600' },
+  };
 
   useEffect(() => {
     onSettingsChange?.(settings);
@@ -133,18 +156,25 @@ export default function UnifiedTradingPanel({
           </div>
         </div>
 
-        {/* Gas/Priority Fee Controls */}
+        {/* Gas/Priority Fee Controls with Slider */}
         <div>
-          <label className="text-white text-sm font-semibold mb-2 block">⛽ Priority Fee</label>
-          <div className="grid grid-cols-2 gap-2">
+          <label className="text-white text-sm font-semibold mb-2 block">
+            ⛽ Priority Fee: {settings.priorityFeeLamports 
+              ? `${(settings.priorityFeeLamports / 1e9).toFixed(6)} SOL` 
+              : priorityFeeInfo[settings.priorityFee].fee}
+          </label>
+          <div className="grid grid-cols-2 gap-2 mb-3">
             {(Object.keys(priorityFeeInfo) as Array<keyof typeof priorityFeeInfo>).map((level) => (
               <motion.button
                 key={level}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                onClick={() => handleSettingChange({ priorityFee: level })}
+                onClick={() => handleSettingChange({ 
+                  priorityFee: level,
+                  priorityFeeLamports: priorityFeePresets[level],
+                })}
                 className={`px-3 py-2 rounded-lg transition-all text-sm ${
-                  settings.priorityFee === level
+                  settings.priorityFee === level && !customPriorityFeeInput
                     ? `${priorityFeeInfo[level].color} text-white shadow-lg`
                     : 'bg-white/10 text-gray-300 hover:bg-white/20'
                 }`}
@@ -154,10 +184,103 @@ export default function UnifiedTradingPanel({
               </motion.button>
             ))}
           </div>
+          
+          {/* Priority Fee Slider */}
+          <div className="space-y-2">
+            <input
+              type="range"
+              min="1000"
+              max="10000000"
+              step="10000"
+              value={settings.priorityFeeLamports || priorityFeePresets[settings.priorityFee]}
+              onChange={(e) => {
+                const lamports = parseInt(e.target.value);
+                handleSettingChange({ 
+                  priorityFeeLamports: lamports,
+                  priorityFee: 'medium', // Reset preset when using slider
+                });
+              }}
+              className="w-full h-2 bg-white/20 rounded-lg appearance-none cursor-pointer slider"
+              style={{
+                background: `linear-gradient(to right, #3b82f6 0%, #8b5cf6 ${
+                  ((settings.priorityFeeLamports || priorityFeePresets[settings.priorityFee]) / 10000000) * 100
+                }%, rgba(255,255,255,0.2) ${
+                  ((settings.priorityFeeLamports || priorityFeePresets[settings.priorityFee]) / 10000000) * 100
+                }%)`,
+              }}
+            />
+            <div className="flex justify-between text-xs text-gray-400">
+              <span>0.000001 SOL</span>
+              <span>0.01 SOL (max)</span>
+            </div>
+          </div>
+          
           <p className="text-gray-400 text-xs mt-2">
-            Higher priority = faster confirmation but higher fees
+            Higher priority = faster confirmation but higher fees (max 10M lamports)
           </p>
         </div>
+
+        {/* Execution Speed Selector */}
+        <div>
+          <label className="text-white text-sm font-semibold mb-2 block">
+            ⚡ Execution Speed
+          </label>
+          <div className="grid grid-cols-2 gap-2">
+            {(Object.keys(executionSpeedInfo) as Array<keyof typeof executionSpeedInfo>).map((speed) => (
+              <motion.button
+                key={speed}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => handleSettingChange({ executionSpeed: speed })}
+                className={`px-3 py-2 rounded-lg transition-all text-sm ${
+                  settings.executionSpeed === speed
+                    ? `${executionSpeedInfo[speed].color} text-white shadow-lg`
+                    : 'bg-white/10 text-gray-300 hover:bg-white/20'
+                }`}
+              >
+                <div className="font-semibold">{executionSpeedInfo[speed].label}</div>
+                <div className="text-xs opacity-75">{executionSpeedInfo[speed].description}</div>
+              </motion.button>
+            ))}
+          </div>
+          <p className="text-gray-400 text-xs mt-2">
+            MEV-Protected uses Jito bundles for frontrun protection
+          </p>
+        </div>
+
+        {/* Jito Tip Slider (shown when MEV-Protected is selected) */}
+        {settings.executionSpeed === 'mev-protected' && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+          >
+            <label className="text-white text-sm font-semibold mb-2 block">
+              💎 Jito Tip: {(settings.jitoTip / 1e9).toFixed(6)} SOL
+            </label>
+            <input
+              type="range"
+              min="0"
+              max="10000000"
+              step="10000"
+              value={settings.jitoTip}
+              onChange={(e) => handleSettingChange({ jitoTip: parseInt(e.target.value) })}
+              className="w-full h-2 bg-white/20 rounded-lg appearance-none cursor-pointer slider"
+              style={{
+                background: `linear-gradient(to right, #10b981 0%, #059669 ${
+                  (settings.jitoTip / 10000000) * 100
+                }%, rgba(255,255,255,0.2) ${(settings.jitoTip / 10000000) * 100}%)`,
+              }}
+            />
+            <div className="flex justify-between text-xs text-gray-400 mt-2">
+              <span>0 SOL (disabled)</span>
+              <span>0.01 SOL</span>
+            </div>
+            <p className="text-gray-400 text-xs mt-2">
+              Higher tips increase bundle priority. Set to 0 to disable Jito.
+            </p>
+          </motion.div>
+        )}
 
         {/* Slippage Controls */}
         <div>
@@ -181,6 +304,32 @@ export default function UnifiedTradingPanel({
               </motion.button>
             ))}
           </div>
+          
+          {/* Slippage Slider */}
+          <div className="space-y-2 mb-2">
+            <input
+              type="range"
+              min="0.1"
+              max="20"
+              step="0.1"
+              value={settings.slippage}
+              onChange={(e) => {
+                const value = parseFloat(e.target.value);
+                handleSettingChange({ slippage: value, customSlippage: value });
+              }}
+              className="w-full h-2 bg-white/20 rounded-lg appearance-none cursor-pointer slider"
+              style={{
+                background: `linear-gradient(to right, #a855f7 0%, #9333ea ${
+                  (settings.slippage / 20) * 100
+                }%, rgba(255,255,255,0.2) ${(settings.slippage / 20) * 100}%)`,
+              }}
+            />
+            <div className="flex justify-between text-xs text-gray-400">
+              <span>0.1%</span>
+              <span>20%</span>
+            </div>
+          </div>
+          
           <div className="flex gap-2">
             <input
               type="number"
@@ -251,8 +400,8 @@ export default function UnifiedTradingPanel({
           </div>
         )}
 
-        {/* Status Indicator */}
-        <div className="bg-white/5 rounded-lg p-3 border border-white/10">
+        {/* Enhanced Status Indicator */}
+        <div className="bg-white/5 rounded-lg p-3 border border-white/10 space-y-2">
           <div className="flex items-center justify-between text-sm">
             <span className="text-gray-300">Status:</span>
             <div className="flex items-center gap-2">
@@ -266,10 +415,30 @@ export default function UnifiedTradingPanel({
               </span>
             </div>
           </div>
-          <div className="flex items-center justify-between text-sm mt-2">
+          <div className="flex items-center justify-between text-sm">
             <span className="text-gray-300">Auto-Execute:</span>
             <span className="text-white font-semibold">
               {settings.autoExecute ? '✅ Enabled' : '❌ Disabled'}
+            </span>
+          </div>
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-gray-300">Speed:</span>
+            <span className="text-white font-semibold">
+              {executionSpeedInfo[settings.executionSpeed].label}
+            </span>
+          </div>
+          {settings.executionSpeed === 'mev-protected' && settings.jitoTip > 0 && (
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-gray-300">Jito Tip:</span>
+              <span className="text-green-400 font-semibold">
+                {(settings.jitoTip / 1e9).toFixed(6)} SOL
+              </span>
+            </div>
+          )}
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-gray-300">Priority Fee:</span>
+            <span className="text-blue-400 font-semibold">
+              {(settings.priorityFeeLamports || priorityFeePresets[settings.priorityFee]) / 1e9} SOL
             </span>
           </div>
         </div>

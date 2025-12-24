@@ -7,6 +7,10 @@ import { WalletModalProvider } from '@solana/wallet-adapter-react-ui';
 import { 
   PhantomWalletAdapter, 
   SolflareWalletAdapter,
+  LedgerWalletAdapter,
+  TorusWalletAdapter,
+  SlopeWalletAdapter,
+  CoinbaseWalletAdapter,
 } from '@solana/wallet-adapter-wallets';
 import { clusterApiUrl } from '@solana/web3.js';
 import { useWallet as useWalletHook } from '@solana/wallet-adapter-react';
@@ -93,9 +97,12 @@ export const WalletContextProvider: FC<{ children: ReactNode }> = ({ children })
     () => [
       new PhantomWalletAdapter(),
       new SolflareWalletAdapter(),
-      // Additional wallet adapters can be added here as needed
-      // Note: Some adapters may not be available in the current version
-      // of @solana/wallet-adapter-wallets. Check package exports before adding.
+      new LedgerWalletAdapter(),
+      new TorusWalletAdapter(),
+      new SlopeWalletAdapter(),
+      new CoinbaseWalletAdapter(),
+      // WalletConnect and other adapters can be added here
+      // Note: WalletConnect requires additional configuration
     ],
     []
   );
