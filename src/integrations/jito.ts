@@ -188,8 +188,13 @@ export class JitoIntegration {
         tx.feePayer = signers[0].publicKey;
 
         // Convert to versioned transaction
-        const message = TransactionMessage.compileToV0Message(tx.instructions);
-        const versionedTx = new VersionedTransaction(message);
+        const messageV0 = new TransactionMessage({
+          payerKey: signers[0].publicKey,
+          recentBlockhash: blockhash,
+          instructions: tx.instructions,
+        }).compileToV0Message();
+        
+        const versionedTx = new VersionedTransaction(messageV0);
 
         // Sign the transaction
         versionedTx.sign(signers);

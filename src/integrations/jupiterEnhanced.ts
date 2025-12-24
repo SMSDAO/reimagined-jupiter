@@ -189,13 +189,17 @@ export class JupiterEnhancedIntegration {
           throw new Error('Invalid response from Jupiter API');
         }
 
-        const quote = response.data;
+        const quote = (response as { data: any }).data;
 
         // Add to route plan
-        routePlans.push(...quote.routePlan);
+        if (quote && quote.routePlan) {
+          routePlans.push(...quote.routePlan);
+        }
 
         // Update amount for next leg
-        currentAmount = parseInt(quote.outAmount);
+        if (quote && quote.outAmount) {
+          currentAmount = parseInt(quote.outAmount);
+        }
       }
 
       // Return combined quote
