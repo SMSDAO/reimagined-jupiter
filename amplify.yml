@@ -1,0 +1,57 @@
+version: 1
+applications:
+  - frontend:
+      phases:
+        preBuild:
+          commands:
+            - cd webapp
+            - npm ci
+        build:
+          commands:
+            - npm run build
+      artifacts:
+        baseDirectory: webapp/.next
+        files:
+          - '**/*'
+      cache:
+        paths:
+          - webapp/node_modules/**/*
+      buildSpec: |
+        version: 1
+        backend:
+          phases:
+            build:
+              commands:
+                - npm ci
+                - npm run build:backend
+        frontend:
+          phases:
+            preBuild:
+              commands:
+                - cd webapp
+                - npm ci
+            build:
+              commands:
+                - npm run build
+          artifacts:
+            baseDirectory: webapp/.next
+            files:
+              - '**/*'
+          cache:
+            paths:
+              - webapp/node_modules/**/*
+              - node_modules/**/*
+    appRoot: webapp
+    customHeaders:
+      - pattern: '**/*'
+        headers:
+          - key: 'Strict-Transport-Security'
+            value: 'max-age=31536000; includeSubDomains'
+          - key: 'X-Frame-Options'
+            value: 'DENY'
+          - key: 'X-Content-Type-Options'
+            value: 'nosniff'
+          - key: 'X-XSS-Protection'
+            value: '1; mode=block'
+          - key: 'Referrer-Policy'
+            value: 'strict-origin-when-cross-origin'

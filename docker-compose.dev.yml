@@ -1,0 +1,69 @@
+version: '3.8'
+
+# Development Docker Compose Configuration
+# Use: docker-compose -f docker-compose.dev.yml up
+
+services:
+  # Backend Development Server
+  backend-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+      target: backend-dev
+    container_name: gxq-backend-dev
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+      - HOST=0.0.0.0
+      - DEPLOYMENT_PLATFORM=docker-dev
+      
+      # Load from .env file
+      - SOLANA_RPC_URL=${SOLANA_RPC_URL}
+      - SOLANA_WS_URL=${SOLANA_WS_URL}
+      - WALLET_PRIVATE_KEY=${WALLET_PRIVATE_KEY}
+      - LOG_LEVEL=debug
+      
+    volumes:
+      # Mount source code for hot reload
+      - ./src:/app/src
+      - ./lib:/app/lib
+      - ./api:/app/api
+      - ./data:/app/data
+      - ./logs:/app/logs
+    networks:
+      - gxq-dev-network
+    command: npm run dev:server
+
+  # Webapp Development Server
+  webapp-dev:
+    build:
+      context: ./webapp
+      dockerfile: Dockerfile.dev
+    container_name: gxq-webapp-dev
+    restart: unless-stopped
+    ports:
+      - "3001:3000"
+    environment:
+      - NODE_ENV=development
+      - NEXT_PUBLIC_RPC_URL=${NEXT_PUBLIC_RPC_URL:-${SOLANA_RPC_URL}}
+      - NEXT_PUBLIC_BACKEND_URL=http://backend-dev:3000
+      - NEXT_PUBLIC_WS_URL=${NEXT_PUBLIC_WS_URL}
+      - WATCHPACK_POLLING=true
+    volumes:
+      # Mount source for hot reload
+      - ./webapp/app:/app/app
+      - ./webapp/components:/app/components
+      - ./webapp/lib:/app/lib
+      - ./webapp/public:/app/public
+    depends_on:
+      - backend-dev
+    networks:
+      - gxq-dev-network
+    command: npm run dev
+
+networks:
+  gxq-dev-network:
+    driver: bridge

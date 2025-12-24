@@ -1,0 +1,187 @@
+version: '3.8'
+
+services:
+  # Backend Server - Express + Arbitrage Engine
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: backend
+    container_name: gxq-backend
+    restart: unless-stopped
+    ports:
+      - "${BACKEND_PORT:-3000}:3000"
+    environment:
+      - NODE_ENV=${NODE_ENV:-production}
+      - PORT=3000
+      - HOST=0.0.0.0
+      - DEPLOYMENT_PLATFORM=docker-compose
+      
+      # Solana Configuration
+      - SOLANA_RPC_URL=${SOLANA_RPC_URL}
+      - SOLANA_WS_URL=${SOLANA_WS_URL}
+      - WALLET_PRIVATE_KEY=${WALLET_PRIVATE_KEY}
+      
+      # Trading Configuration
+      - MINIMUM_PROFIT_SOL=${MINIMUM_PROFIT_SOL:-0.01}
+      - MAX_SLIPPAGE=${MAX_SLIPPAGE:-0.01}
+      - SCAN_INTERVAL_MS=${SCAN_INTERVAL_MS:-5000}
+      - AUTO_START=${AUTO_START:-true}
+      
+      # Admin Configuration
+      - ADMIN_USERNAME=${ADMIN_USERNAME}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
+      - JWT_SECRET=${JWT_SECRET}
+      
+      # Logging
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      
+      # Flash Loan Providers
+      - MARGINFI_PROGRAM_ID=${MARGINFI_PROGRAM_ID}
+      - SOLEND_PROGRAM_ID=${SOLEND_PROGRAM_ID}
+      - MANGO_PROGRAM_ID=${MANGO_PROGRAM_ID}
+      - KAMINO_PROGRAM_ID=${KAMINO_PROGRAM_ID}
+      - PORT_FINANCE_PROGRAM_ID=${PORT_FINANCE_PROGRAM_ID}
+      - SAVE_FINANCE_PROGRAM_ID=${SAVE_FINANCE_PROGRAM_ID}
+      
+      # Priority Fees
+      - PRIORITY_FEE_URGENCY=${PRIORITY_FEE_URGENCY:-high}
+      - MAX_PRIORITY_FEE_LAMPORTS=${MAX_PRIORITY_FEE_LAMPORTS:-10000000}
+      - COMPUTE_UNIT_LIMIT=${COMPUTE_UNIT_LIMIT:-400000}
+      
+      # Dev Fee
+      - DEV_FEE_ENABLED=${DEV_FEE_ENABLED:-true}
+      - DEV_FEE_PERCENTAGE=${DEV_FEE_PERCENTAGE:-0.10}
+      - DEV_FEE_WALLET=${DEV_FEE_WALLET}
+      
+      # Jito MEV Protection
+      - JITO_ENABLED=${JITO_ENABLED:-true}
+      - JITO_MIN_TIP_LAMPORTS=${JITO_MIN_TIP_LAMPORTS:-10000}
+      - JITO_MAX_TIP_LAMPORTS=${JITO_MAX_TIP_LAMPORTS:-1000000}
+      - JITO_TIP_PERCENTAGE=${JITO_TIP_PERCENTAGE:-0.05}
+      
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    networks:
+      - gxq-network
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/api/health', (r) => { process.exit(r.statusCode === 200 ? 0 : 1); })"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Webapp - Next.js Frontend
+  webapp:
+    build:
+      context: ./webapp
+      dockerfile: Dockerfile
+    container_name: gxq-webapp
+    restart: unless-stopped
+    ports:
+      - "${WEBAPP_PORT:-3001}:3000"
+    environment:
+      - NODE_ENV=${NODE_ENV:-production}
+      - NEXT_PUBLIC_RPC_URL=${NEXT_PUBLIC_RPC_URL:-${SOLANA_RPC_URL}}
+      - NEXT_PUBLIC_BACKEND_URL=${NEXT_PUBLIC_BACKEND_URL:-http://backend:3000}
+      - NEXT_PUBLIC_WS_URL=${NEXT_PUBLIC_WS_URL}
+    depends_on:
+      - backend
+    networks:
+      - gxq-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # Optional: PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: gxq-postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=${DB_NAME:-gxq_studio}
+      - POSTGRES_USER=${DB_USER:-postgres}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - gxq-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    profiles:
+      - with-db
+
+  # Optional: Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: gxq-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-data:/data
+    networks:
+      - gxq-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    profiles:
+      - with-cache
+
+  # Optional: Prometheus Monitoring
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: gxq-prometheus
+    restart: unless-stopped
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+    volumes:
+      - ./deployment/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    networks:
+      - gxq-network
+    profiles:
+      - monitoring
+
+  # Optional: Grafana Dashboard
+  grafana:
+    image: grafana/grafana:latest
+    container_name: gxq-grafana
+    restart: unless-stopped
+    ports:
+      - "${GRAFANA_PORT:-3002}:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./deployment/grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - ./deployment/grafana/datasources:/etc/grafana/provisioning/datasources
+    networks:
+      - gxq-network
+    depends_on:
+      - prometheus
+    profiles:
+      - monitoring
+
+networks:
+  gxq-network:
+    driver: bridge
+
+volumes:
+  postgres-data:
+  redis-data:
+  prometheus-data:
+  grafana-data:

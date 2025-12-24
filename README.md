@@ -8,7 +8,51 @@
 
 The most advanced Solana DeFi platform with flash loan arbitrage, sniper bot, token launchpad, and comprehensive Web3 UI.
 
+## 🚀 Quick Start
+
+```bash
+# Interactive setup
+./quick-start.sh
+
+# Or use Make commands
+make help          # Show all available commands
+make dev           # Start local development
+make docker-up     # Start with Docker
+```
+
+## 📦 Deployment Options
+
+**Deploy to any platform in minutes!** See [DEPLOYMENT.md](DEPLOYMENT.md) for comprehensive guides.
+
+| Platform | Best For | Command | Guide |
+|----------|----------|---------|-------|
+| 🌐 **Vercel** | Webapp (Serverless) | `vercel --prod` | [Guide](DEPLOYMENT.md#vercel-serverless) |
+| 🚂 **Railway** | Backend (Container) | `railway up` | [Guide](DEPLOYMENT.md#railway-container) |
+| ☁️ **AWS** | Enterprise Scale | `make deploy-aws` | [Guide](DEPLOYMENT.md#aws) |
+| 🔷 **Azure** | Microsoft Cloud | `make deploy-azure` | [Guide](DEPLOYMENT.md#azure) |
+| 🐳 **Docker** | Any Server | `make docker-up` | [Guide](DEPLOYMENT.md#docker) |
+| 💻 **VPS** | Full Control | `make deploy-vps` | [Guide](DEPLOYMENT.md#vps-manual) |
+| 🏠 **Localhost** | Development | `make dev` | [Guide](DEPLOYMENT.md#localhost) |
+
+### Key Features
+- ✅ **Unified Server**: Single entry point for all deployments
+- ✅ **Docker Orchestration**: Backend + Webapp + Monitoring
+- ✅ **50+ Make Commands**: Simplified management
+- ✅ **Automated Scripts**: One-command VPS deployment
+- ✅ **Health Checks**: Kubernetes-compatible endpoints
+- ✅ **WebSocket Support**: Real-time updates with auto-reconnect
+- ✅ **Monitoring**: Prometheus + Grafana integration
+
 ## 🆕 Latest Updates
+
+**✨ Multi-Platform Deployment Support**
+
+- ✅ **Unified Server**: `src/server.ts` works across all platforms
+- ✅ **Docker Excellence**: Multi-stage builds, dev & prod configs
+- ✅ **Comprehensive Docs**: 26KB deployment guide covering 8+ platforms
+- ✅ **Automation**: Makefile with 50+ commands, deployment scripts
+- ✅ **CI/CD**: Docker build workflow, automated testing
+- ✅ **WebSocket Stability**: Enhanced reconnection logic
 
 **✨ Production-Ready API with Comprehensive Validation & Automated Deployment**
 
@@ -19,7 +63,7 @@ The most advanced Solana DeFi platform with flash loan arbitrage, sniper bot, to
 - ✅ **Enhanced Security**: Rate limiting, input sanitization, and authentication validation
 - ✅ **Complete Documentation**: Comprehensive guides for API, validation, deployment, and configuration
 
-📖 **[Quick Start Guide](./docs/QUICK_START.md)** | **[API Validation](./docs/API_VALIDATION.md)** | **[Deployment Guide](./docs/DEPLOYMENT_AUTOMATION.md)**
+📖 **[Deployment Guide](./DEPLOYMENT.md)** | **[Quick Start](./docs/QUICK_START.md)** | **[API Validation](./docs/API_VALIDATION.md)**
 
 ## 🌐 Web Application (NEW!)
 

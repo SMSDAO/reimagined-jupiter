@@ -8,7 +8,7 @@
     "buildCommand": "npm install && npm run build"
   },
   "deploy": {
-    "startCommand": "npm run start:railway",
+    "startCommand": "npm run start:server",
     "restartPolicyType": "ALWAYS",
     "restartPolicyMaxRetries": 10,
     "healthcheckPath": "/api/health",

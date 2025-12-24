@@ -2,6 +2,7 @@ import type { NextConfig } from "next";
 
 const isProduction = process.env.NODE_ENV === 'production';
 const isVercel = Boolean(process.env.VERCEL);
+const isDocker = Boolean(process.env.DOCKER || process.env.DEPLOYMENT_PLATFORM === 'docker');
 
 const nextConfig: NextConfig = {
   typescript: {
@@ -15,6 +16,11 @@ const nextConfig: NextConfig = {
   ...(isProduction && {
     compress: true,
     poweredByHeader: false,
+  }),
+  
+  // Enable standalone output for Docker deployments
+  ...(isDocker && {
+    output: 'standalone',
   }),
   
   // Optimize package imports
@@ -41,6 +47,7 @@ const nextConfig: NextConfig = {
             value: isProduction ? 'production' : 'development',
           },
           ...(isVercel ? [{ key: 'X-Platform', value: 'vercel' }] : []),
+          ...(isDocker ? [{ key: 'X-Platform', value: 'docker' }] : []),
         ],
       },
     ];
