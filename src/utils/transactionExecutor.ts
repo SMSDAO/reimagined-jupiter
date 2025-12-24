@@ -11,13 +11,17 @@ import {
   TransactionInstruction,
 } from '@solana/web3.js';
 import type { PrioritizationFee } from '../types/solana.js';
+import { JitoIntegration, type JitoBundleResult } from '../integrations/jito.js';
 
 export interface TransactionExecutionResult {
   success: boolean;
   signature?: string;
+  signatures?: string[];
+  bundleId?: string;
   error?: string;
   computeUnits?: number;
   fee?: number;
+  usedJito?: boolean;
 }
 
 export interface PriorityFeeConfig {
@@ -29,15 +33,22 @@ export class TransactionExecutor {
   private connection: Connection;
   private maxRetries: number;
   private retryDelay: number;
+  private jitoIntegration: JitoIntegration | null;
   
   constructor(
     connection: Connection,
     maxRetries: number = 3,
-    retryDelay: number = 2000
+    retryDelay: number = 2000,
+    enableJito: boolean = true
   ) {
     this.connection = connection;
     this.maxRetries = maxRetries;
     this.retryDelay = retryDelay;
+    this.jitoIntegration = enableJito ? new JitoIntegration(connection) : null;
+
+    if (this.jitoIntegration) {
+      console.log('💎 Jito MEV protection enabled');
+    }
   }
   
   /**
@@ -495,5 +506,109 @@ export class TransactionExecutor {
     
     // Execute the transaction
     return await this.executeVersionedTransaction(transaction, signers, commitment);
+  }
+
+  /**
+   * Execute atomic bundle with Jito MEV protection
+   * This is the preferred method for arbitrage transactions
+   */
+  async executeAtomicBundleWithJito(
+    transactions: Transaction[],
+    signers: Keypair[],
+    expectedProfitLamports: number = 0,
+    priorityFee?: PriorityFeeConfig
+  ): Promise<TransactionExecutionResult> {
+    if (!this.jitoIntegration) {
+      console.warn('⚠️  Jito integration not enabled, falling back to regular transaction execution');
+      
+      // Fallback to regular transaction execution
+      if (transactions.length === 1) {
+        return await this.executeTransaction(transactions[0], signers, priorityFee);
+      } else {
+        console.error('❌ Cannot execute multiple transactions without Jito');
+        return {
+          success: false,
+          error: 'Jito integration required for multi-transaction bundles',
+        };
+      }
+    }
+
+    try {
+      console.log('🚀 Executing atomic bundle with Jito MEV protection...');
+      console.log(`   Transactions: ${transactions.length}`);
+      console.log(`   Expected profit: ${expectedProfitLamports / 1e9} SOL`);
+
+      // Add priority fees to transactions if provided
+      if (priorityFee) {
+        for (const tx of transactions) {
+          this.addComputeBudgetInstructions(tx, priorityFee);
+        }
+      } else {
+        // Calculate dynamic priority fee
+        const dynamicFee = await this.calculateDynamicPriorityFee('high'); // Use high priority for arbitrage
+        for (const tx of transactions) {
+          this.addComputeBudgetInstructions(tx, dynamicFee);
+        }
+      }
+
+      // Execute bundle through Jito
+      const result: JitoBundleResult = await this.jitoIntegration.executeAtomicBundle(
+        transactions,
+        signers,
+        expectedProfitLamports,
+        true // Poll for confirmation
+      );
+
+      if (result.success) {
+        console.log('✅ Atomic bundle executed successfully!');
+        console.log(`   Bundle ID: ${result.bundleId}`);
+        if (result.landedSlot) {
+          console.log(`   Landed in slot: ${result.landedSlot}`);
+        }
+
+        return {
+          success: true,
+          bundleId: result.bundleId,
+          signatures: result.signatures,
+          signature: result.signatures[0], // First signature for backwards compatibility
+          usedJito: true,
+        };
+      } else {
+        console.error('❌ Atomic bundle execution failed:', result.error);
+        return {
+          success: false,
+          error: result.error || 'Bundle execution failed',
+          usedJito: true,
+        };
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error('❌ Error executing atomic bundle with Jito:', errorMessage);
+      return {
+        success: false,
+        error: errorMessage,
+        usedJito: true,
+      };
+    }
+  }
+
+  /**
+   * Get Jito integration instance
+   */
+  getJitoIntegration(): JitoIntegration | null {
+    return this.jitoIntegration;
+  }
+
+  /**
+   * Enable/disable Jito integration
+   */
+  setJitoEnabled(enabled: boolean): void {
+    if (enabled && !this.jitoIntegration) {
+      this.jitoIntegration = new JitoIntegration(this.connection);
+      console.log('💎 Jito MEV protection enabled');
+    } else if (!enabled && this.jitoIntegration) {
+      this.jitoIntegration = null;
+      console.log('⚠️  Jito MEV protection disabled');
+    }
   }
 }
