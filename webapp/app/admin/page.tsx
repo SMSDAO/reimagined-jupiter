@@ -5,6 +5,7 @@ import { useWallet, useConnection } from '@solana/wallet-adapter-react';
 import { PublicKey } from '@solana/web3.js';
 import { motion } from 'framer-motion';
 import PendingApprovals from '@/components/PendingApprovals';
+import { isAdmin } from '@/lib/auth';
 
 interface BotStatus {
   running: boolean;
@@ -293,7 +294,7 @@ export default function AdminPage() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto space-y-8">
+    <div className="max-w-7xl mx-auto space-y-8 px-4">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -302,6 +303,23 @@ export default function AdminPage() {
         <p className="text-gray-300 mb-8">
           Live bot control, opportunity finder, and advanced analytics
         </p>
+
+        {/* Check if user is admin */}
+        {!publicKey ? (
+          <div className="bg-white/10 backdrop-blur-md rounded-xl p-12 text-center border border-white/10">
+            <div className="text-6xl mb-4">🔐</div>
+            <h2 className="text-2xl font-bold text-white mb-2">Connect Your Wallet</h2>
+            <p className="text-gray-300">Connect your wallet to access the admin panel</p>
+          </div>
+        ) : !isAdmin(publicKey.toString()) ? (
+          <div className="bg-white/10 backdrop-blur-md rounded-xl p-12 text-center border border-red-500/50">
+            <div className="text-6xl mb-4">🚫</div>
+            <h2 className="text-2xl font-bold text-white mb-2">Access Denied</h2>
+            <p className="text-gray-300">This page is restricted to administrators only.</p>
+            <p className="text-sm text-gray-400 mt-4">Your wallet: {publicKey.toString().slice(0, 8)}...{publicKey.toString().slice(-8)}</p>
+          </div>
+        ) : (
+          <>
 
         {/* Pending Approvals Section */}
         <div className="mb-8">
@@ -576,6 +594,8 @@ export default function AdminPage() {
             </div>
           )}
         </div>
+        </>
+        )}
       </motion.div>
     </div>
   );

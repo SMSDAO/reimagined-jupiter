@@ -3,7 +3,7 @@
 import { motion } from 'framer-motion';
 import { useState } from 'react';
 
-export type PageType = 'arbitrage' | 'swap' | 'sniper' | 'launchpad';
+export type PageType = 'arbitrage' | 'swap' | 'sniper' | 'launchpad' | 'staking' | 'airdrop';
 
 interface InstructionPanelProps {
   pageType: PageType;
@@ -157,6 +157,80 @@ const instructions = {
       'Airdrop roulette has 12-hour cooldown',
       'Reduced wait time after 3 days of activity',
       'Integrate with other platforms after launch',
+    ],
+  },
+  staking: {
+    title: '💎 Staking',
+    emoji: '📚',
+    steps: [
+      {
+        title: 'Connect Wallet',
+        description: 'Connect your Solana wallet to start staking',
+        icon: '🔗',
+      },
+      {
+        title: 'Select Pool',
+        description: 'Choose a staking pool from Marinade, Lido, Jito, BlazeStake, or Kamino based on APY and TVL',
+        icon: '🏊',
+      },
+      {
+        title: 'Enter Amount',
+        description: 'Input the amount of SOL you want to stake (minimum varies by pool)',
+        icon: '💰',
+      },
+      {
+        title: 'Review Returns',
+        description: 'Check estimated returns based on current APY rates. Rates update in real-time.',
+        icon: '📊',
+      },
+      {
+        title: 'Stake Now',
+        description: 'Click "Stake Now" to execute. Receive liquid staking tokens (mSOL, stSOL, etc.) immediately',
+        icon: '✅',
+      },
+    ],
+    tips: [
+      'Liquid staking tokens can be used in DeFi while earning rewards',
+      'APY rates are updated every minute from protocol APIs',
+      'Higher TVL generally indicates more mature protocols',
+      'You can unstake anytime, but there may be a cooldown period',
+    ],
+  },
+  airdrop: {
+    title: '🔍 Airdrop Checker',
+    emoji: '📚',
+    steps: [
+      {
+        title: 'Connect Wallet',
+        description: 'Connect your Solana wallet to analyze eligibility',
+        icon: '🔗',
+      },
+      {
+        title: 'Wallet Analysis',
+        description: 'System analyzes your on-chain activity: transactions, NFTs, balance, and trading history',
+        icon: '🔍',
+      },
+      {
+        title: 'Social Intelligence',
+        description: 'If linked, checks Farcaster profile for follower count, casts, power badge, and GM score',
+        icon: '🟦',
+      },
+      {
+        title: 'Trust Score',
+        description: 'Calculates overall trust score (0-100) combining on-chain metrics and social factors',
+        icon: '🛡️',
+      },
+      {
+        title: 'Claim Airdrops',
+        description: 'View claimable airdrops and claim individually or use "Claim All" for eligible drops',
+        icon: '💰',
+      },
+    ],
+    tips: [
+      'Trust score factors: inverse risk (40%), Farcaster (30%), GM score (20%), age bonus (10%)',
+      'Higher trust scores may qualify for more airdrops',
+      'Social intelligence is optional but improves scoring',
+      'Refresh regularly to check for new airdrops',
     ],
   },
 };
