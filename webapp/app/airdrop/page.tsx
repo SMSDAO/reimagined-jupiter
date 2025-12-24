@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useWallet, useConnection } from '@solana/wallet-adapter-react';
 import { motion } from 'framer-motion';
+import InstructionPanel from '@/components/Trading/InstructionPanel';
 
 interface WalletScore {
   address: string;
@@ -261,7 +262,7 @@ export default function AirdropPage() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto">
+    <div className="max-w-7xl mx-auto px-4">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -276,19 +277,47 @@ export default function AirdropPage() {
         </div>
 
         {!publicKey ? (
-          <div className="glass-morphism rounded-xl p-12 text-center">
-            <div className="text-6xl mb-4">🔐</div>
-            <h2 className="text-2xl font-bold text-white mb-2">Connect Your Wallet</h2>
-            <p className="text-gray-300">Connect your wallet to access advanced wallet analysis with social intelligence</p>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Left column - Instructions */}
+            <div className="lg:col-span-1">
+              <InstructionPanel pageType="airdrop" />
+            </div>
+            
+            {/* Right column - Connect prompt */}
+            <div className="lg:col-span-2">
+              <div className="glass-morphism rounded-xl p-12 text-center">
+                <div className="text-6xl mb-4">🔐</div>
+                <h2 className="text-2xl font-bold text-white mb-2">Connect Your Wallet</h2>
+                <p className="text-gray-300">Connect your wallet to access advanced wallet analysis with social intelligence</p>
+              </div>
+            </div>
           </div>
         ) : loading ? (
-          <div className="glass-morphism rounded-xl p-12 text-center">
-            <div className="text-6xl mb-4">⏳</div>
-            <h2 className="text-2xl font-bold text-white">Analyzing Wallet...</h2>
-            <p className="text-gray-400 mt-2">Fetching on-chain data and social intelligence</p>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Left column - Instructions */}
+            <div className="lg:col-span-1">
+              <InstructionPanel pageType="airdrop" />
+            </div>
+            
+            {/* Right column - Loading */}
+            <div className="lg:col-span-2">
+              <div className="glass-morphism rounded-xl p-12 text-center">
+                <div className="text-6xl mb-4">⏳</div>
+                <h2 className="text-2xl font-bold text-white">Analyzing Wallet...</h2>
+                <p className="text-gray-400 mt-2">Fetching on-chain data and social intelligence</p>
+              </div>
+            </div>
           </div>
         ) : (
-          <div className="space-y-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Left column - Instructions */}
+            <div className="lg:col-span-1">
+              <InstructionPanel pageType="airdrop" />
+            </div>
+            
+            {/* Right column - Analysis Results */}
+            <div className="lg:col-span-2">
+              <div className="space-y-8">
             {/* Trust Score Orb + Basic Stats */}
             {walletScore && (
               <motion.div
@@ -587,6 +616,8 @@ export default function AirdropPage() {
                 ))}
               </div>
             </motion.div>
+              </div>
+            </div>
           </div>
         )}
 
