@@ -1,0 +1,64 @@
+# ==============================================================================
+# Systemd Service File for GXQ Studio
+# Location: /etc/systemd/system/gxq-studio.service
+# ==============================================================================
+#
+# Installation:
+# 1. Copy this file to /etc/systemd/system/gxq-studio.service
+# 2. Update paths and user as needed
+# 3. Run: sudo systemctl daemon-reload
+# 4. Run: sudo systemctl enable gxq-studio
+# 5. Run: sudo systemctl start gxq-studio
+#
+# Management:
+# - Start: sudo systemctl start gxq-studio
+# - Stop: sudo systemctl stop gxq-studio
+# - Restart: sudo systemctl restart gxq-studio
+# - Status: sudo systemctl status gxq-studio
+# - Logs: sudo journalctl -u gxq-studio -f
+#
+
+[Unit]
+Description=GXQ Studio - Solana Arbitrage Platform
+Documentation=https://github.com/SMSDAO/reimagined-jupiter
+After=network.target
+
+[Service]
+Type=simple
+User=gxq
+Group=gxq
+WorkingDirectory=/home/gxq/reimagined-jupiter
+
+# Environment
+Environment="NODE_ENV=production"
+Environment="PATH=/usr/bin:/usr/local/bin"
+EnvironmentFile=/home/gxq/reimagined-jupiter/.env
+
+# Start command
+ExecStart=/usr/bin/node /home/gxq/reimagined-jupiter/dist/src/server.js
+
+# Restart policy
+Restart=always
+RestartSec=10
+StartLimitInterval=60s
+StartLimitBurst=3
+
+# Resource limits
+LimitNOFILE=65536
+LimitNPROC=4096
+
+# Security settings
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/home/gxq/reimagined-jupiter/data
+ReadWritePaths=/home/gxq/reimagined-jupiter/logs
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=gxq-studio
+
+[Install]
+WantedBy=multi-user.target

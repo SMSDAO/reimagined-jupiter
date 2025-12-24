@@ -11,6 +11,8 @@ yarn-debug.log*
 yarn-error.log*
 .DS_Store
 *.md
+!README.md
+!DEPLOYMENT.md
 webapp/node_modules
 webapp/.next
 webapp/out
@@ -20,3 +22,18 @@ __tests__
 coverage
 .vscode
 .idea
+docs
+examples
+*.patch
+*.txt
+IMPLEMENTATION_*.md
+MERGE_*.md
+VERIFICATION_*.md
+WALLET_*.md
+ORACLE_*.md
+SECURITY_*.md
+ARCHITECTURE.md
+CONTRIBUTING.md
+TESTING.md
+QUICKSTART.md
+CODE_REVIEW_*.md
