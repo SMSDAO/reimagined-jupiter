@@ -15,6 +15,10 @@ export interface Config {
   neynar: {
     apiKey: string;
   };
+  gemini: {
+    apiKey: string;
+    enabled: boolean;
+  };
   flashLoanProviders: {
     marginfi: PublicKey;
     solend: PublicKey;

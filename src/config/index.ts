@@ -19,6 +19,10 @@ export const config: Config = {
   neynar: {
     apiKey: process.env.NEYNAR_API_KEY || '',
   },
+  gemini: {
+    apiKey: process.env.GEMINI_API_KEY || '',
+    enabled: process.env.GEMINI_ENABLED !== 'false',
+  },
   flashLoanProviders: {
     marginfi: new PublicKey(process.env.MARGINFI_PROGRAM_ID || 'MFv2hWf31Z9kbCa1snEPYctwafyhdvnV7FZnsebVacA'),
     solend: new PublicKey(process.env.SOLEND_PROGRAM_ID || 'So1endDq2YkqhipRh3WViPa8hdiSpxWy6z3Z6tMCpAo'),
