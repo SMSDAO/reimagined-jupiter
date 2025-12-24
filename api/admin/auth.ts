@@ -161,8 +161,7 @@ export default async function handler(
     console.log(`✅ Login successful for user: ${username}`);
     
     // Audit log: Record login with wallet address and metadata
-    // Note: In production, this should write to the wallet_audit_log table
-    // For now, we log it and it can be integrated with database when available
+    // Store hashed IP and fingerprint for privacy-safe audit logging
     try {
       const auditEntry = {
         username,
@@ -175,12 +174,18 @@ export default async function handler(
       };
       console.log('🔐 Audit Log:', JSON.stringify(auditEntry));
       
-      // TODO: When database is available, insert into wallet_audit_log:
+      // Note: Database integration requires DB connection setup
+      // The database module is available but needs environment configuration
+      // For serverless Vercel deployment, this would need Vercel Postgres or similar
+      // Database schema already supports this operation in wallet_audit_log table
+      
+      // Uncomment when database connection is configured:
+      // const { insertWalletAuditLog } = await import('../../db/database.js');
       // await insertWalletAuditLog({
       //   walletId: walletAddress || 'admin_login',
       //   userId: username,
       //   operation: 'LOGIN',
-      //   operationData: { username },
+      //   operationData: { username, loginTime: new Date().toISOString() },
       //   ipAddressHash,
       //   fingerprintHash,
       //   success: true,

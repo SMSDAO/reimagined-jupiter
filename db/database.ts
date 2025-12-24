@@ -379,6 +379,10 @@ export async function getAirdropPriorityWallets(
 
 /**
  * Insert wallet audit log entry
+ * Records user actions with hashed IP and fingerprint for privacy-safe auditing
+ * 
+ * @param data Audit log data including operation, hashed metadata, and status
+ * @returns QueryResult with inserted audit log entry
  */
 export async function insertWalletAuditLog(data: {
   walletId: string;
@@ -454,7 +458,43 @@ export async function countUserWallets(userId: string): Promise<number> {
 }
 
 /**
- * Insert user wallet
+ * Validate if user can create more wallets (max 3 enforced)
+ * @param userId User ID to check
+ * @returns Object with validation result and current wallet count
+ */
+export async function validateWalletCreation(userId: string): Promise<{
+  allowed: boolean;
+  currentCount: number;
+  error?: string;
+}> {
+  const currentCount = await countUserWallets(userId);
+  const maxWallets = 3; // Strictly enforced limit
+  
+  if (currentCount >= maxWallets) {
+    return {
+      allowed: false,
+      currentCount,
+      error: `Maximum ${maxWallets} wallets per user exceeded. Current count: ${currentCount}`,
+    };
+  }
+  
+  return {
+    allowed: true,
+    currentCount,
+  };
+}
+
+/**
+ * Insert user wallet with strict 3-wallet limit enforcement
+ * 
+ * Features:
+ * - Validates user doesn't exceed 3-wallet limit before insertion
+ * - Stores encrypted private key with AES-256-GCM metadata (IV, Salt, Tag)
+ * - All wallets are sub-wallets that inherit user RBAC permissions
+ * 
+ * @param data Wallet data including encryption details
+ * @returns QueryResult with inserted wallet
+ * @throws Error if wallet limit exceeded or insertion fails
  */
 export async function insertUserWallet(data: {
   userId: string;
@@ -467,6 +507,12 @@ export async function insertUserWallet(data: {
   encryptionTag: string;
   keyDerivationIterations: number;
 }): Promise<QueryResult> {
+  // Pre-check: Validate user can create more wallets
+  const validation = await validateWalletCreation(data.userId);
+  if (!validation.allowed) {
+    throw new Error(validation.error || 'Cannot create wallet');
+  }
+  
   const sql = `
     INSERT INTO user_wallets (
       user_id, wallet_address, wallet_label, is_primary,
@@ -524,6 +570,7 @@ export default {
   getUserByUsername,
   getUserWallets,
   countUserWallets,
+  validateWalletCreation,
   insertUserWallet,
   getUserWalletByAddress,
 };

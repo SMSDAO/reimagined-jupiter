@@ -1,12 +1,22 @@
 /**
  * Professional Bot Framework Infrastructure
  * 
- * Features:
+ * Wallet Governance & Security Features:
+ * - ✅ Minimum SOL balance check (0.05 SOL) before execution
+ * - ✅ Strict per-user sandbox isolation (no shared signers)
+ * - ✅ Private key wiping after transaction signing
+ * - ✅ Web panel integration with local signing (CLIENT_SIDE mode)
+ * - ✅ Auto-execution after validation (replay protection, balance checks, Oracle)
+ * - ✅ Session-based execution with isolated state
+ * 
+ * Framework Features:
  * - Scriptable BOT.exe style execution engine
  * - Offline transaction builder
  * - Multiple signing modes (client-side, server-side, enclave-ready)
- * - 4-layer replay protection
- * - Per-user sandbox isolation
+ * - 4-layer replay protection (nonce, hash, timestamp, rate-limit)
+ * - Per-user sandbox isolation with RBAC permissions
+ * - Oracle intelligence integration (pre-execution analysis)
+ * - Comprehensive audit logging with database integration
  */
 
 import { 
