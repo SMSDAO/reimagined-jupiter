@@ -2,7 +2,8 @@
  * Wallet utilities for scoring, analysis, and operations
  */
 
-import { Connection, PublicKey } from '@solana/web3.js';
+import { Connection, PublicKey, Keypair } from '@solana/web3.js';
+import bs58 from 'bs58';
 
 export type WalletTier = 'WHALE' | 'DEGEN' | 'ACTIVE' | 'CASUAL' | 'NOVICE';
 
@@ -212,4 +213,92 @@ export function isValidSolanaAddress(address: string): boolean {
 export function shortenAddress(address: string, chars: number = 4): string {
   if (address.length <= chars * 2) return address;
   return `${address.slice(0, chars)}...${address.slice(-chars)}`;
+}
+
+/**
+ * Generate a new ephemeral Solana wallet
+ */
+export function generateWallet(): { keypair: Keypair; privateKey: string; publicKey: string } {
+  const keypair = Keypair.generate();
+  const privateKey = bs58.encode(keypair.secretKey);
+  const publicKey = keypair.publicKey.toString();
+  
+  return {
+    keypair,
+    privateKey,
+    publicKey,
+  };
+}
+
+/**
+ * Import wallet from private key (base58 or Uint8Array JSON)
+ */
+export function importWalletFromPrivateKey(privateKey: string): {
+  keypair: Keypair;
+  publicKey: string;
+} {
+  try {
+    let secretKey: Uint8Array;
+    
+    // Try base58 format first
+    if (!privateKey.includes('[') && !privateKey.includes(',')) {
+      secretKey = bs58.decode(privateKey);
+    } else {
+      // Try JSON array format
+      const parsed = JSON.parse(privateKey);
+      if (Array.isArray(parsed)) {
+        secretKey = Uint8Array.from(parsed);
+      } else {
+        throw new Error('Invalid private key format');
+      }
+    }
+    
+    const keypair = Keypair.fromSecretKey(secretKey);
+    const publicKey = keypair.publicKey.toString();
+    
+    return {
+      keypair,
+      publicKey,
+    };
+  } catch (error) {
+    console.error('Error importing wallet:', error);
+    throw new Error('Invalid private key format. Use base58 string or [byte array].');
+  }
+}
+
+/**
+ * Validate private key format (without importing)
+ */
+export function validatePrivateKeyFormat(privateKey: string): { valid: boolean; error?: string } {
+  try {
+    // Check if empty
+    if (!privateKey || privateKey.trim().length === 0) {
+      return { valid: false, error: 'Private key cannot be empty' };
+    }
+    
+    // Try to import
+    importWalletFromPrivateKey(privateKey);
+    return { valid: true };
+  } catch (error) {
+    return {
+      valid: false,
+      error: error instanceof Error ? error.message : 'Invalid private key format',
+    };
+  }
+}
+
+/**
+ * Convert private key to different formats
+ */
+export function convertPrivateKeyFormat(
+  privateKey: string,
+  outputFormat: 'base58' | 'array'
+): string {
+  const { keypair } = importWalletFromPrivateKey(privateKey);
+  
+  if (outputFormat === 'base58') {
+    return bs58.encode(keypair.secretKey);
+  } else {
+    return JSON.stringify(Array.from(keypair.secretKey));
+  }
 }
