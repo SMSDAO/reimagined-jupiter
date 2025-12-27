@@ -1,13 +1,19 @@
 /**
  * Integration Examples for Resilient Solana Connection
- * 
+ *
  * This file contains practical examples of how to integrate the resilient
  * connection pattern into existing Solana applications.
  */
 
-import { createResilientConnection } from './connection';
-import { TransactionBuilder } from './transaction-builder';
-import { Connection, PublicKey, Transaction, SystemProgram, Keypair } from '@solana/web3.js';
+import { createResilientConnection } from "./connection";
+import { TransactionBuilder } from "./transaction-builder";
+import {
+  Connection,
+  PublicKey,
+  Transaction,
+  SystemProgram,
+  Keypair,
+} from "@solana/web3.js";
 
 /**
  * Example 1: Simple SOL Transfer with Resilient Connection
@@ -15,14 +21,14 @@ import { Connection, PublicKey, Transaction, SystemProgram, Keypair } from '@sol
 export async function exampleSolTransfer(
   fromKeypair: Keypair,
   toAddress: string,
-  amountSOL: number
+  amountSOL: number,
 ) {
   // Create resilient connection
   const resilientConnection = createResilientConnection();
   const builder = new TransactionBuilder(resilientConnection);
 
   try {
-    console.log('🚀 Starting SOL transfer...');
+    console.log("🚀 Starting SOL transfer...");
 
     // Create transfer instruction
     const instruction = SystemProgram.transfer({
@@ -36,23 +42,23 @@ export async function exampleSolTransfer(
       [instruction],
       fromKeypair.publicKey,
       undefined, // Auto-calculate priority fee
-      'medium'   // Urgency level
+      "medium", // Urgency level
     );
 
     // Execute transaction
     const result = await builder.executeTransaction(
       transaction,
       [fromKeypair],
-      'confirmed'
+      "confirmed",
     );
 
     if (result.success) {
-      console.log('✅ Transfer successful!');
-      console.log('   Signature:', result.signature);
-      console.log('   Fee:', (result.fee! / 1e9).toFixed(6), 'SOL');
+      console.log("✅ Transfer successful!");
+      console.log("   Signature:", result.signature);
+      console.log("   Fee:", (result.fee! / 1e9).toFixed(6), "SOL");
       return result.signature;
     } else {
-      console.error('❌ Transfer failed:', result.error);
+      console.error("❌ Transfer failed:", result.error);
       throw new Error(result.error);
     }
   } finally {
@@ -63,7 +69,7 @@ export async function exampleSolTransfer(
 
 /**
  * Example 2: Jupiter Swap Integration
- * 
+ *
  * This example shows how to integrate resilient connection with Jupiter swaps
  */
 export async function exampleJupiterSwap(
@@ -71,29 +77,29 @@ export async function exampleJupiterSwap(
   inputMint: string,
   outputMint: string,
   amount: number,
-  slippageBps: number = 100
+  slippageBps: number = 100,
 ) {
   const resilientConnection = createResilientConnection();
 
   try {
-    console.log('🔄 Getting Jupiter quote...');
+    console.log("🔄 Getting Jupiter quote...");
 
     // Get quote from Jupiter
     const quoteResponse = await fetch(
-      `https://api.jup.ag/v6/quote?inputMint=${inputMint}&outputMint=${outputMint}&amount=${amount}&slippageBps=${slippageBps}`
+      `https://api.jup.ag/v6/quote?inputMint=${inputMint}&outputMint=${outputMint}&amount=${amount}&slippageBps=${slippageBps}`,
     );
     const quoteData = await quoteResponse.json();
 
-    console.log('💰 Quote received:', {
+    console.log("💰 Quote received:", {
       inputAmount: amount / 1e9,
       outputAmount: parseInt(quoteData.outAmount) / 1e9,
       priceImpact: quoteData.priceImpactPct,
     });
 
     // Get swap transaction from Jupiter
-    const swapResponse = await fetch('https://api.jup.ag/v6/swap', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+    const swapResponse = await fetch("https://api.jup.ag/v6/swap", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         quoteResponse: quoteData,
         userPublicKey: walletPublicKey.toString(),
@@ -105,8 +111,8 @@ export async function exampleJupiterSwap(
 
     // Note: In a real application, this transaction would be signed by the wallet
     // and then executed either client-side or via the API endpoint
-    console.log('📝 Swap transaction ready');
-    console.log('   Use wallet.sendTransaction() to execute');
+    console.log("📝 Swap transaction ready");
+    console.log("   Use wallet.sendTransaction() to execute");
 
     return {
       quote: quoteData,
@@ -120,16 +126,14 @@ export async function exampleJupiterSwap(
 
 /**
  * Example 3: Batch Operations with Resilient Connection
- * 
+ *
  * Execute multiple operations efficiently
  */
-export async function exampleBatchOperations(
-  walletAddresses: string[]
-) {
+export async function exampleBatchOperations(walletAddresses: string[]) {
   const resilientConnection = createResilientConnection();
 
   try {
-    console.log('📊 Fetching data for', walletAddresses.length, 'wallets...');
+    console.log("📊 Fetching data for", walletAddresses.length, "wallets...");
 
     // Execute multiple operations in parallel
     const results = await Promise.all(
@@ -141,7 +145,7 @@ export async function exampleBatchOperations(
           resilientConnection.getBalance(pubkey),
           resilientConnection.executeWithRetry(
             (conn) => conn.getSignaturesForAddress(pubkey, { limit: 10 }),
-            'getSignatures'
+            "getSignatures",
           ),
         ]);
 
@@ -150,10 +154,10 @@ export async function exampleBatchOperations(
           balance: balance / 1e9,
           recentTxCount: signatures.length,
         };
-      })
+      }),
     );
 
-    console.log('✅ Batch operations completed');
+    console.log("✅ Batch operations completed");
     return results;
   } finally {
     resilientConnection.destroy();
@@ -166,37 +170,39 @@ export async function exampleBatchOperations(
 export async function exampleHealthMonitoring() {
   const resilientConnection = createResilientConnection({
     endpoints: [
-      'https://api.mainnet-beta.solana.com',
-      'https://solana-api.projectserum.com',
-      'https://rpc.ankr.com/solana',
+      "https://api.mainnet-beta.solana.com",
+      "https://solana-api.projectserum.com",
+      "https://rpc.ankr.com/solana",
     ],
     healthCheckInterval: 10000, // Check every 10 seconds
   });
 
   try {
-    console.log('🏥 Starting health monitoring...');
+    console.log("🏥 Starting health monitoring...");
 
     // Check initial health
     const initialHealth = resilientConnection.getEndpointHealth();
-    console.log('Initial endpoint health:');
-    initialHealth.forEach(e => {
-      console.log(`  ${e.url}: ${e.isHealthy ? '✅' : '❌'}`);
+    console.log("Initial endpoint health:");
+    initialHealth.forEach((e) => {
+      console.log(`  ${e.url}: ${e.isHealthy ? "✅" : "❌"}`);
     });
 
     // Perform some operations
-    console.log('\n📊 Performing operations...');
+    console.log("\n📊 Performing operations...");
     for (let i = 0; i < 5; i++) {
       const slot = await resilientConnection.getSlot();
-      console.log(`  Operation ${i + 1}: Slot ${slot}, Endpoint: ${resilientConnection.getCurrentEndpoint()}`);
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      console.log(
+        `  Operation ${i + 1}: Slot ${slot}, Endpoint: ${resilientConnection.getCurrentEndpoint()}`,
+      );
+      await new Promise((resolve) => setTimeout(resolve, 2000));
     }
 
     // Check final health
     const finalHealth = resilientConnection.getEndpointHealth();
-    console.log('\nFinal endpoint health:');
-    finalHealth.forEach(e => {
+    console.log("\nFinal endpoint health:");
+    finalHealth.forEach((e) => {
       console.log(`  ${e.url}:`);
-      console.log(`    Healthy: ${e.isHealthy ? '✅' : '❌'}`);
+      console.log(`    Healthy: ${e.isHealthy ? "✅" : "❌"}`);
       console.log(`    Failures: ${e.failureCount}`);
     });
 
@@ -208,7 +214,7 @@ export async function exampleHealthMonitoring() {
 
 /**
  * Example 5: Server-Side API Integration
- * 
+ *
  * This example shows how to use the resilient connection in API routes
  */
 export async function exampleAPIRoute(walletAddress: string) {
@@ -221,12 +227,13 @@ export async function exampleAPIRoute(walletAddress: string) {
     // Get wallet data with automatic retry
     const balance = await resilientConnection.getBalance(pubkey);
     const slot = await resilientConnection.getSlot();
-    
+
     // Get recent fees for network status
     const fees = await resilientConnection.getRecentPrioritizationFees();
-    const avgFee = fees.length > 0
-      ? fees.reduce((sum, f) => sum + f.prioritizationFee, 0) / fees.length
-      : 0;
+    const avgFee =
+      fees.length > 0
+        ? fees.reduce((sum, f) => sum + f.prioritizationFee, 0) / fees.length
+        : 0;
 
     return {
       success: true,
@@ -236,7 +243,8 @@ export async function exampleAPIRoute(walletAddress: string) {
         currentSlot: slot,
         networkStatus: {
           averagePriorityFee: Math.round(avgFee),
-          congestion: avgFee > 100000 ? 'high' : avgFee > 10000 ? 'medium' : 'low',
+          congestion:
+            avgFee > 100000 ? "high" : avgFee > 10000 ? "medium" : "low",
         },
         rpcEndpoint: resilientConnection.getCurrentEndpoint(),
       },
@@ -244,7 +252,7 @@ export async function exampleAPIRoute(walletAddress: string) {
   } catch (error) {
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: error instanceof Error ? error.message : "Unknown error",
     };
   } finally {
     resilientConnection.destroy();
@@ -259,13 +267,15 @@ export async function examplePriorityFees() {
   const builder = new TransactionBuilder(resilientConnection);
 
   try {
-    console.log('💎 Calculating priority fees for different urgency levels...\n');
+    console.log(
+      "💎 Calculating priority fees for different urgency levels...\n",
+    );
 
-    const urgencies: Array<'low' | 'medium' | 'high' | 'critical'> = [
-      'low',
-      'medium',
-      'high',
-      'critical',
+    const urgencies: Array<"low" | "medium" | "high" | "critical"> = [
+      "low",
+      "medium",
+      "high",
+      "critical",
     ];
 
     for (const urgency of urgencies) {
@@ -273,8 +283,12 @@ export async function examplePriorityFees() {
       const estimatedFee = (fee.microLamports * fee.computeUnitLimit) / 1e9;
 
       console.log(`${urgency.toUpperCase()}:`);
-      console.log(`  Priority Fee: ${fee.microLamports.toLocaleString()} microLamports`);
-      console.log(`  Compute Limit: ${fee.computeUnitLimit.toLocaleString()} units`);
+      console.log(
+        `  Priority Fee: ${fee.microLamports.toLocaleString()} microLamports`,
+      );
+      console.log(
+        `  Compute Limit: ${fee.computeUnitLimit.toLocaleString()} units`,
+      );
       console.log(`  Est. Total Fee: ${estimatedFee.toFixed(6)} SOL\n`);
     }
   } finally {
@@ -284,53 +298,56 @@ export async function examplePriorityFees() {
 
 /**
  * Example 7: Client-Side Transaction Execution
- * 
+ *
  * This example shows how to use the resilient connection from a React component
  */
 export async function exampleClientSideExecution(
   transaction: Transaction,
   connection: Connection,
-  sendTransaction: (tx: Transaction, connection: Connection) => Promise<string>
+  sendTransaction: (tx: Transaction, connection: Connection) => Promise<string>,
 ) {
   try {
-    console.log('🔄 Executing transaction from client...');
+    console.log("🔄 Executing transaction from client...");
 
     // Send transaction using wallet adapter
     const signature = await sendTransaction(transaction, connection);
-    console.log('📝 Transaction sent:', signature);
+    console.log("📝 Transaction sent:", signature);
 
     // Confirm transaction
-    const confirmation = await connection.confirmTransaction(signature, 'confirmed');
+    const confirmation = await connection.confirmTransaction(
+      signature,
+      "confirmed",
+    );
 
     if (confirmation.value.err) {
-      throw new Error('Transaction failed');
+      throw new Error("Transaction failed");
     }
 
-    console.log('✅ Transaction confirmed:', signature);
+    console.log("✅ Transaction confirmed:", signature);
     return signature;
   } catch (error) {
-    console.error('❌ Transaction failed:', error);
+    console.error("❌ Transaction failed:", error);
     throw error;
   }
 }
 
 /**
  * Example 8: Fallback Pattern
- * 
+ *
  * Demonstrates how the library handles RPC failures automatically
  */
 export async function exampleFallbackBehavior() {
   const resilientConnection = createResilientConnection({
     endpoints: [
-      'https://api.mainnet-beta.solana.com',
-      'https://solana-api.projectserum.com',
+      "https://api.mainnet-beta.solana.com",
+      "https://solana-api.projectserum.com",
     ],
     maxRetries: 3,
     retryDelay: 1000,
   });
 
   try {
-    console.log('🔄 Testing fallback behavior...\n');
+    console.log("🔄 Testing fallback behavior...\n");
 
     // This operation will automatically:
     // 1. Try the first endpoint
@@ -339,18 +356,17 @@ export async function exampleFallbackBehavior() {
     // 4. Return result or throw after all retries exhausted
 
     const slot = await resilientConnection.getSlot();
-    console.log('✅ Successfully got slot:', slot);
-    console.log('   Using endpoint:', resilientConnection.getCurrentEndpoint());
+    console.log("✅ Successfully got slot:", slot);
+    console.log("   Using endpoint:", resilientConnection.getCurrentEndpoint());
 
     // Check which endpoints are healthy
     const health = resilientConnection.getEndpointHealth();
-    console.log('\nEndpoint health:');
-    health.forEach(e => {
+    console.log("\nEndpoint health:");
+    health.forEach((e) => {
       console.log(`  ${e.url}:`);
-      console.log(`    Status: ${e.isHealthy ? '✅ Healthy' : '❌ Unhealthy'}`);
+      console.log(`    Status: ${e.isHealthy ? "✅ Healthy" : "❌ Unhealthy"}`);
       console.log(`    Failures: ${e.failureCount}`);
     });
-
   } finally {
     resilientConnection.destroy();
   }

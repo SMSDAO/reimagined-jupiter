@@ -1,6 +1,6 @@
-import WebSocket from 'ws';
-import { EventEmitter } from 'events';
-import { pythPriceFeed, PythPriceData } from './pythPriceFeed.js';
+import WebSocket from "ws";
+import { EventEmitter } from "events";
+import { pythPriceFeed, PythPriceData } from "./pythPriceFeed.js";
 
 /**
  * WebSocket Service for Real-Time Data Streaming
@@ -8,14 +8,20 @@ import { pythPriceFeed, PythPriceData } from './pythPriceFeed.js';
  */
 
 export interface WebSocketMessage {
-  type: 'price_update' | 'arbitrage_opportunity' | 'trade_executed' | 'error' | 'heartbeat' | 'subscription_ack';
+  type:
+    | "price_update"
+    | "arbitrage_opportunity"
+    | "trade_executed"
+    | "error"
+    | "heartbeat"
+    | "subscription_ack";
   data: any;
   timestamp: number;
 }
 
 export interface ArbitrageOpportunity {
   id: string;
-  type: 'flash_loan' | 'triangular' | 'hybrid';
+  type: "flash_loan" | "triangular" | "hybrid";
   tokens: string[];
   estimatedProfit: number;
   confidence: number;
@@ -40,33 +46,33 @@ export class WebSocketService extends EventEmitter {
    */
   start(port: number = 8080): void {
     if (this.isRunning) {
-      console.log('[WebSocketService] Already running');
+      console.log("[WebSocketService] Already running");
       return;
     }
 
     try {
       this.wss = new WebSocket.Server({ port });
-      
-      this.wss.on('connection', (ws: WebSocket) => {
+
+      this.wss.on("connection", (ws: WebSocket) => {
         this.handleConnection(ws);
       });
 
-      this.wss.on('error', (error: Error) => {
-        console.error('[WebSocketService] Server error:', error);
-        this.emit('error', error);
+      this.wss.on("error", (error: Error) => {
+        console.error("[WebSocketService] Server error:", error);
+        this.emit("error", error);
       });
 
       // Start heartbeat
       this.startHeartbeat();
-      
+
       // Start price updates
       this.startPriceUpdates();
 
       this.isRunning = true;
       console.log(`[WebSocketService] Started on port ${port}`);
-      this.emit('started', { port });
+      this.emit("started", { port });
     } catch (error) {
-      console.error('[WebSocketService] Failed to start:', error);
+      console.error("[WebSocketService] Failed to start:", error);
       throw error;
     }
   }
@@ -75,41 +81,41 @@ export class WebSocketService extends EventEmitter {
    * Handle new WebSocket connection
    */
   private handleConnection(ws: WebSocket): void {
-    console.log('[WebSocketService] New client connected');
+    console.log("[WebSocketService] New client connected");
     this.clients.add(ws);
 
     // Send welcome message
     this.sendMessage(ws, {
-      type: 'subscription_ack',
+      type: "subscription_ack",
       data: {
-        message: 'Connected to GXQ Studio WebSocket Service',
-        supportedSubscriptions: ['prices', 'arbitrage', 'trades'],
+        message: "Connected to GXQ Studio WebSocket Service",
+        supportedSubscriptions: ["prices", "arbitrage", "trades"],
         timestamp: Date.now(),
       },
       timestamp: Date.now(),
     });
 
     // Handle messages from client
-    ws.on('message', (data: WebSocket.Data) => {
+    ws.on("message", (data: WebSocket.Data) => {
       try {
         const message = JSON.parse(data.toString());
         this.handleClientMessage(ws, message);
       } catch (error) {
-        console.error('[WebSocketService] Error parsing message:', error);
-        this.sendError(ws, 'Invalid message format');
+        console.error("[WebSocketService] Error parsing message:", error);
+        this.sendError(ws, "Invalid message format");
       }
     });
 
     // Handle disconnection
-    ws.on('close', () => {
-      console.log('[WebSocketService] Client disconnected');
+    ws.on("close", () => {
+      console.log("[WebSocketService] Client disconnected");
       this.clients.delete(ws);
       this.removeClientSubscriptions(ws);
     });
 
     // Handle errors
-    ws.on('error', (error: Error) => {
-      console.error('[WebSocketService] Client error:', error);
+    ws.on("error", (error: Error) => {
+      console.error("[WebSocketService] Client error:", error);
     });
   }
 
@@ -120,22 +126,22 @@ export class WebSocketService extends EventEmitter {
     const { type, data } = message;
 
     switch (type) {
-      case 'subscribe':
+      case "subscribe":
         this.handleSubscribe(ws, data);
         break;
-      
-      case 'unsubscribe':
+
+      case "unsubscribe":
         this.handleUnsubscribe(ws, data);
         break;
-      
-      case 'ping':
+
+      case "ping":
         this.sendMessage(ws, {
-          type: 'heartbeat',
+          type: "heartbeat",
           data: { pong: true },
           timestamp: Date.now(),
         });
         break;
-      
+
       default:
         this.sendError(ws, `Unknown message type: ${type}`);
     }
@@ -148,36 +154,36 @@ export class WebSocketService extends EventEmitter {
     const { channel, symbols } = data;
 
     if (!channel) {
-      this.sendError(ws, 'Channel is required for subscription');
+      this.sendError(ws, "Channel is required for subscription");
       return;
     }
 
     console.log(`[WebSocketService] Client subscribing to ${channel}`, symbols);
 
     switch (channel) {
-      case 'prices':
+      case "prices":
         if (!symbols || !Array.isArray(symbols)) {
-          this.sendError(ws, 'Symbols array required for price subscription');
+          this.sendError(ws, "Symbols array required for price subscription");
           return;
         }
         this.subscribeToPrices(ws, symbols);
         break;
-      
-      case 'arbitrage':
+
+      case "arbitrage":
         this.subscribeToArbitrage(ws);
         break;
-      
-      case 'trades':
+
+      case "trades":
         this.subscribeToTrades(ws);
         break;
-      
+
       default:
         this.sendError(ws, `Unknown channel: ${channel}`);
     }
 
     this.sendMessage(ws, {
-      type: 'subscription_ack',
-      data: { channel, status: 'subscribed' },
+      type: "subscription_ack",
+      data: { channel, status: "subscribed" },
       timestamp: Date.now(),
     });
   }
@@ -189,7 +195,7 @@ export class WebSocketService extends EventEmitter {
     const { channel } = data;
 
     if (!channel) {
-      this.sendError(ws, 'Channel is required for unsubscription');
+      this.sendError(ws, "Channel is required for unsubscription");
       return;
     }
 
@@ -200,8 +206,8 @@ export class WebSocketService extends EventEmitter {
     }
 
     this.sendMessage(ws, {
-      type: 'subscription_ack',
-      data: { channel, status: 'unsubscribed' },
+      type: "subscription_ack",
+      data: { channel, status: "unsubscribed" },
       timestamp: Date.now(),
     });
   }
@@ -210,12 +216,12 @@ export class WebSocketService extends EventEmitter {
    * Subscribe client to price updates
    */
   private subscribeToPrices(ws: WebSocket, symbols: string[]): void {
-    const channel = 'prices';
-    
+    const channel = "prices";
+
     if (!this.subscriptions.has(channel)) {
       this.subscriptions.set(channel, new Set());
     }
-    
+
     this.subscriptions.get(channel)!.add(ws);
 
     // Store symbols for this client
@@ -226,12 +232,12 @@ export class WebSocketService extends EventEmitter {
    * Subscribe client to arbitrage opportunities
    */
   private subscribeToArbitrage(ws: WebSocket): void {
-    const channel = 'arbitrage';
-    
+    const channel = "arbitrage";
+
     if (!this.subscriptions.has(channel)) {
       this.subscriptions.set(channel, new Set());
     }
-    
+
     this.subscriptions.get(channel)!.add(ws);
   }
 
@@ -239,12 +245,12 @@ export class WebSocketService extends EventEmitter {
    * Subscribe client to trade executions
    */
   private subscribeToTrades(ws: WebSocket): void {
-    const channel = 'trades';
-    
+    const channel = "trades";
+
     if (!this.subscriptions.has(channel)) {
       this.subscriptions.set(channel, new Set());
     }
-    
+
     this.subscriptions.get(channel)!.add(ws);
   }
 
@@ -264,7 +270,7 @@ export class WebSocketService extends EventEmitter {
   private startHeartbeat(): void {
     this.heartbeatInterval = setInterval(() => {
       this.broadcast({
-        type: 'heartbeat',
+        type: "heartbeat",
         data: { timestamp: Date.now() },
         timestamp: Date.now(),
       });
@@ -276,17 +282,17 @@ export class WebSocketService extends EventEmitter {
    */
   private startPriceUpdates(): void {
     this.priceUpdateInterval = setInterval(async () => {
-      const priceSubscribers = this.subscriptions.get('prices');
+      const priceSubscribers = this.subscriptions.get("prices");
       if (!priceSubscribers || priceSubscribers.size === 0) {
         return;
       }
 
       // Collect all unique symbols from subscribers
       const allSymbols = new Set<string>();
-      priceSubscribers.forEach(ws => {
+      priceSubscribers.forEach((ws) => {
         const symbols = this.clientSymbols.get(ws);
         if (symbols && Array.isArray(symbols)) {
-          symbols.forEach(s => allSymbols.add(s));
+          symbols.forEach((s) => allSymbols.add(s));
         }
       });
 
@@ -298,11 +304,11 @@ export class WebSocketService extends EventEmitter {
       const prices = await pythPriceFeed.getPrices(Array.from(allSymbols));
 
       // Send updates to subscribed clients
-      priceSubscribers.forEach(ws => {
+      priceSubscribers.forEach((ws) => {
         const symbols = this.clientSymbols.get(ws) || [];
         const relevantPrices: Record<string, PythPriceData> = {};
 
-        symbols.forEach(symbol => {
+        symbols.forEach((symbol) => {
           const price = prices.get(symbol);
           if (price) {
             relevantPrices[symbol] = price;
@@ -311,7 +317,7 @@ export class WebSocketService extends EventEmitter {
 
         if (Object.keys(relevantPrices).length > 0) {
           this.sendMessage(ws, {
-            type: 'price_update',
+            type: "price_update",
             data: relevantPrices,
             timestamp: Date.now(),
           });
@@ -324,44 +330,48 @@ export class WebSocketService extends EventEmitter {
    * Broadcast arbitrage opportunity to subscribers
    */
   broadcastArbitrageOpportunity(opportunity: ArbitrageOpportunity): void {
-    const subscribers = this.subscriptions.get('arbitrage');
+    const subscribers = this.subscriptions.get("arbitrage");
     if (!subscribers || subscribers.size === 0) {
       return;
     }
 
     const message: WebSocketMessage = {
-      type: 'arbitrage_opportunity',
+      type: "arbitrage_opportunity",
       data: opportunity,
       timestamp: Date.now(),
     };
 
-    subscribers.forEach(ws => {
+    subscribers.forEach((ws) => {
       this.sendMessage(ws, message);
     });
 
-    console.log(`[WebSocketService] Broadcasted arbitrage opportunity to ${subscribers.size} clients`);
+    console.log(
+      `[WebSocketService] Broadcasted arbitrage opportunity to ${subscribers.size} clients`,
+    );
   }
 
   /**
    * Broadcast trade execution to subscribers
    */
   broadcastTradeExecution(trade: any): void {
-    const subscribers = this.subscriptions.get('trades');
+    const subscribers = this.subscriptions.get("trades");
     if (!subscribers || subscribers.size === 0) {
       return;
     }
 
     const message: WebSocketMessage = {
-      type: 'trade_executed',
+      type: "trade_executed",
       data: trade,
       timestamp: Date.now(),
     };
 
-    subscribers.forEach(ws => {
+    subscribers.forEach((ws) => {
       this.sendMessage(ws, message);
     });
 
-    console.log(`[WebSocketService] Broadcasted trade execution to ${subscribers.size} clients`);
+    console.log(
+      `[WebSocketService] Broadcasted trade execution to ${subscribers.size} clients`,
+    );
   }
 
   /**
@@ -378,7 +388,7 @@ export class WebSocketService extends EventEmitter {
    */
   private sendError(ws: WebSocket, error: string): void {
     this.sendMessage(ws, {
-      type: 'error',
+      type: "error",
       data: { error },
       timestamp: Date.now(),
     });
@@ -388,7 +398,7 @@ export class WebSocketService extends EventEmitter {
    * Broadcast message to all connected clients
    */
   private broadcast(message: WebSocketMessage): void {
-    this.clients.forEach(ws => {
+    this.clients.forEach((ws) => {
       this.sendMessage(ws, message);
     });
   }
@@ -398,7 +408,7 @@ export class WebSocketService extends EventEmitter {
    */
   stop(): void {
     if (!this.isRunning) {
-      console.log('[WebSocketService] Not running');
+      console.log("[WebSocketService] Not running");
       return;
     }
 
@@ -414,15 +424,15 @@ export class WebSocketService extends EventEmitter {
     }
 
     // Close all client connections
-    this.clients.forEach(ws => {
-      ws.close(1000, 'Server shutting down');
+    this.clients.forEach((ws) => {
+      ws.close(1000, "Server shutting down");
     });
 
     // Close server
     if (this.wss) {
       this.wss.close(() => {
-        console.log('[WebSocketService] Server stopped');
-        this.emit('stopped');
+        console.log("[WebSocketService] Server stopped");
+        this.emit("stopped");
       });
       this.wss = null;
     }

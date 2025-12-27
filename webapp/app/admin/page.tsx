@@ -1,11 +1,11 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useWallet, useConnection } from '@solana/wallet-adapter-react';
-import { PublicKey } from '@solana/web3.js';
-import { motion } from 'framer-motion';
-import PendingApprovals from '@/components/PendingApprovals';
-import { isAdmin } from '@/lib/auth';
+import { useState, useEffect } from "react";
+import { useWallet, useConnection } from "@solana/wallet-adapter-react";
+import { PublicKey } from "@solana/web3.js";
+import { motion } from "framer-motion";
+import PendingApprovals from "@/components/PendingApprovals";
+import { isAdmin } from "@/lib/auth";
 
 interface BotStatus {
   running: boolean;
@@ -37,7 +37,7 @@ interface WalletScore {
 export default function AdminPage() {
   const { publicKey } = useWallet();
   const { connection } = useConnection();
-  
+
   const [botStatus, setBotStatus] = useState<BotStatus>({
     running: false,
     uptime: 0,
@@ -47,11 +47,17 @@ export default function AdminPage() {
   });
 
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
-  const [walletToScore, setWalletToScore] = useState('');
+  const [walletToScore, setWalletToScore] = useState("");
   const [walletScore, setWalletScore] = useState<WalletScore | null>(null);
   const [scoringWallet, setScoringWallet] = useState(false);
   const [portfolioAnalysis, setPortfolioAnalysis] = useState<{
-    holdings: Array<{ symbol: string; mint: string; balance: number; price: number; value: number }>;
+    holdings: Array<{
+      symbol: string;
+      mint: string;
+      balance: number;
+      price: number;
+      value: number;
+    }>;
     totalValue: number;
     timestamp: string;
   } | null>(null);
@@ -60,7 +66,7 @@ export default function AdminPage() {
   useEffect(() => {
     if (botStatus.running) {
       const interval = setInterval(() => {
-        setBotStatus(prev => ({
+        setBotStatus((prev) => ({
           ...prev,
           uptime: prev.uptime + 1,
         }));
@@ -70,8 +76,8 @@ export default function AdminPage() {
   }, [botStatus.running]);
 
   const toggleBot = () => {
-    setBotStatus(prev => ({ ...prev, running: !prev.running }));
-    
+    setBotStatus((prev) => ({ ...prev, running: !prev.running }));
+
     if (!botStatus.running) {
       // Start scanning for opportunities
       scanOpportunities();
@@ -81,74 +87,80 @@ export default function AdminPage() {
   const scanOpportunities = async () => {
     try {
       // Fetch real opportunities from API
-      const response = await fetch('/api/admin/scan-opportunities', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/admin/scan-opportunities", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          types: ['arbitrage', 'snipe', 'flash-loan', 'triangular'],
+          types: ["arbitrage", "snipe", "flash-loan", "triangular"],
         }),
       });
-      
+
       if (!response.ok) {
-        console.error('Failed to scan opportunities:', response.statusText);
+        console.error("Failed to scan opportunities:", response.statusText);
         return;
       }
-      
+
       const data = await response.json();
       if (data.opportunities && Array.isArray(data.opportunities)) {
         setOpportunities(data.opportunities);
       }
     } catch (error) {
-      console.error('Error scanning opportunities:', error);
+      console.error("Error scanning opportunities:", error);
     }
   };
 
   const executeOpportunity = async (opp: Opportunity) => {
     if (!publicKey) {
-      alert('Connect wallet first!');
+      alert("Connect wallet first!");
       return;
     }
 
     try {
-      const response = await fetch('/api/admin/execute-opportunity', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/admin/execute-opportunity", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           opportunityId: opp.id,
           walletAddress: publicKey.toString(),
         }),
       });
-      
+
       if (!response.ok) {
-        throw new Error(`Failed to execute opportunity: ${response.statusText}`);
+        throw new Error(
+          `Failed to execute opportunity: ${response.statusText}`,
+        );
       }
-      
+
       const result = await response.json();
-      
+
       if (result.success) {
-        alert(`✅ ${opp.type} trade executed successfully!\n\nSignature: ${result.signature}\nProfit: ${opp.profit}%`);
-        
+        alert(
+          `✅ ${opp.type} trade executed successfully!\n\nSignature: ${result.signature}\nProfit: ${opp.profit}%`,
+        );
+
         // Update bot status
-        setBotStatus(prev => ({
+        setBotStatus((prev) => ({
           ...prev,
           tradesExecuted: prev.tradesExecuted + 1,
           profitToday: prev.profitToday + (result.profit || opp.profit * 100),
         }));
 
         // Remove executed opportunity
-        setOpportunities(prev => prev.filter(o => o.id !== opp.id));
+        setOpportunities((prev) => prev.filter((o) => o.id !== opp.id));
       } else {
         alert(`❌ Failed to execute trade: ${result.error}`);
       }
     } catch (error) {
-      console.error('Error executing opportunity:', error);
-      alert(`❌ Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error("Error executing opportunity:", error);
+      alert(
+        `❌ Error: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
     }
   };
 
   const calculateWalletScore = async () => {
     if (!walletToScore) {
-      alert('Please enter a wallet address');
+      alert("Please enter a wallet address");
       return;
     }
 
@@ -159,13 +171,15 @@ export default function AdminPage() {
       const pubKey = new PublicKey(walletToScore);
 
       // Fetch transaction signatures
-      const signatures = await connection.getSignaturesForAddress(pubKey, { limit: 1000 });
+      const signatures = await connection.getSignaturesForAddress(pubKey, {
+        limit: 1000,
+      });
 
       // Analyze transactions for swaps
       let swapCount = 0;
       let totalVolume = 0;
-      const jupiterProgram = 'JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4';
-      const raydiumProgram = 'RVKd61ztZW9GUwhRbbLoYVRE5Xf1B2tVscKqwZqXgEr';
+      const jupiterProgram = "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4";
+      const raydiumProgram = "RVKd61ztZW9GUwhRbbLoYVRE5Xf1B2tVscKqwZqXgEr";
 
       for (const sig of signatures.slice(0, 100)) {
         try {
@@ -176,12 +190,18 @@ export default function AdminPage() {
           if (tx?.meta) {
             // Check if transaction involves Jupiter or Raydium
             const programIds = tx.transaction.message.instructions
-              .map((ix: { programId?: { toString: () => string } }) => ix.programId?.toString() || '')
+              .map(
+                (ix: { programId?: { toString: () => string } }) =>
+                  ix.programId?.toString() || "",
+              )
               .filter(Boolean);
 
-            if (programIds.includes(jupiterProgram) || programIds.includes(raydiumProgram)) {
+            if (
+              programIds.includes(jupiterProgram) ||
+              programIds.includes(raydiumProgram)
+            ) {
               swapCount++;
-              
+
               // Calculate volume from pre/post balances
               const preBalance = tx.meta.preBalances[0] || 0;
               const postBalance = tx.meta.postBalances[0] || 0;
@@ -196,13 +216,14 @@ export default function AdminPage() {
       }
 
       // Calculate score (0-100)
-      const score = Math.min(100, Math.floor(
-        (swapCount * 5) + (totalVolume * 2) + (signatures.length * 0.1)
-      ));
+      const score = Math.min(
+        100,
+        Math.floor(swapCount * 5 + totalVolume * 2 + signatures.length * 0.1),
+      );
 
       const lastActive = signatures[0]?.blockTime
         ? new Date(signatures[0].blockTime * 1000).toLocaleString()
-        : 'Unknown';
+        : "Unknown";
 
       const walletScoreData: WalletScore = {
         address: walletToScore,
@@ -214,7 +235,7 @@ export default function AdminPage() {
 
       setWalletScore(walletScoreData);
     } catch (err) {
-      console.error('Error calculating wallet score:', err);
+      console.error("Error calculating wallet score:", err);
       alert(`Error: ${(err as Error).message}`);
     } finally {
       setScoringWallet(false);
@@ -223,46 +244,54 @@ export default function AdminPage() {
 
   const analyzePortfolio = async () => {
     if (!publicKey) {
-      alert('Connect wallet first!');
+      alert("Connect wallet first!");
       return;
     }
 
     try {
       // Get token accounts
-      const tokenAccounts = await connection.getParsedTokenAccountsByOwner(publicKey, {
-        programId: new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'),
-      });
+      const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
+        publicKey,
+        {
+          programId: new PublicKey(
+            "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+          ),
+        },
+      );
 
       // Fetch real prices from Jupiter Price API
       const mintAddresses = tokenAccounts.value.map(
-        acc => acc.account.data.parsed.info.mint
+        (acc) => acc.account.data.parsed.info.mint,
       );
-      
+
       const priceResponse = await fetch(
-        `https://price.jup.ag/v4/price?ids=${mintAddresses.join(',')}`
+        `https://price.jup.ag/v4/price?ids=${mintAddresses.join(",")}`,
       );
-      
+
       const priceData = await priceResponse.json();
 
       const holdings = await Promise.all(
         tokenAccounts.value.map(async (acc) => {
-          const balance = acc.account.data.parsed.info.tokenAmount.uiAmount || 0;
+          const balance =
+            acc.account.data.parsed.info.tokenAmount.uiAmount || 0;
           const mint = acc.account.data.parsed.info.mint;
-          
+
           // Get real price from Jupiter
           const price = priceData.data?.[mint]?.price || 0;
-          
+
           // Fetch token metadata to get symbol
-          let symbol = 'UNKNOWN';
+          let symbol = "UNKNOWN";
           try {
-            const tokenListResponse = await fetch('https://token.jup.ag/all');
+            const tokenListResponse = await fetch("https://token.jup.ag/all");
             const tokenList = await tokenListResponse.json();
-            const token = tokenList.find((t: { address: string }) => t.address === mint);
+            const token = tokenList.find(
+              (t: { address: string }) => t.address === mint,
+            );
             symbol = token?.symbol || mint.slice(0, 4);
           } catch {
             symbol = mint.slice(0, 4);
           }
-          
+
           return {
             symbol,
             mint,
@@ -270,7 +299,7 @@ export default function AdminPage() {
             price,
             value: balance * price,
           };
-        })
+        }),
       );
 
       const totalValue = holdings.reduce((sum, h) => sum + h.value, 0);
@@ -281,7 +310,7 @@ export default function AdminPage() {
         timestamp: new Date().toISOString(),
       });
     } catch (err) {
-      console.error('Error analyzing portfolio:', err);
+      console.error("Error analyzing portfolio:", err);
       alert(`Error: ${(err as Error).message}`);
     }
   };
@@ -308,293 +337,369 @@ export default function AdminPage() {
         {!publicKey ? (
           <div className="bg-white/10 backdrop-blur-md rounded-xl p-12 text-center border border-white/10">
             <div className="text-6xl mb-4">🔐</div>
-            <h2 className="text-2xl font-bold text-white mb-2">Connect Your Wallet</h2>
-            <p className="text-gray-300">Connect your wallet to access the admin panel</p>
+            <h2 className="text-2xl font-bold text-white mb-2">
+              Connect Your Wallet
+            </h2>
+            <p className="text-gray-300">
+              Connect your wallet to access the admin panel
+            </p>
           </div>
         ) : !isAdmin(publicKey.toString()) ? (
           <div className="bg-white/10 backdrop-blur-md rounded-xl p-12 text-center border border-red-500/50">
             <div className="text-6xl mb-4">🚫</div>
-            <h2 className="text-2xl font-bold text-white mb-2">Access Denied</h2>
-            <p className="text-gray-300">This page is restricted to administrators only.</p>
-            <p className="text-sm text-gray-400 mt-4">Your wallet: {publicKey.toString().slice(0, 8)}...{publicKey.toString().slice(-8)}</p>
+            <h2 className="text-2xl font-bold text-white mb-2">
+              Access Denied
+            </h2>
+            <p className="text-gray-300">
+              This page is restricted to administrators only.
+            </p>
+            <p className="text-sm text-gray-400 mt-4">
+              Your wallet: {publicKey.toString().slice(0, 8)}...
+              {publicKey.toString().slice(-8)}
+            </p>
           </div>
         ) : (
           <>
+            {/* Pending Approvals Section */}
+            <div className="mb-8">
+              <PendingApprovals />
+            </div>
 
-        {/* Pending Approvals Section */}
-        <div className="mb-8">
-          <PendingApprovals />
-        </div>
+            {/* Bot Status & Control */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+              <div className="bg-white/10 backdrop-blur-md rounded-xl p-6">
+                <h2 className="text-2xl font-bold text-white mb-4">
+                  🤖 Mainnet Bot Runner
+                </h2>
 
-        {/* Bot Status & Control */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          <div className="bg-white/10 backdrop-blur-md rounded-xl p-6">
-            <h2 className="text-2xl font-bold text-white mb-4">🤖 Mainnet Bot Runner</h2>
-            
-            <div className="space-y-4 mb-6">
-              <div className="flex items-center justify-between">
-                <span className="text-gray-300">Status</span>
-                <div className="flex items-center gap-2">
-                  <span className={`w-3 h-3 rounded-full ${botStatus.running ? 'bg-green-500' : 'bg-red-500'}`} />
-                  <span className="text-white font-bold">
-                    {botStatus.running ? 'RUNNING' : 'STOPPED'}
-                  </span>
+                <div className="space-y-4 mb-6">
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-300">Status</span>
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`w-3 h-3 rounded-full ${botStatus.running ? "bg-green-500" : "bg-red-500"}`}
+                      />
+                      <span className="text-white font-bold">
+                        {botStatus.running ? "RUNNING" : "STOPPED"}
+                      </span>
+                    </div>
+                  </div>
+
+                  {botStatus.running && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-300">Uptime</span>
+                      <span className="text-white font-bold">
+                        {formatUptime(botStatus.uptime)}
+                      </span>
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-300">Profit Today</span>
+                    <span className="text-green-400 font-bold">
+                      ${botStatus.profitToday.toFixed(2)}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-300">Trades Executed</span>
+                    <span className="text-white font-bold">
+                      {botStatus.tradesExecuted}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-300">Success Rate</span>
+                    <span className="text-green-400 font-bold">
+                      {botStatus.successRate}%
+                    </span>
+                  </div>
                 </div>
+
+                <button
+                  onClick={toggleBot}
+                  disabled={!publicKey}
+                  className={`w-full py-3 rounded-lg font-bold transition ${
+                    botStatus.running
+                      ? "bg-red-600 hover:bg-red-700"
+                      : "bg-green-600 hover:bg-green-700"
+                  } text-white disabled:opacity-50`}
+                >
+                  {botStatus.running ? "⏹️ Stop Bot" : "▶️ Start Bot"}
+                </button>
+
+                {!publicKey && (
+                  <div className="text-center text-sm text-yellow-400 mt-2">
+                    Connect wallet to control bot
+                  </div>
+                )}
               </div>
 
-              {botStatus.running && (
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-300">Uptime</span>
-                  <span className="text-white font-bold">{formatUptime(botStatus.uptime)}</span>
+              {/* Multi-Angle Opportunity Finder */}
+              <div className="bg-white/10 backdrop-blur-md rounded-xl p-6">
+                <h2 className="text-2xl font-bold text-white mb-4">
+                  🎯 Opportunity Finder
+                </h2>
+
+                <div className="space-y-3 mb-4">
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`w-3 h-3 rounded-full ${botStatus.running ? "bg-green-500" : "bg-gray-500"}`}
+                    />
+                    <span className="text-white">Arbitrage Scanner</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`w-3 h-3 rounded-full ${botStatus.running ? "bg-green-500" : "bg-gray-500"}`}
+                    />
+                    <span className="text-white">Flash Loan Detector</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`w-3 h-3 rounded-full ${botStatus.running ? "bg-green-500" : "bg-gray-500"}`}
+                    />
+                    <span className="text-white">Triangular Routes</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`w-3 h-3 rounded-full ${botStatus.running ? "bg-green-500" : "bg-gray-500"}`}
+                    />
+                    <span className="text-white">Sniper Monitor</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`w-3 h-3 rounded-full ${botStatus.running ? "bg-green-500" : "bg-gray-500"}`}
+                    />
+                    <span className="text-white">Pyth Price Oracle</span>
+                  </div>
+                </div>
+
+                <div className="bg-white/5 rounded-lg p-3 mb-4">
+                  <div className="text-sm text-gray-400">Monitoring DEXs:</div>
+                  <div className="text-white font-mono text-xs mt-1">
+                    Raydium, Orca, Jupiter, Meteora, Phoenix, Pump.fun, OpenBook
+                  </div>
+                </div>
+
+                <button
+                  onClick={scanOpportunities}
+                  disabled={!botStatus.running}
+                  className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 rounded-lg disabled:opacity-50"
+                >
+                  🔍 Scan Now
+                </button>
+              </div>
+            </div>
+
+            {/* Opportunities List */}
+            {opportunities.length > 0 && (
+              <div className="bg-white/10 backdrop-blur-md rounded-xl p-6 mb-8">
+                <h2 className="text-2xl font-bold text-white mb-4">
+                  💎 Live Opportunities
+                </h2>
+                <div className="space-y-3">
+                  {opportunities.map((opp) => (
+                    <div
+                      key={opp.id}
+                      className="bg-white/5 rounded-lg p-4 flex items-center justify-between"
+                    >
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-2">
+                          <span className="px-3 py-1 rounded-full text-xs font-bold bg-blue-600 text-white">
+                            {opp.type}
+                          </span>
+                          <span className="text-white font-bold">
+                            {opp.token}
+                          </span>
+                          <span className="text-gray-400 text-sm">
+                            {opp.dex}
+                          </span>
+                        </div>
+                        <div className="flex gap-4 text-sm">
+                          {opp.entry > 0 && (
+                            <span className="text-gray-300">
+                              Entry:{" "}
+                              <span className="text-white">
+                                ${opp.entry.toFixed(4)}
+                              </span>
+                            </span>
+                          )}
+                          {opp.target > 0 && (
+                            <span className="text-gray-300">
+                              Target:{" "}
+                              <span className="text-white">
+                                ${opp.target.toFixed(4)}
+                              </span>
+                            </span>
+                          )}
+                          <span className="text-gray-300">
+                            Confidence:{" "}
+                            <span className="text-green-400">
+                              {opp.confidence}%
+                            </span>
+                          </span>
+                        </div>
+                      </div>
+                      <div className="text-right mr-6">
+                        <div className="text-2xl font-bold text-green-400">
+                          +{opp.profit}%
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => executeOpportunity(opp)}
+                        className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-bold"
+                      >
+                        Execute
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Wallet Scoring System */}
+            <div className="bg-white/10 backdrop-blur-md rounded-xl p-6 mb-8">
+              <h2 className="text-2xl font-bold text-white mb-4">
+                📊 Wallet Scoring System
+              </h2>
+              <p className="text-gray-300 text-sm mb-4">
+                Calculate wallet scores based on real swaps from Jupiter and
+                Raydium APIs
+              </p>
+
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+                <input
+                  type="text"
+                  placeholder="Enter wallet address..."
+                  value={walletToScore}
+                  onChange={(e) => setWalletToScore(e.target.value)}
+                  className="md:col-span-3 px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500"
+                />
+                <button
+                  onClick={calculateWalletScore}
+                  disabled={scoringWallet}
+                  className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 rounded-lg disabled:opacity-50"
+                >
+                  {scoringWallet ? "⏳ Scoring..." : "🎯 Score Wallet"}
+                </button>
+              </div>
+
+              {walletScore && (
+                <div className="bg-white/5 rounded-lg p-4">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div>
+                      <div className="text-sm text-gray-400">Score</div>
+                      <div className="text-2xl font-bold text-green-400">
+                        {walletScore.score}/100
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-sm text-gray-400">Swaps</div>
+                      <div className="text-2xl font-bold text-white">
+                        {walletScore.swapCount}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-sm text-gray-400">Volume</div>
+                      <div className="text-2xl font-bold text-white">
+                        {walletScore.volume.toFixed(2)} SOL
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-sm text-gray-400">Last Active</div>
+                      <div className="text-sm text-white">
+                        {walletScore.lastActive}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Portfolio Analysis */}
+            <div className="bg-white/10 backdrop-blur-md rounded-xl p-6">
+              <h2 className="text-2xl font-bold text-white mb-4">
+                💼 Portfolio Analysis
+              </h2>
+              <p className="text-gray-300 text-sm mb-4">
+                Live portfolio insights with Pyth prices and multi-aggregator
+                cross-check
+              </p>
+
+              <button
+                onClick={analyzePortfolio}
+                disabled={!publicKey}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg mb-4 disabled:opacity-50"
+              >
+                📈 Analyze My Portfolio
+              </button>
+
+              {!publicKey && (
+                <div className="text-center text-sm text-yellow-400 mb-4">
+                  Connect wallet to analyze portfolio
                 </div>
               )}
 
-              <div className="flex items-center justify-between">
-                <span className="text-gray-300">Profit Today</span>
-                <span className="text-green-400 font-bold">${botStatus.profitToday.toFixed(2)}</span>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <span className="text-gray-300">Trades Executed</span>
-                <span className="text-white font-bold">{botStatus.tradesExecuted}</span>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <span className="text-gray-300">Success Rate</span>
-                <span className="text-green-400 font-bold">{botStatus.successRate}%</span>
-              </div>
-            </div>
-
-            <button
-              onClick={toggleBot}
-              disabled={!publicKey}
-              className={`w-full py-3 rounded-lg font-bold transition ${
-                botStatus.running
-                  ? 'bg-red-600 hover:bg-red-700'
-                  : 'bg-green-600 hover:bg-green-700'
-              } text-white disabled:opacity-50`}
-            >
-              {botStatus.running ? '⏹️ Stop Bot' : '▶️ Start Bot'}
-            </button>
-            
-            {!publicKey && (
-              <div className="text-center text-sm text-yellow-400 mt-2">
-                Connect wallet to control bot
-              </div>
-            )}
-          </div>
-
-          {/* Multi-Angle Opportunity Finder */}
-          <div className="bg-white/10 backdrop-blur-md rounded-xl p-6">
-            <h2 className="text-2xl font-bold text-white mb-4">🎯 Opportunity Finder</h2>
-            
-            <div className="space-y-3 mb-4">
-              <div className="flex items-center gap-2">
-                <span className={`w-3 h-3 rounded-full ${botStatus.running ? 'bg-green-500' : 'bg-gray-500'}`} />
-                <span className="text-white">Arbitrage Scanner</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className={`w-3 h-3 rounded-full ${botStatus.running ? 'bg-green-500' : 'bg-gray-500'}`} />
-                <span className="text-white">Flash Loan Detector</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className={`w-3 h-3 rounded-full ${botStatus.running ? 'bg-green-500' : 'bg-gray-500'}`} />
-                <span className="text-white">Triangular Routes</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className={`w-3 h-3 rounded-full ${botStatus.running ? 'bg-green-500' : 'bg-gray-500'}`} />
-                <span className="text-white">Sniper Monitor</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className={`w-3 h-3 rounded-full ${botStatus.running ? 'bg-green-500' : 'bg-gray-500'}`} />
-                <span className="text-white">Pyth Price Oracle</span>
-              </div>
-            </div>
-
-            <div className="bg-white/5 rounded-lg p-3 mb-4">
-              <div className="text-sm text-gray-400">Monitoring DEXs:</div>
-              <div className="text-white font-mono text-xs mt-1">
-                Raydium, Orca, Jupiter, Meteora, Phoenix, Pump.fun, OpenBook
-              </div>
-            </div>
-
-            <button
-              onClick={scanOpportunities}
-              disabled={!botStatus.running}
-              className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 rounded-lg disabled:opacity-50"
-            >
-              🔍 Scan Now
-            </button>
-          </div>
-        </div>
-
-        {/* Opportunities List */}
-        {opportunities.length > 0 && (
-          <div className="bg-white/10 backdrop-blur-md rounded-xl p-6 mb-8">
-            <h2 className="text-2xl font-bold text-white mb-4">💎 Live Opportunities</h2>
-            <div className="space-y-3">
-              {opportunities.map((opp) => (
-                <div
-                  key={opp.id}
-                  className="bg-white/5 rounded-lg p-4 flex items-center justify-between"
-                >
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <span className="px-3 py-1 rounded-full text-xs font-bold bg-blue-600 text-white">
-                        {opp.type}
-                      </span>
-                      <span className="text-white font-bold">{opp.token}</span>
-                      <span className="text-gray-400 text-sm">{opp.dex}</span>
+              {portfolioAnalysis && (
+                <div className="space-y-4">
+                  <div className="bg-white/5 rounded-lg p-4">
+                    <div className="text-sm text-gray-400">
+                      Total Portfolio Value
                     </div>
-                    <div className="flex gap-4 text-sm">
-                      {opp.entry > 0 && (
-                        <span className="text-gray-300">
-                          Entry: <span className="text-white">${opp.entry.toFixed(4)}</span>
-                        </span>
-                      )}
-                      {opp.target > 0 && (
-                        <span className="text-gray-300">
-                          Target: <span className="text-white">${opp.target.toFixed(4)}</span>
-                        </span>
-                      )}
-                      <span className="text-gray-300">
-                        Confidence: <span className="text-green-400">{opp.confidence}%</span>
-                      </span>
+                    <div className="text-3xl font-bold text-green-400">
+                      ${portfolioAnalysis.totalValue.toFixed(2)}
+                    </div>
+                    <div className="text-xs text-gray-500 mt-1">
+                      Last updated:{" "}
+                      {new Date(portfolioAnalysis.timestamp).toLocaleString()}
                     </div>
                   </div>
-                  <div className="text-right mr-6">
-                    <div className="text-2xl font-bold text-green-400">+{opp.profit}%</div>
+
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b border-white/10">
+                          <th className="text-left py-2 text-gray-400">
+                            Token
+                          </th>
+                          <th className="text-right py-2 text-gray-400">
+                            Balance
+                          </th>
+                          <th className="text-right py-2 text-gray-400">
+                            Price
+                          </th>
+                          <th className="text-right py-2 text-gray-400">
+                            Value
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {portfolioAnalysis.holdings.map((holding, idx) => (
+                          <tr key={idx} className="border-b border-white/5">
+                            <td className="py-2 text-white">
+                              {holding.symbol}
+                              <div className="text-xs text-gray-500 font-mono">
+                                {holding.mint.slice(0, 8)}...
+                              </div>
+                            </td>
+                            <td className="text-right py-2 text-white">
+                              {holding.balance.toFixed(4)}
+                            </td>
+                            <td className="text-right py-2 text-white">
+                              ${holding.price.toFixed(4)}
+                            </td>
+                            <td className="text-right py-2 text-white">
+                              ${holding.value.toFixed(2)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
-                  <button
-                    onClick={() => executeOpportunity(opp)}
-                    className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-bold"
-                  >
-                    Execute
-                  </button>
                 </div>
-              ))}
+              )}
             </div>
-          </div>
-        )}
-
-        {/* Wallet Scoring System */}
-        <div className="bg-white/10 backdrop-blur-md rounded-xl p-6 mb-8">
-          <h2 className="text-2xl font-bold text-white mb-4">📊 Wallet Scoring System</h2>
-          <p className="text-gray-300 text-sm mb-4">
-            Calculate wallet scores based on real swaps from Jupiter and Raydium APIs
-          </p>
-
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
-            <input
-              type="text"
-              placeholder="Enter wallet address..."
-              value={walletToScore}
-              onChange={(e) => setWalletToScore(e.target.value)}
-              className="md:col-span-3 px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500"
-            />
-            <button
-              onClick={calculateWalletScore}
-              disabled={scoringWallet}
-              className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 rounded-lg disabled:opacity-50"
-            >
-              {scoringWallet ? '⏳ Scoring...' : '🎯 Score Wallet'}
-            </button>
-          </div>
-
-          {walletScore && (
-            <div className="bg-white/5 rounded-lg p-4">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div>
-                  <div className="text-sm text-gray-400">Score</div>
-                  <div className="text-2xl font-bold text-green-400">{walletScore.score}/100</div>
-                </div>
-                <div>
-                  <div className="text-sm text-gray-400">Swaps</div>
-                  <div className="text-2xl font-bold text-white">{walletScore.swapCount}</div>
-                </div>
-                <div>
-                  <div className="text-sm text-gray-400">Volume</div>
-                  <div className="text-2xl font-bold text-white">{walletScore.volume.toFixed(2)} SOL</div>
-                </div>
-                <div>
-                  <div className="text-sm text-gray-400">Last Active</div>
-                  <div className="text-sm text-white">{walletScore.lastActive}</div>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Portfolio Analysis */}
-        <div className="bg-white/10 backdrop-blur-md rounded-xl p-6">
-          <h2 className="text-2xl font-bold text-white mb-4">💼 Portfolio Analysis</h2>
-          <p className="text-gray-300 text-sm mb-4">
-            Live portfolio insights with Pyth prices and multi-aggregator cross-check
-          </p>
-
-          <button
-            onClick={analyzePortfolio}
-            disabled={!publicKey}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg mb-4 disabled:opacity-50"
-          >
-            📈 Analyze My Portfolio
-          </button>
-
-          {!publicKey && (
-            <div className="text-center text-sm text-yellow-400 mb-4">
-              Connect wallet to analyze portfolio
-            </div>
-          )}
-
-          {portfolioAnalysis && (
-            <div className="space-y-4">
-              <div className="bg-white/5 rounded-lg p-4">
-                <div className="text-sm text-gray-400">Total Portfolio Value</div>
-                <div className="text-3xl font-bold text-green-400">
-                  ${portfolioAnalysis.totalValue.toFixed(2)}
-                </div>
-                <div className="text-xs text-gray-500 mt-1">
-                  Last updated: {new Date(portfolioAnalysis.timestamp).toLocaleString()}
-                </div>
-              </div>
-
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-white/10">
-                      <th className="text-left py-2 text-gray-400">Token</th>
-                      <th className="text-right py-2 text-gray-400">Balance</th>
-                      <th className="text-right py-2 text-gray-400">Price</th>
-                      <th className="text-right py-2 text-gray-400">Value</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {portfolioAnalysis.holdings.map((holding, idx) => (
-                      <tr key={idx} className="border-b border-white/5">
-                        <td className="py-2 text-white">
-                          {holding.symbol}
-                          <div className="text-xs text-gray-500 font-mono">
-                            {holding.mint.slice(0, 8)}...
-                          </div>
-                        </td>
-                        <td className="text-right py-2 text-white">
-                          {holding.balance.toFixed(4)}
-                        </td>
-                        <td className="text-right py-2 text-white">
-                          ${holding.price.toFixed(4)}
-                        </td>
-                        <td className="text-right py-2 text-white">
-                          ${holding.value.toFixed(2)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-        </div>
-        </>
+          </>
         )}
       </motion.div>
     </div>

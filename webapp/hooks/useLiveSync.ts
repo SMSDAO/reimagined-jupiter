@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from "react";
 
 interface LiveSyncOptions {
   intervalMs?: number;
@@ -7,17 +7,17 @@ interface LiveSyncOptions {
 
 /**
  * useLiveSync - Custom hook for live data synchronization
- * 
+ *
  * Features:
  * - Automatically fetches data at specified intervals
  * - Tracks loading, error, and last update states
  * - Can be enabled/disabled dynamically
  * - Cleans up on unmount
- * 
+ *
  * @param fetchFn Function that fetches the data (must be stable)
  * @param options Configuration options
  * @returns Object with data, loading, error, and lastUpdate states
- * 
+ *
  * @example
  * const { data, loading, error, lastUpdate } = useLiveSync(
  *   async () => {
@@ -29,7 +29,7 @@ interface LiveSyncOptions {
  */
 export function useLiveSync<T>(
   fetchFn: () => Promise<T>,
-  options: LiveSyncOptions = {}
+  options: LiveSyncOptions = {},
 ) {
   const { intervalMs = 3000, enabled = true } = options;
   const [data, setData] = useState<T | null>(null);
@@ -59,8 +59,8 @@ export function useLiveSync<T>(
         }
       } catch (err) {
         if (isMounted) {
-          setError(err instanceof Error ? err.message : 'Unknown error');
-          console.error('[useLiveSync] Fetch error:', err);
+          setError(err instanceof Error ? err.message : "Unknown error");
+          console.error("[useLiveSync] Fetch error:", err);
         }
       } finally {
         if (isMounted) {

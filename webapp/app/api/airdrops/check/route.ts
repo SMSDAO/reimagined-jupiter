@@ -1,27 +1,27 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createResilientConnection } from '@/lib/solana/connection';
-import { PublicKey } from '@solana/web3.js';
+import { NextRequest, NextResponse } from "next/server";
+import { createResilientConnection } from "@/lib/solana/connection";
+import { PublicKey } from "@solana/web3.js";
 
 /**
  * GET /api/airdrops/check
- * 
+ *
  * Check airdrop eligibility using resilient connection
- * 
+ *
  * Query parameters:
  * - walletAddress: Wallet address to check (required)
  */
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
-  const walletAddress = searchParams.get('walletAddress');
+  const walletAddress = searchParams.get("walletAddress");
 
   if (!walletAddress) {
     return NextResponse.json(
-      { success: false, error: 'walletAddress is required' },
-      { status: 400 }
+      { success: false, error: "walletAddress is required" },
+      { status: 400 },
     );
   }
 
-  console.log('🎁 Checking airdrop eligibility...');
+  console.log("🎁 Checking airdrop eligibility...");
   console.log(`   Wallet: ${walletAddress}`);
 
   // Create resilient connection
@@ -31,13 +31,14 @@ export async function GET(request: NextRequest) {
     // Verify and get wallet info
     const pubkey = new PublicKey(walletAddress);
     const balance = await resilientConnection.getBalance(pubkey);
-    
+
     console.log(`💰 Wallet balance: ${(balance / 1e9).toFixed(4)} SOL`);
 
     // Get transaction history (limited to recent)
     const signatures = await resilientConnection.executeWithRetry(
-      (connection) => connection.getSignaturesForAddress(pubkey, { limit: 100 }),
-      'getSignaturesForAddress'
+      (connection) =>
+        connection.getSignaturesForAddress(pubkey, { limit: 100 }),
+      "getSignaturesForAddress",
     );
 
     const txCount = signatures.length;
@@ -51,12 +52,12 @@ export async function GET(request: NextRequest) {
 
     const eligibleAirdrops = [
       {
-        project: 'Example Project',
+        project: "Example Project",
         amount: 100,
-        token: 'EXAMPLE',
+        token: "EXAMPLE",
         claimable: true,
         claimDeadline: Date.now() + 30 * 24 * 60 * 60 * 1000, // 30 days
-      }
+      },
     ];
 
     // Cleanup
@@ -73,20 +74,21 @@ export async function GET(request: NextRequest) {
       rpcEndpoint: resilientConnection.getCurrentEndpoint(),
     });
   } catch (error) {
-    console.error('❌ Airdrop check error:', error);
+    console.error("❌ Airdrop check error:", error);
     resilientConnection.destroy();
-    
-    const errorMessage = error instanceof Error ? error.message : 'Check failed';
+
+    const errorMessage =
+      error instanceof Error ? error.message : "Check failed";
     return NextResponse.json(
       { success: false, error: errorMessage },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
 
 /**
  * POST /api/airdrops/check
- * 
+ *
  * Claim an airdrop
  */
 export async function POST(request: NextRequest) {
@@ -96,12 +98,12 @@ export async function POST(request: NextRequest) {
 
     if (!walletAddress || !airdropId) {
       return NextResponse.json(
-        { success: false, error: 'walletAddress and airdropId are required' },
-        { status: 400 }
+        { success: false, error: "walletAddress and airdropId are required" },
+        { status: 400 },
       );
     }
 
-    console.log('🎁 Claiming airdrop...');
+    console.log("🎁 Claiming airdrop...");
     console.log(`   Wallet: ${walletAddress}`);
     console.log(`   Airdrop ID: ${airdropId}`);
 
@@ -110,7 +112,7 @@ export async function POST(request: NextRequest) {
 
     try {
       const pubkey = new PublicKey(walletAddress);
-      
+
       // TODO: Implement actual airdrop claim logic
       // This would:
       // 1. Verify eligibility
@@ -123,7 +125,7 @@ export async function POST(request: NextRequest) {
 
       return NextResponse.json({
         success: true,
-        message: 'Airdrop claim not yet implemented',
+        message: "Airdrop claim not yet implemented",
         airdropId,
       });
     } catch (error) {
@@ -131,11 +133,12 @@ export async function POST(request: NextRequest) {
       throw error;
     }
   } catch (error) {
-    console.error('❌ Airdrop claim error:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Claim failed';
+    console.error("❌ Airdrop claim error:", error);
+    const errorMessage =
+      error instanceof Error ? error.message : "Claim failed";
     return NextResponse.json(
       { success: false, error: errorMessage },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

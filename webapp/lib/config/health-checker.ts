@@ -1,11 +1,11 @@
 /**
  * API Health Checker Service
- * 
+ *
  * Monitors API endpoints health and provides automatic fallback mechanisms.
  * Runs periodic health checks and maintains endpoint availability status.
  */
 
-import { getAPIConfig, APIEndpoint } from './api-config';
+import { getAPIConfig, APIEndpoint } from "./api-config";
 
 export interface HealthCheckResult {
   endpoint: string;
@@ -17,7 +17,7 @@ export interface HealthCheckResult {
 }
 
 export interface HealthStatus {
-  overall: 'healthy' | 'degraded' | 'unhealthy';
+  overall: "healthy" | "degraded" | "unhealthy";
   checks: HealthCheckResult[];
   lastCheck: number;
 }
@@ -50,25 +50,27 @@ export class APIHealthChecker {
    */
   startHealthChecks(intervalMs: number = 60000): void {
     if (this.healthCheckInterval) {
-      console.warn('Health checks already running');
+      console.warn("Health checks already running");
       return;
     }
 
     this.checkIntervalMs = intervalMs;
-    
+
     // Run initial check
-    this.runHealthChecks().catch(error => {
-      console.error('Initial health check failed:', error);
+    this.runHealthChecks().catch((error) => {
+      console.error("Initial health check failed:", error);
     });
 
     // Schedule periodic checks
     this.healthCheckInterval = setInterval(() => {
-      this.runHealthChecks().catch(error => {
-        console.error('Health check failed:', error);
+      this.runHealthChecks().catch((error) => {
+        console.error("Health check failed:", error);
       });
     }, intervalMs);
 
-    console.log(`🏥 API health checks started (interval: ${intervalMs / 1000}s)`);
+    console.log(
+      `🏥 API health checks started (interval: ${intervalMs / 1000}s)`,
+    );
   }
 
   /**
@@ -78,7 +80,7 @@ export class APIHealthChecker {
     if (this.healthCheckInterval) {
       clearInterval(this.healthCheckInterval);
       this.healthCheckInterval = null;
-      console.log('🛑 API health checks stopped');
+      console.log("🛑 API health checks stopped");
     }
   }
 
@@ -87,7 +89,7 @@ export class APIHealthChecker {
    */
   async runHealthChecks(): Promise<HealthStatus> {
     const apiConfig = getAPIConfig();
-    const allEndpoints = apiConfig.getHealthStatus().map(e => ({
+    const allEndpoints = apiConfig.getHealthStatus().map((e) => ({
       url: e.endpoint,
       name: e.name,
       healthy: true,
@@ -103,16 +105,16 @@ export class APIHealthChecker {
     }
 
     // Determine overall health
-    const healthyCount = checks.filter(c => c.healthy).length;
+    const healthyCount = checks.filter((c) => c.healthy).length;
     const totalCount = checks.length;
-    
-    let overall: 'healthy' | 'degraded' | 'unhealthy';
+
+    let overall: "healthy" | "degraded" | "unhealthy";
     if (healthyCount === totalCount) {
-      overall = 'healthy';
+      overall = "healthy";
     } else if (healthyCount >= totalCount * 0.5) {
-      overall = 'degraded';
+      overall = "degraded";
     } else {
-      overall = 'unhealthy';
+      overall = "unhealthy";
     }
 
     const status: HealthStatus = {
@@ -122,31 +124,38 @@ export class APIHealthChecker {
     };
 
     this.lastHealthStatus = status;
-    
+
     // Log summary
-    console.log(`🏥 Health check complete: ${overall} (${healthyCount}/${totalCount} healthy)`);
-    
+    console.log(
+      `🏥 Health check complete: ${overall} (${healthyCount}/${totalCount} healthy)`,
+    );
+
     return status;
   }
 
   /**
    * Check health of a single endpoint
    */
-  private async checkSingleEndpoint(endpoint: APIEndpoint): Promise<HealthCheckResult> {
+  private async checkSingleEndpoint(
+    endpoint: APIEndpoint,
+  ): Promise<HealthCheckResult> {
     const startTime = Date.now();
-    
+
     try {
       // Special handling for different endpoint types
       let checkUrl = endpoint.url;
-      
+
       // For Jupiter APIs, try a lightweight health check endpoint
-      if (endpoint.url.includes('api.jup.ag') || endpoint.url.includes('quote-api.jup.ag')) {
+      if (
+        endpoint.url.includes("api.jup.ag") ||
+        endpoint.url.includes("quote-api.jup.ag")
+      ) {
         // Quote API - use /health endpoint if available
         checkUrl = endpoint.url;
-      } else if (endpoint.url.includes('price.jup.ag')) {
+      } else if (endpoint.url.includes("price.jup.ag")) {
         // Price API - check with a simple query
         checkUrl = `${endpoint.url}/price?ids=So11111111111111111111111111111111111111112`;
-      } else if (endpoint.url.includes('token.jup.ag')) {
+      } else if (endpoint.url.includes("token.jup.ag")) {
         // Token list - just HEAD request
         checkUrl = endpoint.url;
       }
@@ -155,10 +164,10 @@ export class APIHealthChecker {
       const timeoutId = setTimeout(() => controller.abort(), 5000);
 
       const response = await fetch(checkUrl, {
-        method: endpoint.url.includes('token.jup.ag') ? 'HEAD' : 'GET',
+        method: endpoint.url.includes("token.jup.ag") ? "HEAD" : "GET",
         signal: controller.signal,
         headers: {
-          'Accept': 'application/json',
+          Accept: "application/json",
         },
       });
 
@@ -176,14 +185,14 @@ export class APIHealthChecker {
       };
     } catch (error) {
       const latency = Date.now() - startTime;
-      
+
       return {
         endpoint: endpoint.url,
         name: endpoint.name,
         healthy: false,
         latency,
         timestamp: Date.now(),
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: error instanceof Error ? error.message : "Unknown error",
       };
     }
   }
@@ -198,43 +207,51 @@ export class APIHealthChecker {
   /**
    * Check if a specific service is healthy
    */
-  isServiceHealthy(serviceName: 'jupiter' | 'pyth' | 'jito'): boolean {
+  isServiceHealthy(serviceName: "jupiter" | "pyth" | "jito"): boolean {
     if (!this.lastHealthStatus) {
       return true; // Assume healthy if no checks run yet
     }
 
-    const relevantChecks = this.lastHealthStatus.checks.filter(c => 
-      c.name.toLowerCase().includes(serviceName)
+    const relevantChecks = this.lastHealthStatus.checks.filter((c) =>
+      c.name.toLowerCase().includes(serviceName),
     );
 
     if (relevantChecks.length === 0) {
       return true;
     }
 
-    return relevantChecks.some(c => c.healthy);
+    return relevantChecks.some((c) => c.healthy);
   }
 
   /**
    * Get healthy endpoint for a service
    */
-  getHealthyEndpoint(serviceName: 'jupiter-quote' | 'jupiter-price' | 'jupiter-tokens' | 'jupiter-worker' | 'pyth' | 'jito'): string | null {
+  getHealthyEndpoint(
+    serviceName:
+      | "jupiter-quote"
+      | "jupiter-price"
+      | "jupiter-tokens"
+      | "jupiter-worker"
+      | "pyth"
+      | "jito",
+  ): string | null {
     if (!this.lastHealthStatus) {
       return null;
     }
 
     const searchTerms: Record<string, string> = {
-      'jupiter-quote': 'quote api',
-      'jupiter-price': 'price api',
-      'jupiter-tokens': 'token list',
-      'jupiter-worker': 'worker api',
-      'pyth': 'pyth',
-      'jito': 'jito',
+      "jupiter-quote": "quote api",
+      "jupiter-price": "price api",
+      "jupiter-tokens": "token list",
+      "jupiter-worker": "worker api",
+      pyth: "pyth",
+      jito: "jito",
     };
 
     const searchTerm = searchTerms[serviceName].toLowerCase();
-    
-    const healthyCheck = this.lastHealthStatus.checks.find(c => 
-      c.healthy && c.name.toLowerCase().includes(searchTerm)
+
+    const healthyCheck = this.lastHealthStatus.checks.find(
+      (c) => c.healthy && c.name.toLowerCase().includes(searchTerm),
     );
 
     return healthyCheck?.endpoint || null;
@@ -252,7 +269,7 @@ export function getHealthChecker(): APIHealthChecker {
  * Start health checks (call once on app initialization)
  */
 export function startAPIHealthMonitoring(intervalMs: number = 60000): void {
-  if (typeof window !== 'undefined') {
+  if (typeof window !== "undefined") {
     // Client-side only
     getHealthChecker().startHealthChecks(intervalMs);
   }

@@ -1,22 +1,22 @@
 /**
  * Oracle Intelligence System - Usage Example
- * 
+ *
  * This example demonstrates how to set up and use the Oracle Intelligence Layer
  * for enhanced bot execution with AI-driven decision making.
  */
 
-import { Connection, Keypair } from '@solana/web3.js';
-import { BotExecutionEngine, BotConfig } from '../services/botFramework.js';
-import { OracleService } from '../services/intelligence/index.js';
+import { Connection, Keypair } from "@solana/web3.js";
+import { BotExecutionEngine, BotConfig } from "../services/botFramework.js";
+import { OracleService } from "../services/intelligence/index.js";
 import {
   StrategyAgent,
   RiskAgent,
   LiquidityAgent,
   ExecutionAgent,
   ProfitOptimizationAgent,
-} from '../services/intelligence/index.js';
-import { rbacService } from '../services/rbac.js';
-import { config } from '../config/index.js';
+} from "../services/intelligence/index.js";
+import { rbacService } from "../services/rbac.js";
+import { config } from "../config/index.js";
 
 /**
  * Initialize and configure the Oracle Intelligence System
@@ -24,7 +24,13 @@ import { config } from '../config/index.js';
 async function setupOracleSystem(): Promise<OracleService> {
   // 1. Create Oracle Service
   const oracleService = new OracleService(rbacService, {
-    enabledAgentTypes: ['STRATEGY', 'RISK', 'LIQUIDITY', 'EXECUTION', 'PROFIT_OPTIMIZATION'],
+    enabledAgentTypes: [
+      "STRATEGY",
+      "RISK",
+      "LIQUIDITY",
+      "EXECUTION",
+      "PROFIT_OPTIMIZATION",
+    ],
     requireAllAgents: false, // Don't require all agents to pass (except Risk)
     parallelExecution: true, // Execute agents in parallel for speed
   });
@@ -37,7 +43,7 @@ async function setupOracleSystem(): Promise<OracleService> {
       apiKey: config.gemini.apiKey,
     });
     await registry.registerAgent(strategyAgent);
-    console.log('✅ Strategy Agent registered');
+    console.log("✅ Strategy Agent registered");
   }
 
   // 3. Register Risk Agent (critical for safety)
@@ -47,13 +53,13 @@ async function setupOracleSystem(): Promise<OracleService> {
     maxLoss: 0.1, // 0.1 SOL
     minProfit: 0.005, // 0.005 SOL
     trustedPrograms: [
-      'JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4', // Jupiter v6
-      'whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc', // Orca Whirlpool
-      '675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8', // Raydium AMM
+      "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4", // Jupiter v6
+      "whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc", // Orca Whirlpool
+      "675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8", // Raydium AMM
     ],
   });
   await registry.registerAgent(riskAgent);
-  console.log('✅ Risk Agent registered');
+  console.log("✅ Risk Agent registered");
 
   // 4. Register Liquidity Agent
   const liquidityAgent = new LiquidityAgent({
@@ -62,7 +68,7 @@ async function setupOracleSystem(): Promise<OracleService> {
     volatilityThreshold: 0.03, // 3% max
   });
   await registry.registerAgent(liquidityAgent);
-  console.log('✅ Liquidity Agent registered');
+  console.log("✅ Liquidity Agent registered");
 
   // 5. Register Execution Agent
   const executionAgent = new ExecutionAgent({
@@ -72,12 +78,12 @@ async function setupOracleSystem(): Promise<OracleService> {
     maxPriorityFee: 10_000_000, // 10M lamports hard cap
   });
   await registry.registerAgent(executionAgent);
-  console.log('✅ Execution Agent registered');
+  console.log("✅ Execution Agent registered");
 
   // 6. Register Profit Optimization Agent
   const profitAgent = new ProfitOptimizationAgent({
     minProfitMargin: 0.003, // 0.3%
-    optimizationStrategy: 'BALANCED',
+    optimizationStrategy: "BALANCED",
     feeStructure: {
       gasFee: 0.000005,
       daoSkimPercentage: config.profitDistribution.daoWalletPercentage,
@@ -85,30 +91,40 @@ async function setupOracleSystem(): Promise<OracleService> {
     },
   });
   await registry.registerAgent(profitAgent);
-  console.log('✅ Profit Optimization Agent registered');
+  console.log("✅ Profit Optimization Agent registered");
 
   // 7. Activate all agents (requires admin approval in production)
   // For demo purposes, we'll mock the admin approval
-  const userId = 'demo-user';
-  const adminId = 'admin-user';
+  const userId = "demo-user";
+  const adminId = "admin-user";
 
-  const agents = ['risk-agent-v1', 'liquidity-agent-v1', 'execution-agent-v1', 'profit-optimization-agent-v1'];
-  
+  const agents = [
+    "risk-agent-v1",
+    "liquidity-agent-v1",
+    "execution-agent-v1",
+    "profit-optimization-agent-v1",
+  ];
+
   if (config.gemini.enabled) {
-    agents.push('strategy-agent-v1');
+    agents.push("strategy-agent-v1");
   }
 
   for (const agentId of agents) {
     const requestId = await registry.requestActivation(
       agentId,
       userId,
-      'Enable Oracle intelligence for enhanced arbitrage execution'
+      "Enable Oracle intelligence for enhanced arbitrage execution",
     );
 
     // In production, this would require actual admin approval via RBAC
     // For this example, we'll assume approval
     try {
-      await registry.approveActivation(requestId, adminId, true, 'Approved for production use');
+      await registry.approveActivation(
+        requestId,
+        adminId,
+        true,
+        "Approved for production use",
+      );
       console.log(`✅ ${agentId} activated`);
     } catch (error) {
       console.warn(`⚠️ Failed to activate ${agentId}:`, error);
@@ -139,11 +155,11 @@ async function executeWithOracle() {
 
   // 3. Configure bot
   const botConfig: BotConfig = {
-    id: 'arbitrage-bot-1',
-    userId: 'demo-user',
-    name: 'SOL-USDC Arbitrage Bot',
-    botType: 'ARBITRAGE',
-    signingMode: 'SERVER_SIDE',
+    id: "arbitrage-bot-1",
+    userId: "demo-user",
+    name: "SOL-USDC Arbitrage Bot",
+    botType: "ARBITRAGE",
+    signingMode: "SERVER_SIDE",
     strategyConfig: {
       minProfitThreshold: 0.005,
       maxSlippage: 0.015,
@@ -155,7 +171,9 @@ async function executeWithOracle() {
   // 4. Load wallet (in production, use secure key management)
   const signer = Keypair.fromSecretKey(
     // This should come from secure storage, not hardcoded
-    Buffer.from([/* private key bytes */])
+    Buffer.from([
+      /* private key bytes */
+    ]),
   );
 
   // 5. Build transaction (simplified for example)
@@ -163,7 +181,7 @@ async function executeWithOracle() {
   const transaction = /* ... build transaction ... */ null as any;
 
   // 6. Execute with Oracle analysis
-  console.log('\n🔮 Executing transaction with Oracle intelligence...\n');
+  console.log("\n🔮 Executing transaction with Oracle intelligence...\n");
 
   const result = await botEngine.executeTransaction(
     botConfig,
@@ -174,21 +192,21 @@ async function executeWithOracle() {
       maxRetries: 3,
       analysisContext: {
         // Provide context for Oracle analysis
-        inputToken: 'SOL',
-        outputToken: 'USDC',
+        inputToken: "SOL",
+        outputToken: "USDC",
         amountIn: 1.0, // 1 SOL
         expectedAmountOut: 150.5, // Expected $150.50 USDC
-        
+
         // Route information
         route: {
           hops: 2,
-          dexes: ['Raydium', 'Orca'],
+          dexes: ["Raydium", "Orca"],
           programIds: [
-            '675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8',
-            'whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc',
+            "675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8",
+            "whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc",
           ],
         },
-        
+
         // Market data
         marketData: {
           liquidity: 5000, // 5000 SOL total liquidity
@@ -196,7 +214,7 @@ async function executeWithOracle() {
           priceImpact: 0.008, // 0.8% price impact
           slippage: 0.01, // 1% slippage
         },
-        
+
         // Risk parameters
         riskParams: {
           maxSlippage: 0.015,
@@ -204,24 +222,24 @@ async function executeWithOracle() {
           maxLoss: 0.1,
           minProfit: 0.005,
         },
-        
+
         // Execution parameters (will be optimized by agents)
         executionParams: {
           priorityFee: 5_000,
           jitoTipLamports: 50_000,
         },
       },
-    }
+    },
   );
 
   // 7. Handle result
-  if (result.status === 'CONFIRMED') {
-    console.log('\n✅ Transaction executed successfully!');
+  if (result.status === "CONFIRMED") {
+    console.log("\n✅ Transaction executed successfully!");
     console.log(`   Signature: ${result.transactionSignature}`);
     console.log(`   Profit: ${result.profitSol?.toFixed(6)} SOL`);
     console.log(`   Gas: ${result.gasFeeSol?.toFixed(6)} SOL`);
   } else {
-    console.log('\n❌ Transaction failed:');
+    console.log("\n❌ Transaction failed:");
     console.log(`   Reason: ${result.errorMessage}`);
   }
 
@@ -235,7 +253,7 @@ async function monitorOracleHealth(oracleService: OracleService) {
   const registry = oracleService.getRegistry();
 
   // Run health checks
-  console.log('\n🏥 Running health checks...\n');
+  console.log("\n🏥 Running health checks...\n");
   const healthResults = await registry.healthCheckAll();
 
   for (const [agentId, health] of healthResults) {
@@ -267,8 +285,8 @@ async function monitorOracleHealth(oracleService: OracleService) {
  */
 async function main() {
   try {
-    console.log('🚀 Oracle Intelligence System - Demo\n');
-    console.log('═'.repeat(60));
+    console.log("🚀 Oracle Intelligence System - Demo\n");
+    console.log("═".repeat(60));
 
     // Setup and execute
     await executeWithOracle();
@@ -277,10 +295,10 @@ async function main() {
     // const oracleService = await setupOracleSystem();
     // await monitorOracleHealth(oracleService);
 
-    console.log('\n' + '═'.repeat(60));
-    console.log('✅ Demo completed successfully\n');
+    console.log("\n" + "═".repeat(60));
+    console.log("✅ Demo completed successfully\n");
   } catch (error) {
-    console.error('❌ Demo failed:', error);
+    console.error("❌ Demo failed:", error);
     process.exit(1);
   }
 }

@@ -1,25 +1,25 @@
-'use client';
+"use client";
 
-import { motion } from 'framer-motion';
+import { motion } from "framer-motion";
 
 interface StatCardProps {
   label: string;
   value: string | number;
   icon?: string;
-  trend?: 'up' | 'down' | 'neutral';
+  trend?: "up" | "down" | "neutral";
   trendValue?: string;
   color?: string;
   loading?: boolean;
 }
 
-export default function StatCard({ 
-  label, 
-  value, 
-  icon, 
-  trend, 
+export default function StatCard({
+  label,
+  value,
+  icon,
+  trend,
   trendValue,
-  color = 'text-purple-400',
-  loading = false
+  color = "text-purple-400",
+  loading = false,
 }: StatCardProps) {
   return (
     <motion.div
@@ -35,13 +35,21 @@ export default function StatCard({
         </div>
       ) : (
         <>
-          <div className={`text-2xl sm:text-3xl font-bold ${color}`}>{value}</div>
+          <div className={`text-2xl sm:text-3xl font-bold ${color}`}>
+            {value}
+          </div>
           <div className="text-sm sm:text-base text-gray-300 mt-1">{label}</div>
           {trend && trendValue && (
-            <div className={`text-xs sm:text-sm mt-2 font-semibold ${
-              trend === 'up' ? 'text-green-400' : trend === 'down' ? 'text-red-400' : 'text-gray-400'
-            }`}>
-              {trend === 'up' ? '▲' : trend === 'down' ? '▼' : '●'} {trendValue}
+            <div
+              className={`text-xs sm:text-sm mt-2 font-semibold ${
+                trend === "up"
+                  ? "text-green-400"
+                  : trend === "down"
+                    ? "text-red-400"
+                    : "text-gray-400"
+              }`}
+            >
+              {trend === "up" ? "▲" : trend === "down" ? "▼" : "●"} {trendValue}
             </div>
           )}
         </>

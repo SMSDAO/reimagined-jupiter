@@ -1,6 +1,6 @@
-import { 
-  Connection, 
-  ConnectionConfig, 
+import {
+  Connection,
+  ConnectionConfig,
   Commitment,
   Transaction,
   VersionedTransaction,
@@ -9,7 +9,7 @@ import {
   SendOptions,
   TransactionSignature,
   SimulateTransactionConfig,
-} from '@solana/web3.js';
+} from "@solana/web3.js";
 
 export interface RpcEndpoint {
   url: string;
@@ -30,7 +30,7 @@ export interface ResilientConnectionConfig {
 
 /**
  * ResilientSolanaConnection - A production-ready Solana connection with automatic failover
- * 
+ *
  * Features:
  * - Multiple RPC endpoint support with automatic fallback
  * - Health checking and monitoring
@@ -58,8 +58,9 @@ export class ResilientSolanaConnection {
       failureCount: 0,
     }));
 
-    this.commitment = config.commitment || 'confirmed';
-    this.confirmTransactionInitialTimeout = config.confirmTransactionInitialTimeout || 60000;
+    this.commitment = config.commitment || "confirmed";
+    this.confirmTransactionInitialTimeout =
+      config.confirmTransactionInitialTimeout || 60000;
     this.maxRetries = config.maxRetries || 3;
     this.retryDelay = config.retryDelay || 1000;
     this.healthCheckInterval = config.healthCheckInterval || 30000;
@@ -105,7 +106,8 @@ export class ResilientSolanaConnection {
     let attempts = 0;
 
     while (attempts < this.endpoints.length) {
-      this.currentEndpointIndex = (this.currentEndpointIndex + 1) % this.endpoints.length;
+      this.currentEndpointIndex =
+        (this.currentEndpointIndex + 1) % this.endpoints.length;
       const endpoint = this.endpoints[this.currentEndpointIndex];
 
       if (endpoint.isHealthy && endpoint.failureCount < 3) {
@@ -120,7 +122,7 @@ export class ResilientSolanaConnection {
       }
     }
 
-    console.error('❌ No healthy RPC endpoints available');
+    console.error("❌ No healthy RPC endpoints available");
     return false;
   }
 
@@ -132,7 +134,9 @@ export class ResilientSolanaConnection {
     endpoint.failureCount++;
     endpoint.isHealthy = endpoint.failureCount < 3;
 
-    console.warn(`⚠️  RPC endpoint failure count: ${endpoint.failureCount} for ${endpoint.url}`);
+    console.warn(
+      `⚠️  RPC endpoint failure count: ${endpoint.failureCount} for ${endpoint.url}`,
+    );
 
     this.switchToNextEndpoint();
   }
@@ -142,23 +146,28 @@ export class ResilientSolanaConnection {
    */
   async executeWithRetry<T>(
     operation: (connection: Connection) => Promise<T>,
-    operationName: string = 'operation'
+    operationName: string = "operation",
   ): Promise<T> {
     let lastError: Error | undefined;
 
     for (let attempt = 1; attempt <= this.maxRetries; attempt++) {
       try {
-        console.log(`🔄 Executing ${operationName} (attempt ${attempt}/${this.maxRetries})`);
+        console.log(
+          `🔄 Executing ${operationName} (attempt ${attempt}/${this.maxRetries})`,
+        );
         const result = await operation(this.connection);
-        
+
         // Reset failure count on success
         this.endpoints[this.currentEndpointIndex].failureCount = 0;
         this.endpoints[this.currentEndpointIndex].isHealthy = true;
-        
+
         return result;
       } catch (error) {
         lastError = error as Error;
-        console.warn(`⚠️  ${operationName} failed (attempt ${attempt}/${this.maxRetries}):`, lastError.message);
+        console.warn(
+          `⚠️  ${operationName} failed (attempt ${attempt}/${this.maxRetries}):`,
+          lastError.message,
+        );
 
         // Handle endpoint failure
         this.handleEndpointFailure();
@@ -167,12 +176,14 @@ export class ResilientSolanaConnection {
         if (attempt < this.maxRetries) {
           const delay = this.retryDelay * Math.pow(2, attempt - 1);
           console.log(`⏳ Waiting ${delay}ms before retry...`);
-          await new Promise(resolve => setTimeout(resolve, delay));
+          await new Promise((resolve) => setTimeout(resolve, delay));
         }
       }
     }
 
-    throw new Error(`${operationName} failed after ${this.maxRetries} attempts: ${lastError?.message}`);
+    throw new Error(
+      `${operationName} failed after ${this.maxRetries} attempts: ${lastError?.message}`,
+    );
   }
 
   /**
@@ -183,14 +194,14 @@ export class ResilientSolanaConnection {
       const connection = this.createConnection(endpoint.url);
       const slot = await Promise.race([
         connection.getSlot(),
-        new Promise<never>((_, reject) => 
-          setTimeout(() => reject(new Error('Health check timeout')), 5000)
-        )
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error("Health check timeout")), 5000),
+        ),
       ]);
 
       endpoint.isHealthy = slot > 0;
       endpoint.lastChecked = Date.now();
-      
+
       if (endpoint.isHealthy && endpoint.failureCount > 0) {
         endpoint.failureCount = Math.max(0, endpoint.failureCount - 1);
       }
@@ -212,14 +223,16 @@ export class ResilientSolanaConnection {
     }
 
     this.healthCheckTimer = setInterval(async () => {
-      console.log('🏥 Running RPC endpoint health checks...');
-      
+      console.log("🏥 Running RPC endpoint health checks...");
+
       await Promise.all(
-        this.endpoints.map(endpoint => this.checkEndpointHealth(endpoint))
+        this.endpoints.map((endpoint) => this.checkEndpointHealth(endpoint)),
       );
 
-      const healthyCount = this.endpoints.filter(e => e.isHealthy).length;
-      console.log(`✅ Healthy endpoints: ${healthyCount}/${this.endpoints.length}`);
+      const healthyCount = this.endpoints.filter((e) => e.isHealthy).length;
+      console.log(
+        `✅ Healthy endpoints: ${healthyCount}/${this.endpoints.length}`,
+      );
     }, this.healthCheckInterval);
   }
 
@@ -239,7 +252,7 @@ export class ResilientSolanaConnection {
   async getRecentPrioritizationFees() {
     return this.executeWithRetry(
       (connection) => connection.getRecentPrioritizationFees(),
-      'getRecentPrioritizationFees'
+      "getRecentPrioritizationFees",
     );
   }
 
@@ -248,8 +261,9 @@ export class ResilientSolanaConnection {
    */
   async getLatestBlockhash(commitment?: Commitment) {
     return this.executeWithRetry(
-      (connection) => connection.getLatestBlockhash(commitment || this.commitment),
-      'getLatestBlockhash'
+      (connection) =>
+        connection.getLatestBlockhash(commitment || this.commitment),
+      "getLatestBlockhash",
     );
   }
 
@@ -259,7 +273,7 @@ export class ResilientSolanaConnection {
   async getSlot(commitment?: Commitment) {
     return this.executeWithRetry(
       (connection) => connection.getSlot(commitment || this.commitment),
-      'getSlot'
+      "getSlot",
     );
   }
 
@@ -270,39 +284,49 @@ export class ResilientSolanaConnection {
   async sendTransaction(
     transaction: Transaction | VersionedTransaction,
     signers?: Keypair[],
-    options?: SendOptions
+    options?: SendOptions,
   ): Promise<TransactionSignature> {
-    return this.executeWithRetry(
-      async (connection) => {
-        if (transaction instanceof VersionedTransaction) {
-          // VersionedTransaction - no signers array needed
-          return await connection.sendTransaction(transaction, options);
-        } else {
-          // Legacy Transaction - requires signers array
-          return await connection.sendTransaction(transaction, signers || [], options);
-        }
-      },
-      'sendTransaction'
-    );
+    return this.executeWithRetry(async (connection) => {
+      if (transaction instanceof VersionedTransaction) {
+        // VersionedTransaction - no signers array needed
+        return await connection.sendTransaction(transaction, options);
+      } else {
+        // Legacy Transaction - requires signers array
+        return await connection.sendTransaction(
+          transaction,
+          signers || [],
+          options,
+        );
+      }
+    }, "sendTransaction");
   }
 
   /**
    * Confirm transaction with retry
    */
   async confirmTransaction(
-    signature: TransactionSignature | { signature: TransactionSignature; blockhash: string; lastValidBlockHeight: number },
-    commitment?: Commitment
+    signature:
+      | TransactionSignature
+      | {
+          signature: TransactionSignature;
+          blockhash: string;
+          lastValidBlockHeight: number;
+        },
+    commitment?: Commitment,
   ) {
-    return this.executeWithRetry(
-      (connection) => {
-        if (typeof signature === 'string') {
-          return connection.confirmTransaction(signature, commitment || this.commitment);
-        } else {
-          return connection.confirmTransaction(signature, commitment || this.commitment);
-        }
-      },
-      'confirmTransaction'
-    );
+    return this.executeWithRetry((connection) => {
+      if (typeof signature === "string") {
+        return connection.confirmTransaction(
+          signature,
+          commitment || this.commitment,
+        );
+      } else {
+        return connection.confirmTransaction(
+          signature,
+          commitment || this.commitment,
+        );
+      }
+    }, "confirmTransaction");
   }
 
   /**
@@ -310,11 +334,14 @@ export class ResilientSolanaConnection {
    */
   async getTransaction(
     signature: TransactionSignature,
-    options?: { commitment?: Commitment; maxSupportedTransactionVersion?: number }
+    options?: {
+      commitment?: Commitment;
+      maxSupportedTransactionVersion?: number;
+    },
   ) {
     return this.executeWithRetry(
       (connection) => connection.getTransaction(signature, options as any),
-      'getTransaction'
+      "getTransaction",
     );
   }
 
@@ -323,8 +350,9 @@ export class ResilientSolanaConnection {
    */
   async getBalance(publicKey: PublicKey, commitment?: Commitment) {
     return this.executeWithRetry(
-      (connection) => connection.getBalance(publicKey, commitment || this.commitment),
-      'getBalance'
+      (connection) =>
+        connection.getBalance(publicKey, commitment || this.commitment),
+      "getBalance",
     );
   }
 
@@ -333,25 +361,22 @@ export class ResilientSolanaConnection {
    */
   async simulateTransaction(
     transaction: Transaction | VersionedTransaction,
-    options?: SimulateTransactionConfig
+    options?: SimulateTransactionConfig,
   ) {
-    return this.executeWithRetry(
-      (connection) => {
-        if (transaction instanceof VersionedTransaction) {
-          return connection.simulateTransaction(transaction, options);
-        } else {
-          return connection.simulateTransaction(transaction as Transaction);
-        }
-      },
-      'simulateTransaction'
-    );
+    return this.executeWithRetry((connection) => {
+      if (transaction instanceof VersionedTransaction) {
+        return connection.simulateTransaction(transaction, options);
+      } else {
+        return connection.simulateTransaction(transaction as Transaction);
+      }
+    }, "simulateTransaction");
   }
 
   /**
    * Get endpoint health status
    */
   getEndpointHealth(): RpcEndpoint[] {
-    return this.endpoints.map(e => ({ ...e }));
+    return this.endpoints.map((e) => ({ ...e }));
   }
 
   /**
@@ -365,15 +390,17 @@ export class ResilientSolanaConnection {
 /**
  * Create a resilient connection from environment variables with mainnet priority
  */
-export function createResilientConnection(config?: Partial<ResilientConnectionConfig>): ResilientSolanaConnection {
+export function createResilientConnection(
+  config?: Partial<ResilientConnectionConfig>,
+): ResilientSolanaConnection {
   // Priority-based mainnet RPC endpoints
   const priorityEndpoints = [
     process.env.NEXT_PUBLIC_HELIUS_RPC,
     process.env.NEXT_PUBLIC_QUICKNODE_RPC,
     process.env.NEXT_PUBLIC_SOLANA_RPC_PRIMARY,
     process.env.NEXT_PUBLIC_RPC_URL,
-    'https://api.mainnet-beta.solana.com',
-    'https://solana-api.projectserum.com',
+    "https://api.mainnet-beta.solana.com",
+    "https://solana-api.projectserum.com",
   ];
 
   // Filter out undefined/null values and remove duplicates
@@ -381,11 +408,14 @@ export function createResilientConnection(config?: Partial<ResilientConnectionCo
     .filter((url): url is string => Boolean(url))
     .filter((url, index, self) => self.indexOf(url) === index);
 
-  console.log('[ResilientConnection] Initialized with endpoints:', defaultEndpoints.length);
+  console.log(
+    "[ResilientConnection] Initialized with endpoints:",
+    defaultEndpoints.length,
+  );
 
   return new ResilientSolanaConnection({
     endpoints: defaultEndpoints,
-    commitment: 'confirmed',
+    commitment: "confirmed",
     maxRetries: 3,
     retryDelay: 1000,
     healthCheckInterval: 30000,

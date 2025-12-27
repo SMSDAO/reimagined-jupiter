@@ -10,4 +10,4 @@ export {
   getBulkTokenPrices,
   type JupiterPriceData,
   type PortfolioValue,
-} from './price-service';
+} from "./price-service";

@@ -22,17 +22,17 @@ CHECKS_WARNING=0
 # Helper functions
 mark_ok() {
   echo -e "${GREEN}✅${NC} $1"
-  ((CHECKS_PASSED++))
+  ((CHECKS_PASSED++)) || true
 }
 
 mark_issue() {
   echo -e "${RED}❌${NC} $1"
-  ((CHECKS_FAILED++))
+  ((CHECKS_FAILED++)) || true
 }
 
 mark_warn() {
   echo -e "${YELLOW}⚠️${NC} $1"
-  ((CHECKS_WARNING++))
+  ((CHECKS_WARNING++)) || true
 }
 
 echo "======================================================================"

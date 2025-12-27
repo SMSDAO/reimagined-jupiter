@@ -1,4 +1,4 @@
-import { Connection } from '@solana/web3.js';
+import { Connection } from "@solana/web3.js";
 
 export interface RPCEndpoint {
   url: string;
@@ -19,7 +19,7 @@ interface RPCLog {
 
 /**
  * RPCRotator - Intelligent RPC endpoint rotation system
- * 
+ *
  * Features:
  * - Automatically rotates between multiple RPC endpoints
  * - Health checks every 30 seconds
@@ -53,7 +53,7 @@ export class RPCRotator {
    */
   async getConnection(): Promise<Connection> {
     const endpoint = this.getBestEndpoint();
-    return new Connection(endpoint.url, 'confirmed');
+    return new Connection(endpoint.url, "confirmed");
   }
 
   /**
@@ -67,7 +67,7 @@ export class RPCRotator {
 
     if (healthy.length === 0) {
       // All endpoints unhealthy, reset and try first
-      console.warn('[RPCRotator] All endpoints unhealthy, resetting...');
+      console.warn("[RPCRotator] All endpoints unhealthy, resetting...");
       this.resetEndpoints();
       return this.endpoints[0];
     }
@@ -91,11 +91,11 @@ export class RPCRotator {
   private async checkHealth(endpoint: RPCEndpoint): Promise<void> {
     const start = Date.now();
     try {
-      const conn = new Connection(endpoint.url, 'confirmed');
+      const conn = new Connection(endpoint.url, "confirmed");
       await Promise.race([
         conn.getSlot(),
         new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Timeout')), 5000)
+          setTimeout(() => reject(new Error("Timeout")), 5000),
         ),
       ]);
 
@@ -103,7 +103,7 @@ export class RPCRotator {
       endpoint.healthy = true;
       endpoint.failures = 0;
 
-      this.logRequest(endpoint.url, 'health_check', endpoint.latency, true);
+      this.logRequest(endpoint.url, "health_check", endpoint.latency, true);
     } catch (error) {
       endpoint.failures++;
       endpoint.healthy = endpoint.failures < 3;
@@ -111,10 +111,10 @@ export class RPCRotator {
 
       console.warn(
         `[RPCRotator] Health check failed for ${endpoint.name} (${endpoint.url}):`,
-        error instanceof Error ? error.message : 'Unknown error'
+        error instanceof Error ? error.message : "Unknown error",
       );
 
-      this.logRequest(endpoint.url, 'health_check', Date.now() - start, false);
+      this.logRequest(endpoint.url, "health_check", Date.now() - start, false);
     }
 
     endpoint.lastCheck = Date.now();
@@ -150,7 +150,7 @@ export class RPCRotator {
     endpoint: string,
     method: string,
     duration: number,
-    success: boolean
+    success: boolean,
   ): void {
     this.logs.push({
       endpoint,
@@ -205,7 +205,7 @@ export class RPCRotator {
       endpoint,
       ...stats,
       successRate:
-        (((stats.calls - stats.failures) / stats.calls) * 100).toFixed(2) + '%',
+        (((stats.calls - stats.failures) / stats.calls) * 100).toFixed(2) + "%",
     }));
   }
 
@@ -227,50 +227,58 @@ export function getRPCRotator(): RPCRotator {
   if (!rotatorInstance) {
     // Build endpoint list with proper priority
     const endpointConfigs = [];
-    
+
     // Priority 1: Helius
     if (process.env.NEXT_PUBLIC_HELIUS_RPC) {
       endpointConfigs.push({
         url: process.env.NEXT_PUBLIC_HELIUS_RPC,
-        name: 'Helius',
+        name: "Helius",
       });
     }
-    
+
     // Priority 2: QuickNode
     if (process.env.NEXT_PUBLIC_QUICKNODE_RPC) {
       endpointConfigs.push({
         url: process.env.NEXT_PUBLIC_QUICKNODE_RPC,
-        name: 'QuickNode',
+        name: "QuickNode",
       });
     }
-    
+
     // Priority 3: Primary RPC
     if (process.env.NEXT_PUBLIC_SOLANA_RPC_PRIMARY) {
       endpointConfigs.push({
         url: process.env.NEXT_PUBLIC_SOLANA_RPC_PRIMARY,
-        name: 'Primary',
+        name: "Primary",
       });
     }
-    
+
     // Priority 4: Legacy RPC URL
-    if (process.env.NEXT_PUBLIC_RPC_URL && 
-        !endpointConfigs.find(e => e.url === process.env.NEXT_PUBLIC_RPC_URL)) {
+    if (
+      process.env.NEXT_PUBLIC_RPC_URL &&
+      !endpointConfigs.find((e) => e.url === process.env.NEXT_PUBLIC_RPC_URL)
+    ) {
       endpointConfigs.push({
         url: process.env.NEXT_PUBLIC_RPC_URL,
-        name: 'Legacy',
+        name: "Legacy",
       });
     }
-    
+
     // Fallback: Public RPC
-    if (!endpointConfigs.find(e => e.url === 'https://api.mainnet-beta.solana.com')) {
+    if (
+      !endpointConfigs.find(
+        (e) => e.url === "https://api.mainnet-beta.solana.com",
+      )
+    ) {
       endpointConfigs.push({
-        url: 'https://api.mainnet-beta.solana.com',
-        name: 'Public',
+        url: "https://api.mainnet-beta.solana.com",
+        name: "Public",
       });
     }
-    
-    console.log('[RPCRotator] Initialized with mainnet endpoints:', 
-      endpointConfigs.map(e => e.name).join(', '));
+
+    console.log(
+      "[RPCRotator] Initialized with mainnet endpoints:",
+      endpointConfigs.map((e) => e.name).join(", "),
+    );
 
     rotatorInstance = new RPCRotator(endpointConfigs);
   }

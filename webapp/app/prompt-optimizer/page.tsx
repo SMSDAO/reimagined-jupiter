@@ -1,33 +1,33 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import PromptEditor from './components/PromptEditor';
-import TemplateLibrary from './components/TemplateLibrary';
-import StrategyDashboard from './components/StrategyDashboard';
-import { PromptTemplate } from './types';
+import { useState } from "react";
+import PromptEditor from "./components/PromptEditor";
+import TemplateLibrary from "./components/TemplateLibrary";
+import StrategyDashboard from "./components/StrategyDashboard";
+import { PromptTemplate } from "./types";
 
-type Tab = 'dashboard' | 'editor' | 'templates' | 'strategies';
+type Tab = "dashboard" | "editor" | "templates" | "strategies";
 
 export default function PromptOptimizerPage() {
-  const [activeTab, setActiveTab] = useState<Tab>('dashboard');
-  const [currentPrompt, setCurrentPrompt] = useState<string>('');
+  const [activeTab, setActiveTab] = useState<Tab>("dashboard");
+  const [currentPrompt, setCurrentPrompt] = useState<string>("");
 
   const handleTemplateSelect = (template: PromptTemplate) => {
     setCurrentPrompt(template.template);
-    setActiveTab('editor');
+    setActiveTab("editor");
   };
 
   const handleSavePrompt = (prompt: string) => {
     setCurrentPrompt(prompt);
     // In a real app, you'd save this to a database or state management
-    console.log('Prompt saved:', prompt);
+    console.log("Prompt saved:", prompt);
   };
 
   const tabs = [
-    { id: 'dashboard' as Tab, label: 'Dashboard', icon: '📊' },
-    { id: 'editor' as Tab, label: 'Prompt Editor', icon: '✏️' },
-    { id: 'templates' as Tab, label: 'Templates', icon: '📚' },
-    { id: 'strategies' as Tab, label: 'Strategies', icon: '🎯' }
+    { id: "dashboard" as Tab, label: "Dashboard", icon: "📊" },
+    { id: "editor" as Tab, label: "Prompt Editor", icon: "✏️" },
+    { id: "templates" as Tab, label: "Templates", icon: "📚" },
+    { id: "strategies" as Tab, label: "Strategies", icon: "🎯" },
   ];
 
   return (
@@ -46,14 +46,14 @@ export default function PromptOptimizerPage() {
         {/* Tab Navigation */}
         <div className="bg-gray-800 rounded-lg p-2 mb-8 shadow-lg border border-purple-500/20">
           <div className="flex flex-wrap gap-2">
-            {tabs.map(tab => (
+            {tabs.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all ${
                   activeTab === tab.id
-                    ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-lg shadow-purple-500/50'
-                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                    ? "bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-lg shadow-purple-500/50"
+                    : "bg-gray-700 text-gray-300 hover:bg-gray-600"
                 }`}
               >
                 <span>{tab.icon}</span>
@@ -65,24 +65,30 @@ export default function PromptOptimizerPage() {
 
         {/* Tab Content */}
         <div>
-          {activeTab === 'dashboard' && (
+          {activeTab === "dashboard" && (
             <div className="space-y-6">
               <div className="bg-gray-800 rounded-lg p-6 shadow-lg border border-purple-500/20">
-                <h2 className="text-2xl font-bold text-white mb-4">Welcome to PromptOptimizer</h2>
+                <h2 className="text-2xl font-bold text-white mb-4">
+                  Welcome to PromptOptimizer
+                </h2>
                 <p className="text-gray-300 mb-6">
-                  PromptOptimizer combines AI prompt engineering with Solana DeFi arbitrage strategies.
-                  Use our tools to create, optimize, and test prompts for maximum profitability.
+                  PromptOptimizer combines AI prompt engineering with Solana
+                  DeFi arbitrage strategies. Use our tools to create, optimize,
+                  and test prompts for maximum profitability.
                 </p>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="bg-gradient-to-br from-purple-900 to-purple-800 p-6 rounded-lg">
                     <div className="text-4xl mb-3">✏️</div>
-                    <h3 className="text-lg font-bold text-white mb-2">Prompt Editor</h3>
+                    <h3 className="text-lg font-bold text-white mb-2">
+                      Prompt Editor
+                    </h3>
                     <p className="text-gray-300 text-sm mb-4">
-                      Create and analyze prompts with real-time metrics and suggestions.
+                      Create and analyze prompts with real-time metrics and
+                      suggestions.
                     </p>
                     <button
-                      onClick={() => setActiveTab('editor')}
+                      onClick={() => setActiveTab("editor")}
                       className="px-4 py-2 bg-white text-purple-900 rounded-lg font-semibold hover:bg-gray-100 transition-colors"
                     >
                       Start Editing
@@ -91,12 +97,15 @@ export default function PromptOptimizerPage() {
 
                   <div className="bg-gradient-to-br from-blue-900 to-blue-800 p-6 rounded-lg">
                     <div className="text-4xl mb-3">📚</div>
-                    <h3 className="text-lg font-bold text-white mb-2">Template Library</h3>
+                    <h3 className="text-lg font-bold text-white mb-2">
+                      Template Library
+                    </h3>
                     <p className="text-gray-300 text-sm mb-4">
-                      Browse pre-built templates for arbitrage, DeFi, and trading analysis.
+                      Browse pre-built templates for arbitrage, DeFi, and
+                      trading analysis.
                     </p>
                     <button
-                      onClick={() => setActiveTab('templates')}
+                      onClick={() => setActiveTab("templates")}
                       className="px-4 py-2 bg-white text-blue-900 rounded-lg font-semibold hover:bg-gray-100 transition-colors"
                     >
                       Browse Templates
@@ -105,12 +114,15 @@ export default function PromptOptimizerPage() {
 
                   <div className="bg-gradient-to-br from-green-900 to-green-800 p-6 rounded-lg">
                     <div className="text-4xl mb-3">🎯</div>
-                    <h3 className="text-lg font-bold text-white mb-2">Strategy Optimizer</h3>
+                    <h3 className="text-lg font-bold text-white mb-2">
+                      Strategy Optimizer
+                    </h3>
                     <p className="text-gray-300 text-sm mb-4">
-                      Optimize DeFi arbitrage strategies with AI-powered recommendations.
+                      Optimize DeFi arbitrage strategies with AI-powered
+                      recommendations.
                     </p>
                     <button
-                      onClick={() => setActiveTab('strategies')}
+                      onClick={() => setActiveTab("strategies")}
                       className="px-4 py-2 bg-white text-green-900 rounded-lg font-semibold hover:bg-gray-100 transition-colors"
                     >
                       View Strategies
@@ -121,7 +133,9 @@ export default function PromptOptimizerPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="bg-gray-800 rounded-lg p-6 shadow-lg border border-purple-500/20">
-                  <h3 className="text-xl font-bold text-white mb-3">Key Features</h3>
+                  <h3 className="text-xl font-bold text-white mb-3">
+                    Key Features
+                  </h3>
                   <ul className="space-y-2 text-gray-300">
                     <li className="flex items-start gap-2">
                       <span className="text-green-400 mt-1">✓</span>
@@ -147,23 +161,35 @@ export default function PromptOptimizerPage() {
                 </div>
 
                 <div className="bg-gray-800 rounded-lg p-6 shadow-lg border border-purple-500/20">
-                  <h3 className="text-xl font-bold text-white mb-3">Quick Stats</h3>
+                  <h3 className="text-xl font-bold text-white mb-3">
+                    Quick Stats
+                  </h3>
                   <div className="space-y-3">
                     <div className="flex justify-between items-center">
                       <span className="text-gray-400">Available Templates</span>
-                      <span className="text-2xl font-bold text-purple-400">4</span>
+                      <span className="text-2xl font-bold text-purple-400">
+                        4
+                      </span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-gray-400">Active Strategies</span>
-                      <span className="text-2xl font-bold text-blue-400">4</span>
+                      <span className="text-2xl font-bold text-blue-400">
+                        4
+                      </span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-gray-400">Supported DEXs</span>
-                      <span className="text-2xl font-bold text-green-400">11+</span>
+                      <span className="text-2xl font-bold text-green-400">
+                        11+
+                      </span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-gray-400">Flash Loan Providers</span>
-                      <span className="text-2xl font-bold text-yellow-400">5</span>
+                      <span className="text-gray-400">
+                        Flash Loan Providers
+                      </span>
+                      <span className="text-2xl font-bold text-yellow-400">
+                        5
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -171,20 +197,18 @@ export default function PromptOptimizerPage() {
             </div>
           )}
 
-          {activeTab === 'editor' && (
+          {activeTab === "editor" && (
             <PromptEditor
               initialPrompt={currentPrompt}
               onSave={handleSavePrompt}
             />
           )}
 
-          {activeTab === 'templates' && (
+          {activeTab === "templates" && (
             <TemplateLibrary onSelectTemplate={handleTemplateSelect} />
           )}
 
-          {activeTab === 'strategies' && (
-            <StrategyDashboard />
-          )}
+          {activeTab === "strategies" && <StrategyDashboard />}
         </div>
       </div>
     </div>

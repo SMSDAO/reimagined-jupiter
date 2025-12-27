@@ -1,6 +1,6 @@
 /**
  * Strategy Agent
- * 
+ *
  * Uses Gemini-powered reasoning to identify complex triangular or multi-hop routes
  * beyond simple heuristics.
  */
@@ -11,25 +11,25 @@ import {
   AgentStatus,
   AnalysisContext,
   AnalysisResult,
-} from '../types.js';
-import { GeminiBackend } from '../GeminiBackend.js';
+} from "../types.js";
+import { GeminiBackend } from "../GeminiBackend.js";
 
 export class StrategyAgent implements IntelligenceAgent {
   readonly metadata: AgentMetadata;
-  status: AgentStatus = 'INACTIVE';
+  status: AgentStatus = "INACTIVE";
   private geminiBackend: GeminiBackend | null = null;
   private config: { apiKey: string };
 
   constructor(config: { apiKey: string }) {
     this.config = config;
     this.metadata = {
-      id: 'strategy-agent-v1',
-      name: 'Strategy Intelligence Agent',
-      version: '1.0.0',
-      type: 'STRATEGY',
-      author: 'GXQ STUDIO',
+      id: "strategy-agent-v1",
+      name: "Strategy Intelligence Agent",
+      version: "1.0.0",
+      type: "STRATEGY",
+      author: "GXQ STUDIO",
       description:
-        'Uses Gemini-powered reasoning to identify optimal arbitrage routes with complex multi-hop analysis',
+        "Uses Gemini-powered reasoning to identify optimal arbitrage routes with complex multi-hop analysis",
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -37,12 +37,12 @@ export class StrategyAgent implements IntelligenceAgent {
 
   async initialize(): Promise<void> {
     if (!this.config.apiKey) {
-      throw new Error('Gemini API key is required for Strategy Agent');
+      throw new Error("Gemini API key is required for Strategy Agent");
     }
 
     this.geminiBackend = new GeminiBackend({
       apiKey: this.config.apiKey,
-      model: 'gemini-pro',
+      model: "gemini-pro",
       temperature: 0.3,
       maxTokens: 2048,
     });
@@ -53,19 +53,19 @@ export class StrategyAgent implements IntelligenceAgent {
       throw new Error(`Failed to initialize Gemini backend: ${health.error}`);
     }
 
-    this.status = 'ACTIVE';
-    console.log('✅ Strategy Agent initialized');
+    this.status = "ACTIVE";
+    console.log("✅ Strategy Agent initialized");
   }
 
   async cleanup(): Promise<void> {
     this.geminiBackend = null;
-    this.status = 'INACTIVE';
-    console.log('🗑️ Strategy Agent cleaned up');
+    this.status = "INACTIVE";
+    console.log("🗑️ Strategy Agent cleaned up");
   }
 
   async healthCheck(): Promise<{ healthy: boolean; error?: string }> {
     if (!this.geminiBackend) {
-      return { healthy: false, error: 'Gemini backend not initialized' };
+      return { healthy: false, error: "Gemini backend not initialized" };
     }
 
     return await this.geminiBackend.healthCheck();
@@ -77,9 +77,9 @@ export class StrategyAgent implements IntelligenceAgent {
         agentId: this.metadata.id,
         agentType: this.metadata.type,
         success: false,
-        confidence: 'LOW',
-        recommendation: 'ABORT',
-        reasoning: 'Strategy agent not initialized',
+        confidence: "LOW",
+        recommendation: "ABORT",
+        reasoning: "Strategy agent not initialized",
         timestamp: new Date(),
       };
     }
@@ -102,32 +102,33 @@ export class StrategyAgent implements IntelligenceAgent {
       };
 
       // Use Gemini to analyze the strategy
-      const llmAnalysis = await this.geminiBackend.analyzeArbitrage(analysisData);
+      const llmAnalysis =
+        await this.geminiBackend.analyzeArbitrage(analysisData);
 
       return {
         agentId: this.metadata.id,
         agentType: this.metadata.type,
-        success: llmAnalysis.recommendation !== 'ABORT',
+        success: llmAnalysis.recommendation !== "ABORT",
         confidence: llmAnalysis.confidence,
         recommendation: llmAnalysis.recommendation,
         reasoning: llmAnalysis.reasoning,
         adjustments: llmAnalysis.adjustments,
         metadata: {
-          llmModel: 'gemini-pro',
+          llmModel: "gemini-pro",
           analysisTimestamp: new Date().toISOString(),
         },
         timestamp: new Date(),
       };
     } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-      console.error('❌ Strategy Agent analysis failed:', error);
+      const errorMsg = error instanceof Error ? error.message : "Unknown error";
+      console.error("❌ Strategy Agent analysis failed:", error);
 
       return {
         agentId: this.metadata.id,
         agentType: this.metadata.type,
         success: false,
-        confidence: 'LOW',
-        recommendation: 'ABORT',
+        confidence: "LOW",
+        recommendation: "ABORT",
         reasoning: `Strategy analysis failed: ${errorMsg}`,
         timestamp: new Date(),
       };

@@ -1,11 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createResilientConnection } from '@/lib/solana/connection';
-import { API } from '@/lib/config';
+import { NextRequest, NextResponse } from "next/server";
+import { createResilientConnection } from "@/lib/solana/connection";
+import { API } from "@/lib/config";
 
 interface HealthResponse {
-  status: 'healthy' | 'degraded' | 'unhealthy';
+  status: "healthy" | "degraded" | "unhealthy";
   rpcLatency: number;
-  jupiterApiStatus: 'online' | 'offline';
+  jupiterApiStatus: "online" | "offline";
   timestamp: number;
   errors?: string[];
   rpcEndpoint?: string;
@@ -13,15 +13,15 @@ interface HealthResponse {
 
 /**
  * GET /api/health
- * 
+ *
  * Health check endpoint for monitoring
  * Returns 200 for healthy, 503 for unhealthy
  */
 export async function GET(_request: NextRequest) {
   const errors: string[] = [];
-  let status: 'healthy' | 'degraded' | 'unhealthy' = 'healthy';
+  let status: "healthy" | "degraded" | "unhealthy" = "healthy";
   let rpcLatency = 0;
-  let rpcEndpoint = '';
+  let rpcEndpoint = "";
 
   // Check Solana RPC connection
   const resilientConnection = createResilientConnection();
@@ -36,18 +36,20 @@ export async function GET(_request: NextRequest) {
 
     if (rpcLatency > 1000) {
       errors.push(`High RPC latency: ${rpcLatency}ms`);
-      status = 'degraded';
+      status = "degraded";
     }
   } catch (error) {
-    errors.push(`RPC connection failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    status = 'unhealthy';
-    console.error('❌ RPC health check failed:', error);
+    errors.push(
+      `RPC connection failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
+    status = "unhealthy";
+    console.error("❌ RPC health check failed:", error);
   } finally {
     resilientConnection.destroy();
   }
 
   // Check Jupiter API availability
-  let jupiterApiStatus: 'online' | 'offline' = 'online';
+  let jupiterApiStatus: "online" | "offline" = "online";
   const jupiterApiUrl = API.jupiterQuote();
   try {
     const jupiterResponse = await fetch(`${jupiterApiUrl}/health`, {
@@ -55,15 +57,15 @@ export async function GET(_request: NextRequest) {
     });
 
     if (!jupiterResponse.ok) {
-      jupiterApiStatus = 'offline';
-      errors.push('Jupiter API unavailable');
-      status = status === 'healthy' ? 'degraded' : status;
+      jupiterApiStatus = "offline";
+      errors.push("Jupiter API unavailable");
+      status = status === "healthy" ? "degraded" : status;
     }
   } catch (error) {
-    jupiterApiStatus = 'offline';
-    errors.push('Jupiter API timeout or error');
-    status = status === 'healthy' ? 'degraded' : status;
-    console.error('❌ Jupiter API health check failed:', error);
+    jupiterApiStatus = "offline";
+    errors.push("Jupiter API timeout or error");
+    status = status === "healthy" ? "degraded" : status;
+    console.error("❌ Jupiter API health check failed:", error);
   }
 
   const response: HealthResponse = {
@@ -81,7 +83,7 @@ export async function GET(_request: NextRequest) {
     response.errors = errors;
   }
 
-  const statusCode = status === 'unhealthy' ? 503 : 200;
+  const statusCode = status === "unhealthy" ? 503 : 200;
 
   console.log(`🏥 Health check: ${status} (${statusCode})`);
 

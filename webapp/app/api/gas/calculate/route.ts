@@ -1,14 +1,14 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createResilientConnection } from '@/lib/solana/connection';
+import { NextRequest, NextResponse } from "next/server";
+import { createResilientConnection } from "@/lib/solana/connection";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
 interface GasCalculationResponse {
   success: boolean;
   priorityFee?: number;
   computeUnits?: number;
   totalFee?: number;
-  networkCongestion?: 'low' | 'medium' | 'high';
+  networkCongestion?: "low" | "medium" | "high";
   recommendedSlippage?: number;
   timestamp: number;
   error?: string;
@@ -17,7 +17,7 @@ interface GasCalculationResponse {
 /**
  * GET /api/gas/calculate
  * Calculate dynamic gas fees based on current network conditions
- * 
+ *
  * Query parameters:
  * - txType: Transaction type (swap, transfer, custom) - affects compute unit estimate
  */
@@ -26,23 +26,23 @@ export async function GET(request: NextRequest) {
 
   try {
     const searchParams = request.nextUrl.searchParams;
-    const txType = searchParams.get('txType') || 'swap';
+    const txType = searchParams.get("txType") || "swap";
 
-    console.log('[Gas] Calculating dynamic gas for transaction type:', txType);
+    console.log("[Gas] Calculating dynamic gas for transaction type:", txType);
 
     // Get recent prioritization fees from the network
     const recentFees = await resilientConnection.getRecentPrioritizationFees();
 
     if (!recentFees || recentFees.length === 0) {
-      console.warn('[Gas] No recent prioritization fees available');
-      
+      console.warn("[Gas] No recent prioritization fees available");
+
       // Return default values if no data available
       return NextResponse.json({
         success: true,
         priorityFee: 5000, // Default: 5,000 micro-lamports
         computeUnits: 200000, // Default for swap
         totalFee: 1000000, // ~0.001 SOL
-        networkCongestion: 'medium',
+        networkCongestion: "medium",
         recommendedSlippage: 1, // 1%
         timestamp: Date.now(),
       });
@@ -61,18 +61,18 @@ export async function GET(request: NextRequest) {
     const max = fees[fees.length - 1] || 0;
 
     // Determine network congestion based on fee distribution
-    let networkCongestion: 'low' | 'medium' | 'high' = 'medium';
+    let networkCongestion: "low" | "medium" | "high" = "medium";
     let recommendedSlippage = 1; // Default 1%
     let priorityFee = p75; // Use 75th percentile for reliable confirmation
 
     if (max > 100000) {
       // Very high fees indicate high congestion
-      networkCongestion = 'high';
+      networkCongestion = "high";
       priorityFee = p90; // Use 90th percentile for faster confirmation
       recommendedSlippage = 2; // 2% slippage for high volatility
     } else if (max < 10000) {
       // Low fees indicate low congestion
-      networkCongestion = 'low';
+      networkCongestion = "low";
       priorityFee = p50; // Median is sufficient
       recommendedSlippage = 0.5; // 0.5% slippage for low volatility
     }
@@ -83,16 +83,16 @@ export async function GET(request: NextRequest) {
     // Estimate compute units based on transaction type
     let computeUnits = 200000; // Default for swap
     switch (txType.toLowerCase()) {
-      case 'transfer':
+      case "transfer":
         computeUnits = 50000;
         break;
-      case 'swap':
+      case "swap":
         computeUnits = 200000;
         break;
-      case 'snipe':
+      case "snipe":
         computeUnits = 300000; // Higher for complex sniper transactions
         break;
-      case 'flashloan':
+      case "flashloan":
         computeUnits = 400000; // Highest for flash loan arbitrage
         break;
       default:
@@ -112,7 +112,7 @@ export async function GET(request: NextRequest) {
       timestamp: Date.now(),
     };
 
-    console.log('[Gas] Calculated gas:', {
+    console.log("[Gas] Calculated gas:", {
       priorityFee,
       computeUnits,
       totalFee,
@@ -124,19 +124,19 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(response, {
       headers: {
-        'Cache-Control': 'public, s-maxage=5, stale-while-revalidate=10',
+        "Cache-Control": "public, s-maxage=5, stale-while-revalidate=10",
       },
     });
   } catch (error) {
-    console.error('[Gas] Calculation error:', error);
+    console.error("[Gas] Calculation error:", error);
 
     return NextResponse.json(
       {
         success: false,
         timestamp: Date.now(),
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: error instanceof Error ? error.message : "Unknown error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   } finally {
     resilientConnection.destroy();
@@ -152,19 +152,19 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { transaction, txType = 'custom' } = body;
+    const { transaction, txType = "custom" } = body;
 
     if (!transaction) {
       return NextResponse.json(
         {
           success: false,
-          error: 'Transaction data is required',
+          error: "Transaction data is required",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
-    console.log('[Gas] Simulating transaction for gas estimation');
+    console.log("[Gas] Simulating transaction for gas estimation");
 
     // In a real implementation, you would:
     // 1. Deserialize the transaction
@@ -175,20 +175,20 @@ export async function POST(request: NextRequest) {
     // For now, use the GET endpoint logic
     const getResponse = await GET(
       new NextRequest(
-        new URL(`/api/gas/calculate?txType=${txType}`, request.url)
-      )
+        new URL(`/api/gas/calculate?txType=${txType}`, request.url),
+      ),
     );
 
     return getResponse;
   } catch (error) {
-    console.error('[Gas] Transaction simulation error:', error);
+    console.error("[Gas] Transaction simulation error:", error);
 
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: error instanceof Error ? error.message : "Unknown error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   } finally {
     resilientConnection.destroy();

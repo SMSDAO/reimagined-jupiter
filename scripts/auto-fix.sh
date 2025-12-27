@@ -30,12 +30,12 @@ log_step() {
 
 log_warning() {
   echo -e "${YELLOW}⚠️  $1${NC}"
-  ((WARNINGS++))
+  ((WARNINGS++)) || true
 }
 
 log_fixed() {
   echo -e "${GREEN}✅ $1${NC}"
-  ((ISSUES_FIXED++))
+  ((ISSUES_FIXED++)) || true
 }
 
 # Remove trailing whitespace from TypeScript files
@@ -82,7 +82,7 @@ IMPORT_ISSUES=0
 # Check for .js extensions in imports (should not have them in TypeScript)
 if grep -r "from ['\"].*\.js['\"]" src/ api/ webapp/ 2>/dev/null | grep -v node_modules | grep -v ".next" || true; then
   log_warning "Found .js extensions in TypeScript imports (should be removed)"
-  ((IMPORT_ISSUES++))
+  ((IMPORT_ISSUES++)) || true
 else
   echo "  No .js extension issues found"
 fi
@@ -90,7 +90,7 @@ fi
 # Check for missing file extensions in relative imports
 if grep -r "from ['\"]\.\.*/[^'\"]*[^/]['\"]" src/ api/ 2>/dev/null | grep -v node_modules | grep -v "\.js" | head -5 || true; then
   log_warning "Some relative imports may be missing proper paths"
-  ((IMPORT_ISSUES++))
+  ((IMPORT_ISSUES++)) || true
 fi
 
 if [ $IMPORT_ISSUES -eq 0 ]; then

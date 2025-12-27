@@ -1,34 +1,38 @@
-'use client';
+"use client";
 
-import React, { FC, ReactNode, useMemo, useEffect } from 'react';
-import { ConnectionProvider, WalletProvider } from '@solana/wallet-adapter-react';
-import { WalletAdapterNetwork } from '@solana/wallet-adapter-base';
-import { WalletModalProvider } from '@solana/wallet-adapter-react-ui';
-import { 
-  PhantomWalletAdapter, 
+import React, { FC, ReactNode, useMemo, useEffect } from "react";
+import {
+  ConnectionProvider,
+  WalletProvider,
+} from "@solana/wallet-adapter-react";
+import { WalletAdapterNetwork } from "@solana/wallet-adapter-base";
+import { WalletModalProvider } from "@solana/wallet-adapter-react-ui";
+import {
+  PhantomWalletAdapter,
   SolflareWalletAdapter,
   LedgerWalletAdapter,
   TorusWalletAdapter,
   SlopeWalletAdapter,
   CoinbaseWalletAdapter,
-} from '@solana/wallet-adapter-wallets';
-import { clusterApiUrl } from '@solana/web3.js';
-import { useWallet as useWalletHook } from '@solana/wallet-adapter-react';
-import '@solana/wallet-adapter-react-ui/styles.css';
+} from "@solana/wallet-adapter-wallets";
+import { clusterApiUrl } from "@solana/web3.js";
+import { useWallet as useWalletHook } from "@solana/wallet-adapter-react";
+import "@solana/wallet-adapter-react-ui/styles.css";
 
 // Wallet event listener component
 const WalletEventDispatcher: FC = () => {
-  const { publicKey, connected, connecting, disconnecting, wallet } = useWalletHook();
+  const { publicKey, connected, connecting, disconnecting, wallet } =
+    useWalletHook();
 
   useEffect(() => {
     if (connected && publicKey) {
-      console.log('[Wallet] Connected:', {
+      console.log("[Wallet] Connected:", {
         address: publicKey.toString(),
         wallet: wallet?.adapter.name,
       });
-      
+
       // Dispatch wallet-connected event
-      const event = new CustomEvent('wallet-connected', {
+      const event = new CustomEvent("wallet-connected", {
         detail: {
           publicKey: publicKey.toString(),
           walletName: wallet?.adapter.name,
@@ -41,22 +45,22 @@ const WalletEventDispatcher: FC = () => {
 
   useEffect(() => {
     if (connecting) {
-      console.log('[Wallet] Connecting to wallet...');
+      console.log("[Wallet] Connecting to wallet...");
     }
   }, [connecting]);
 
   useEffect(() => {
     if (disconnecting) {
-      console.log('[Wallet] Disconnecting from wallet...');
+      console.log("[Wallet] Disconnecting from wallet...");
     }
   }, [disconnecting]);
 
   useEffect(() => {
     if (!connected && !connecting && !disconnecting) {
-      console.log('[Wallet] Wallet disconnected - resetting state');
-      
+      console.log("[Wallet] Wallet disconnected - resetting state");
+
       // Dispatch wallet-disconnected event
-      const event = new CustomEvent('wallet-disconnected', {
+      const event = new CustomEvent("wallet-disconnected", {
         detail: {
           timestamp: new Date().toISOString(),
         },
@@ -68,9 +72,11 @@ const WalletEventDispatcher: FC = () => {
   return null;
 };
 
-export const WalletContextProvider: FC<{ children: ReactNode }> = ({ children }) => {
+export const WalletContextProvider: FC<{ children: ReactNode }> = ({
+  children,
+}) => {
   const network = WalletAdapterNetwork.Mainnet;
-  
+
   // Use priority-based RPC endpoint selection for mainnet
   const endpoint = useMemo(() => {
     // Priority 1: Helius (fastest, most reliable)
@@ -104,12 +110,12 @@ export const WalletContextProvider: FC<{ children: ReactNode }> = ({ children })
       // WalletConnect and other adapters can be added here
       // Note: WalletConnect requires additional configuration
     ],
-    []
+    [],
   );
 
   useEffect(() => {
-    console.log('[WalletContext] Initialized with mainnet RPC:', endpoint);
-    console.log('[WalletContext] Supported wallets:', wallets.length);
+    console.log("[WalletContext] Initialized with mainnet RPC:", endpoint);
+    console.log("[WalletContext] Supported wallets:", wallets.length);
   }, [endpoint, wallets.length]);
 
   return (

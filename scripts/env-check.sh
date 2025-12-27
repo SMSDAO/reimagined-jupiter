@@ -22,17 +22,17 @@ TOTAL_OK=0
 # Helper functions
 mark_ok() {
   echo -e "${GREEN}✅ [OK]${NC} $1"
-  ((TOTAL_OK++))
+  ((TOTAL_OK++)) || true
 }
 
 mark_missing() {
   echo -e "${RED}❌ [MISSING]${NC} $1"
-  ((MISSING_REQUIRED++))
+  ((MISSING_REQUIRED++)) || true
 }
 
 mark_optional() {
   echo -e "${YELLOW}⚠️  [OPTIONAL]${NC} $1"
-  ((MISSING_OPTIONAL++))
+  ((MISSING_OPTIONAL++)) || true
 }
 
 echo "======================================================================"

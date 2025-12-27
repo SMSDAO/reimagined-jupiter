@@ -1,25 +1,36 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { analyzePrompt, getSuggestions, validatePrompt } from '../lib/optimizer';
-import { OptimizationMetrics } from '../types';
+import { useState } from "react";
+import {
+  analyzePrompt,
+  getSuggestions,
+  validatePrompt,
+} from "../lib/optimizer";
+import { OptimizationMetrics } from "../types";
 
 interface PromptEditorProps {
   initialPrompt?: string;
   onSave?: (prompt: string) => void;
 }
 
-export default function PromptEditor({ initialPrompt = '', onSave }: PromptEditorProps) {
+export default function PromptEditor({
+  initialPrompt = "",
+  onSave,
+}: PromptEditorProps) {
   const [prompt, setPrompt] = useState(initialPrompt);
   const [metrics, setMetrics] = useState<OptimizationMetrics | null>(null);
   const [suggestions, setSuggestions] = useState<string[]>([]);
-  const [validation, setValidation] = useState<{ valid: boolean; errors: string[]; warnings: string[] } | null>(null);
+  const [validation, setValidation] = useState<{
+    valid: boolean;
+    errors: string[];
+    warnings: string[];
+  } | null>(null);
 
   const handleAnalyze = () => {
     const newMetrics = analyzePrompt(prompt);
     const newSuggestions = getSuggestions(prompt);
     const newValidation = validatePrompt(prompt);
-    
+
     setMetrics(newMetrics);
     setSuggestions(newSuggestions);
     setValidation(newValidation);
@@ -32,23 +43,23 @@ export default function PromptEditor({ initialPrompt = '', onSave }: PromptEdito
   };
 
   const getScoreColor = (score: number): string => {
-    if (score >= 80) return 'text-green-400';
-    if (score >= 60) return 'text-yellow-400';
-    return 'text-red-400';
+    if (score >= 80) return "text-green-400";
+    if (score >= 60) return "text-yellow-400";
+    return "text-red-400";
   };
 
   return (
     <div className="space-y-6">
       <div className="bg-gray-800 rounded-lg p-6 shadow-lg border border-purple-500/20">
         <h2 className="text-2xl font-bold text-white mb-4">Prompt Editor</h2>
-        
+
         <textarea
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
           className="w-full h-64 bg-gray-900 text-white p-4 rounded-lg border border-purple-500/30 focus:border-purple-500 focus:outline-none resize-none font-mono text-sm"
           placeholder="Enter your prompt here..."
         />
-        
+
         <div className="flex gap-4 mt-4">
           <button
             onClick={handleAnalyze}
@@ -63,7 +74,7 @@ export default function PromptEditor({ initialPrompt = '', onSave }: PromptEdito
             Save
           </button>
           <button
-            onClick={() => setPrompt('')}
+            onClick={() => setPrompt("")}
             className="px-6 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-semibold transition-colors"
           >
             Clear
@@ -99,19 +110,25 @@ export default function PromptEditor({ initialPrompt = '', onSave }: PromptEdito
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             <div className="bg-gray-900 p-4 rounded-lg">
               <div className="text-gray-400 text-sm mb-1">Clarity</div>
-              <div className={`text-2xl font-bold ${getScoreColor(metrics.clarity)}`}>
+              <div
+                className={`text-2xl font-bold ${getScoreColor(metrics.clarity)}`}
+              >
                 {metrics.clarity.toFixed(0)}%
               </div>
             </div>
             <div className="bg-gray-900 p-4 rounded-lg">
               <div className="text-gray-400 text-sm mb-1">Specificity</div>
-              <div className={`text-2xl font-bold ${getScoreColor(metrics.specificity)}`}>
+              <div
+                className={`text-2xl font-bold ${getScoreColor(metrics.specificity)}`}
+              >
                 {metrics.specificity.toFixed(0)}%
               </div>
             </div>
             <div className="bg-gray-900 p-4 rounded-lg">
               <div className="text-gray-400 text-sm mb-1">Effectiveness</div>
-              <div className={`text-2xl font-bold ${getScoreColor(metrics.effectiveness)}`}>
+              <div
+                className={`text-2xl font-bold ${getScoreColor(metrics.effectiveness)}`}
+              >
                 {metrics.effectiveness.toFixed(0)}%
               </div>
             </div>
@@ -133,7 +150,9 @@ export default function PromptEditor({ initialPrompt = '', onSave }: PromptEdito
 
       {suggestions.length > 0 && (
         <div className="bg-gray-800 rounded-lg p-6 shadow-lg border border-purple-500/20">
-          <h3 className="text-xl font-bold text-white mb-4">Suggestions for Improvement</h3>
+          <h3 className="text-xl font-bold text-white mb-4">
+            Suggestions for Improvement
+          </h3>
           <ul className="space-y-2">
             {suggestions.map((suggestion, i) => (
               <li key={i} className="flex items-start gap-3">

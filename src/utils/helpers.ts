@@ -1,7 +1,7 @@
-import { PublicKey } from '@solana/web3.js';
+import { PublicKey } from "@solana/web3.js";
 
 export function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 export function formatTokenAmount(amount: number, decimals: number): number {
@@ -32,7 +32,7 @@ export function shortenAddress(address: string, chars: number = 4): string {
 export function calculateProfit(
   initialAmount: number,
   finalAmount: number,
-  fees: number[]
+  fees: number[],
 ): number {
   const totalFees = fees.reduce((sum, fee) => sum + fee, 0);
   return finalAmount - initialAmount - totalFees;
@@ -40,7 +40,7 @@ export function calculateProfit(
 
 export function calculateProfitPercentage(
   initialAmount: number,
-  finalAmount: number
+  finalAmount: number,
 ): number {
   return ((finalAmount - initialAmount) / initialAmount) * 100;
 }
@@ -49,29 +49,29 @@ export class RateLimiter {
   private timestamps: number[] = [];
   private maxRequests: number;
   private timeWindow: number;
-  
+
   constructor(maxRequests: number, timeWindowMs: number) {
     this.maxRequests = maxRequests;
     this.timeWindow = timeWindowMs;
   }
-  
+
   async waitIfNeeded(): Promise<void> {
     const now = Date.now();
-    
+
     // Remove old timestamps outside the time window
     this.timestamps = this.timestamps.filter(
-      ts => now - ts < this.timeWindow
+      (ts) => now - ts < this.timeWindow,
     );
-    
+
     if (this.timestamps.length >= this.maxRequests) {
       const oldestTimestamp = this.timestamps[0];
       const waitTime = this.timeWindow - (now - oldestTimestamp);
-      
+
       if (waitTime > 0) {
         await sleep(waitTime);
       }
     }
-    
+
     this.timestamps.push(Date.now());
   }
 }

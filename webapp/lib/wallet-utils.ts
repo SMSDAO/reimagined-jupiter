@@ -2,10 +2,10 @@
  * Wallet utilities for scoring, analysis, and operations
  */
 
-import { Connection, PublicKey, Keypair } from '@solana/web3.js';
-import bs58 from 'bs58';
+import { Connection, PublicKey, Keypair } from "@solana/web3.js";
+import bs58 from "bs58";
 
-export type WalletTier = 'WHALE' | 'DEGEN' | 'ACTIVE' | 'CASUAL' | 'NOVICE';
+export type WalletTier = "WHALE" | "DEGEN" | "ACTIVE" | "CASUAL" | "NOVICE";
 
 export interface WalletMetrics {
   balance: number;
@@ -26,16 +26,16 @@ export interface WalletScore {
  */
 export function calculateWalletScore(metrics: WalletMetrics): WalletScore {
   let totalScore = 0;
-  
+
   // Balance score (0-30 points)
   const { balance, txCount, nftCount } = metrics;
-  
+
   if (balance >= 100) totalScore += 30;
   else if (balance >= 10) totalScore += 25;
   else if (balance >= 1) totalScore += 20;
   else if (balance >= 0.1) totalScore += 15;
   else totalScore += 10;
-  
+
   // Transaction score (0-40 points)
   if (txCount >= 1000) totalScore += 40;
   else if (txCount >= 500) totalScore += 35;
@@ -43,21 +43,21 @@ export function calculateWalletScore(metrics: WalletMetrics): WalletScore {
   else if (txCount >= 50) totalScore += 25;
   else if (txCount >= 10) totalScore += 20;
   else totalScore += 10;
-  
+
   // NFT score (0-30 points)
   if (nftCount >= 50) totalScore += 30;
   else if (nftCount >= 20) totalScore += 25;
   else if (nftCount >= 10) totalScore += 20;
   else if (nftCount >= 5) totalScore += 15;
   else if (nftCount >= 1) totalScore += 10;
-  
+
   // Determine tier
-  let tier: WalletTier = 'NOVICE';
-  if (totalScore >= 80) tier = 'WHALE';
-  else if (totalScore >= 65) tier = 'DEGEN';
-  else if (totalScore >= 50) tier = 'ACTIVE';
-  else if (totalScore >= 30) tier = 'CASUAL';
-  
+  let tier: WalletTier = "NOVICE";
+  if (totalScore >= 80) tier = "WHALE";
+  else if (totalScore >= 65) tier = "DEGEN";
+  else if (totalScore >= 50) tier = "ACTIVE";
+  else if (totalScore >= 30) tier = "CASUAL";
+
   return {
     totalScore,
     tier,
@@ -70,22 +70,27 @@ export function calculateWalletScore(metrics: WalletMetrics): WalletScore {
  */
 export async function fetchWalletMetrics(
   connection: Connection,
-  publicKey: PublicKey
+  publicKey: PublicKey,
 ): Promise<WalletMetrics> {
   try {
     // Get balance
     const balance = await connection.getBalance(publicKey);
     const solBalance = balance / 1e9;
-    
+
     // Get transaction count
-    const signatures = await connection.getSignaturesForAddress(publicKey, { limit: 1000 });
-    const txCount = signatures.length;
-    
-    // Get token accounts
-    const tokenAccounts = await connection.getParsedTokenAccountsByOwner(publicKey, {
-      programId: new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'),
+    const signatures = await connection.getSignaturesForAddress(publicKey, {
+      limit: 1000,
     });
-    
+    const txCount = signatures.length;
+
+    // Get token accounts
+    const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
+      publicKey,
+      {
+        programId: new PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"),
+      },
+    );
+
     // Count NFTs (tokens with amount=1 and decimals=0)
     let nftCount = 0;
     for (const account of tokenAccounts.value) {
@@ -95,16 +100,18 @@ export async function fetchWalletMetrics(
         nftCount++;
       }
     }
-    
+
     // Calculate wallet age
     let age = 0;
     if (signatures.length > 0) {
       const oldestSignature = signatures[signatures.length - 1];
       if (oldestSignature.blockTime) {
-        age = Math.floor((Date.now() / 1000 - oldestSignature.blockTime) / 86400);
+        age = Math.floor(
+          (Date.now() / 1000 - oldestSignature.blockTime) / 86400,
+        );
       }
     }
-    
+
     return {
       balance: solBalance,
       txCount,
@@ -113,8 +120,10 @@ export async function fetchWalletMetrics(
       age,
     };
   } catch (error) {
-    console.error('Error fetching wallet metrics:', error);
-    throw new Error('Failed to fetch wallet metrics. Please check your RPC connection and try again.');
+    console.error("Error fetching wallet metrics:", error);
+    throw new Error(
+      "Failed to fetch wallet metrics. Please check your RPC connection and try again.",
+    );
   }
 }
 
@@ -123,18 +132,18 @@ export async function fetchWalletMetrics(
  */
 export function getTierColor(tier: WalletTier): string {
   switch (tier) {
-    case 'WHALE':
-      return 'from-yellow-400 to-orange-500';
-    case 'DEGEN':
-      return 'from-purple-400 to-pink-500';
-    case 'ACTIVE':
-      return 'from-blue-400 to-cyan-500';
-    case 'CASUAL':
-      return 'from-green-400 to-emerald-500';
-    case 'NOVICE':
-      return 'from-gray-400 to-gray-500';
+    case "WHALE":
+      return "from-yellow-400 to-orange-500";
+    case "DEGEN":
+      return "from-purple-400 to-pink-500";
+    case "ACTIVE":
+      return "from-blue-400 to-cyan-500";
+    case "CASUAL":
+      return "from-green-400 to-emerald-500";
+    case "NOVICE":
+      return "from-gray-400 to-gray-500";
     default:
-      return 'from-gray-400 to-gray-500';
+      return "from-gray-400 to-gray-500";
   }
 }
 
@@ -143,18 +152,18 @@ export function getTierColor(tier: WalletTier): string {
  */
 export function getTierEmoji(tier: WalletTier): string {
   switch (tier) {
-    case 'WHALE':
-      return '🐋';
-    case 'DEGEN':
-      return '🎲';
-    case 'ACTIVE':
-      return '⚡';
-    case 'CASUAL':
-      return '👤';
-    case 'NOVICE':
-      return '🌱';
+    case "WHALE":
+      return "🐋";
+    case "DEGEN":
+      return "🎲";
+    case "ACTIVE":
+      return "⚡";
+    case "CASUAL":
+      return "👤";
+    case "NOVICE":
+      return "🌱";
     default:
-      return '👤';
+      return "👤";
   }
 }
 
@@ -169,7 +178,7 @@ export function calculateAirdropPriority(score: WalletScore): number {
     CASUAL: 2,
     NOVICE: 1,
   };
-  
+
   return tierPriority[score.tier];
 }
 
@@ -184,14 +193,15 @@ export function estimateAirdropValue(score: WalletScore): number {
     CASUAL: 500,
     NOVICE: 100,
   };
-  
+
   // Apply multipliers based on metrics
   const metrics = score.metrics;
-  const multiplier = 1 + 
-    (Math.min(metrics.txCount / 1000, 1) * 0.5) +
-    (Math.min(metrics.nftCount / 50, 1) * 0.3) +
-    (Math.min(metrics.age / 365, 1) * 0.2);
-  
+  const multiplier =
+    1 +
+    Math.min(metrics.txCount / 1000, 1) * 0.5 +
+    Math.min(metrics.nftCount / 50, 1) * 0.3 +
+    Math.min(metrics.age / 365, 1) * 0.2;
+
   return Math.round(baseValues[score.tier] * multiplier);
 }
 
@@ -218,11 +228,15 @@ export function shortenAddress(address: string, chars: number = 4): string {
 /**
  * Generate a new ephemeral Solana wallet
  */
-export function generateWallet(): { keypair: Keypair; privateKey: string; publicKey: string } {
+export function generateWallet(): {
+  keypair: Keypair;
+  privateKey: string;
+  publicKey: string;
+} {
   const keypair = Keypair.generate();
   const privateKey = bs58.encode(keypair.secretKey);
   const publicKey = keypair.publicKey.toString();
-  
+
   return {
     keypair,
     privateKey,
@@ -239,9 +253,9 @@ export function importWalletFromPrivateKey(privateKey: string): {
 } {
   try {
     let secretKey: Uint8Array;
-    
+
     // Try base58 format first
-    if (!privateKey.includes('[') && !privateKey.includes(',')) {
+    if (!privateKey.includes("[") && !privateKey.includes(",")) {
       secretKey = bs58.decode(privateKey);
     } else {
       // Try JSON array format
@@ -249,40 +263,46 @@ export function importWalletFromPrivateKey(privateKey: string): {
       if (Array.isArray(parsed)) {
         secretKey = Uint8Array.from(parsed);
       } else {
-        throw new Error('Invalid private key format');
+        throw new Error("Invalid private key format");
       }
     }
-    
+
     const keypair = Keypair.fromSecretKey(secretKey);
     const publicKey = keypair.publicKey.toString();
-    
+
     return {
       keypair,
       publicKey,
     };
   } catch (error) {
-    console.error('Error importing wallet:', error);
-    throw new Error('Invalid private key format. Use base58 string or [byte array].');
+    console.error("Error importing wallet:", error);
+    throw new Error(
+      "Invalid private key format. Use base58 string or [byte array].",
+    );
   }
 }
 
 /**
  * Validate private key format (without importing)
  */
-export function validatePrivateKeyFormat(privateKey: string): { valid: boolean; error?: string } {
+export function validatePrivateKeyFormat(privateKey: string): {
+  valid: boolean;
+  error?: string;
+} {
   try {
     // Check if empty
     if (!privateKey || privateKey.trim().length === 0) {
-      return { valid: false, error: 'Private key cannot be empty' };
+      return { valid: false, error: "Private key cannot be empty" };
     }
-    
+
     // Try to import
     importWalletFromPrivateKey(privateKey);
     return { valid: true };
   } catch (error) {
     return {
       valid: false,
-      error: error instanceof Error ? error.message : 'Invalid private key format',
+      error:
+        error instanceof Error ? error.message : "Invalid private key format",
     };
   }
 }
@@ -292,11 +312,11 @@ export function validatePrivateKeyFormat(privateKey: string): { valid: boolean; 
  */
 export function convertPrivateKeyFormat(
   privateKey: string,
-  outputFormat: 'base58' | 'array'
+  outputFormat: "base58" | "array",
 ): string {
   const { keypair } = importWalletFromPrivateKey(privateKey);
-  
-  if (outputFormat === 'base58') {
+
+  if (outputFormat === "base58") {
     return bs58.encode(keypair.secretKey);
   } else {
     return JSON.stringify(Array.from(keypair.secretKey));

@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { useEffect } from 'react';
+import { useEffect } from "react";
 import { WalletContextProvider } from "@/lib/wallet-context-provider";
 import { ThemeProvider } from "@/lib/theme-context";
 import Navigation from "@/components/Navigation";
@@ -15,10 +15,10 @@ export default function ClientLayout({
   useEffect(() => {
     // Start health checks every 60 seconds
     startAPIHealthMonitoring(60000);
-    
+
     // Log initialization
-    console.log('[GXQ Studio] API health monitoring started');
-    
+    console.log("[GXQ Studio] API health monitoring started");
+
     // Cleanup is handled by the health checker itself
   }, []);
 

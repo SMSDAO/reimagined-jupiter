@@ -22,17 +22,17 @@ WARNINGS=0
 
 log_healthy() {
   echo -e "${GREEN}✅ HEALTHY${NC} - $1"
-  ((HEALTHY++))
+  ((HEALTHY++)) || true
 }
 
 log_unhealthy() {
   echo -e "${RED}❌ UNHEALTHY${NC} - $1"
-  ((UNHEALTHY++))
+  ((UNHEALTHY++)) || true
 }
 
 log_warning() {
   echo -e "${YELLOW}⚠️  WARNING${NC} - $1"
-  ((WARNINGS++))
+  ((WARNINGS++)) || true
 }
 
 log_info() {

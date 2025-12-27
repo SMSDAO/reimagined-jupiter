@@ -13,7 +13,7 @@ export interface SlippageRecommendation {
   slippage: number; // Recommended slippage in percentage
   slippageBps: number; // Recommended slippage in basis points (100 = 1%)
   reason: string;
-  confidence: 'low' | 'medium' | 'high';
+  confidence: "low" | "medium" | "high";
 }
 
 export class SlippageManager {
@@ -33,54 +33,54 @@ export class SlippageManager {
   async getRecommendedSlippage(params: {
     tokenAddress: string;
     amountIn: number;
-    networkCongestion?: 'low' | 'medium' | 'high';
+    networkCongestion?: "low" | "medium" | "high";
     priceImpact?: number;
     volatility?: number;
   }): Promise<SlippageRecommendation> {
     const {
-      networkCongestion = 'medium',
+      networkCongestion = "medium",
       priceImpact = 0,
       volatility = 1,
     } = params;
 
     // Start with default slippage
     let recommendedSlippage = this.config.defaultSlippage;
-    let reason = 'Default slippage for normal market conditions';
-    let confidence: 'low' | 'medium' | 'high' = 'medium';
+    let reason = "Default slippage for normal market conditions";
+    let confidence: "low" | "medium" | "high" = "medium";
 
     // Adjust based on network congestion
-    if (networkCongestion === 'high') {
+    if (networkCongestion === "high") {
       recommendedSlippage += 0.5;
-      reason = 'Increased slippage due to high network congestion';
-      confidence = 'high';
-    } else if (networkCongestion === 'low') {
+      reason = "Increased slippage due to high network congestion";
+      confidence = "high";
+    } else if (networkCongestion === "low") {
       recommendedSlippage -= 0.2;
-      reason = 'Reduced slippage due to low network congestion';
-      confidence = 'high';
+      reason = "Reduced slippage due to low network congestion";
+      confidence = "high";
     }
 
     // Adjust based on price impact
     if (priceImpact > 2) {
       recommendedSlippage += 1;
-      reason = 'High price impact detected - increased slippage';
-      confidence = 'high';
+      reason = "High price impact detected - increased slippage";
+      confidence = "high";
     } else if (priceImpact > 1) {
       recommendedSlippage += 0.5;
-      reason = 'Moderate price impact - slightly increased slippage';
-      confidence = 'medium';
+      reason = "Moderate price impact - slightly increased slippage";
+      confidence = "medium";
     }
 
     // Adjust based on volatility (simplified)
     if (volatility > 2) {
       recommendedSlippage += 0.5;
-      reason = 'High market volatility - increased slippage';
-      confidence = 'medium';
+      reason = "High market volatility - increased slippage";
+      confidence = "medium";
     }
 
     // Ensure within bounds
     recommendedSlippage = Math.max(
       this.config.minSlippage,
-      Math.min(this.config.maxSlippage, recommendedSlippage)
+      Math.min(this.config.maxSlippage, recommendedSlippage),
     );
 
     // Convert to basis points
@@ -97,13 +97,16 @@ export class SlippageManager {
   /**
    * Get slippage based on transaction type
    */
-  getSlippageByType(txType: 'swap' | 'snipe' | 'flashloan'): number {
+  getSlippageByType(txType: "swap" | "snipe" | "flashloan"): number {
     switch (txType) {
-      case 'swap':
+      case "swap":
         return this.config.defaultSlippage;
-      case 'snipe':
-        return Math.min(this.config.maxSlippage, this.config.defaultSlippage * 2);
-      case 'flashloan':
+      case "snipe":
+        return Math.min(
+          this.config.maxSlippage,
+          this.config.defaultSlippage * 2,
+        );
+      case "flashloan":
         return this.config.minSlippage; // Lower slippage for arbitrage
       default:
         return this.config.defaultSlippage;
@@ -118,7 +121,7 @@ export class SlippageManager {
     minimumAmount: number;
   }): number {
     const { expectedAmount, minimumAmount } = params;
-    
+
     if (expectedAmount <= 0) {
       return this.config.defaultSlippage;
     }
@@ -128,7 +131,7 @@ export class SlippageManager {
 
     return Math.max(
       this.config.minSlippage,
-      Math.min(this.config.maxSlippage, slippagePercent)
+      Math.min(this.config.maxSlippage, slippagePercent),
     );
   }
 
@@ -156,7 +159,9 @@ let slippageManagerInstance: SlippageManager | null = null;
 /**
  * Get or create the SlippageManager singleton
  */
-export function getSlippageManager(config?: Partial<SlippageConfig>): SlippageManager {
+export function getSlippageManager(
+  config?: Partial<SlippageConfig>,
+): SlippageManager {
   if (!slippageManagerInstance) {
     slippageManagerInstance = new SlippageManager(config);
   }
@@ -169,7 +174,7 @@ export function getSlippageManager(config?: Partial<SlippageConfig>): SlippageMa
 export async function calculateRecommendedSlippage(params: {
   tokenAddress: string;
   amountIn: number;
-  networkCongestion?: 'low' | 'medium' | 'high';
+  networkCongestion?: "low" | "medium" | "high";
   priceImpact?: number;
 }): Promise<SlippageRecommendation> {
   const manager = getSlippageManager();

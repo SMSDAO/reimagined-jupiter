@@ -6,7 +6,7 @@ export interface PromptTemplate {
   id: string;
   name: string;
   description: string;
-  category: 'arbitrage' | 'defi' | 'trading' | 'analysis' | 'general';
+  category: "arbitrage" | "defi" | "trading" | "analysis" | "general";
   template: string;
   variables: PromptVariable[];
   createdAt: Date;
@@ -16,7 +16,7 @@ export interface PromptTemplate {
 
 export interface PromptVariable {
   name: string;
-  type: 'string' | 'number' | 'boolean' | 'array';
+  type: "string" | "number" | "boolean" | "array";
   description: string;
   required: boolean;
   defaultValue?: string | number | boolean;
@@ -47,7 +47,7 @@ export interface ArbitrageStrategy {
   prompt: string;
   parameters: StrategyParameters;
   expectedProfit: number;
-  riskLevel: 'low' | 'medium' | 'high';
+  riskLevel: "low" | "medium" | "high";
   enabled: boolean;
 }
 

@@ -1,6 +1,6 @@
 /**
  * Comprehensive Mainnet Arbitrage Orchestrator
- * 
+ *
  * Coordinates all components for executing profitable arbitrage opportunities:
  * - Flash loan provider selection
  * - Multi-hop route optimization (3-7 legs)
@@ -10,7 +10,7 @@
  * - Priority fee optimization
  */
 
-import { Connection, Keypair, PublicKey, Transaction } from '@solana/web3.js';
+import { Connection, Keypair, PublicKey, Transaction } from "@solana/web3.js";
 import {
   BaseFlashLoanProvider,
   MarginfiProvider,
@@ -22,17 +22,27 @@ import {
   TulipProvider,
   DriftProvider,
   JetProvider,
-} from '../providers/flashLoan.js';
-import { JupiterEnhancedIntegration, type JupiterMultiHopRoute } from '../integrations/jupiterEnhanced.js';
-import { TransactionExecutor, type TransactionExecutionResult } from '../utils/transactionExecutor.js';
-import { ProfitDistributionManager } from '../utils/profitDistribution.js';
-import { generateGXQWallet, validateGXQWallet, type GeneratedWallet } from '../services/walletGenerator.js';
-import { config, FLASH_LOAN_FEES } from '../config/index.js';
+} from "../providers/flashLoan.js";
+import {
+  JupiterEnhancedIntegration,
+  type JupiterMultiHopRoute,
+} from "../integrations/jupiterEnhanced.js";
+import {
+  TransactionExecutor,
+  type TransactionExecutionResult,
+} from "../utils/transactionExecutor.js";
+import { ProfitDistributionManager } from "../utils/profitDistribution.js";
+import {
+  generateGXQWallet,
+  validateGXQWallet,
+  type GeneratedWallet,
+} from "../services/walletGenerator.js";
+import { config, FLASH_LOAN_FEES } from "../config/index.js";
 
 export interface ArbitrageConfig {
   minProfitThreshold: number; // Minimum profit in lamports
   maxSlippage: number; // Maximum slippage percentage
-  priorityFeeUrgency: 'low' | 'medium' | 'high' | 'critical';
+  priorityFeeUrgency: "low" | "medium" | "high" | "critical";
   useJito: boolean; // Enable Jito MEV protection
   requireGXQWallet: boolean; // Require wallet to end with 'GXQ'
   routeLegs: { min: number; max: number }; // Route length (3-7)
@@ -65,7 +75,7 @@ export class MainnetArbitrageOrchestrator {
 
   constructor(
     connection: Connection,
-    arbitrageConfig?: Partial<ArbitrageConfig>
+    arbitrageConfig?: Partial<ArbitrageConfig>,
   ) {
     this.connection = connection;
     this.jupiter = new JupiterEnhancedIntegration(connection);
@@ -74,64 +84,96 @@ export class MainnetArbitrageOrchestrator {
 
     // Initialize flash loan providers
     this.providers = new Map();
-    this.providers.set('marginfi', new MarginfiProvider(
-      connection,
-      config.flashLoanProviders.marginfi,
-      FLASH_LOAN_FEES.marginfi
-    ));
-    this.providers.set('solend', new SolendProvider(
-      connection,
-      config.flashLoanProviders.solend,
-      FLASH_LOAN_FEES.solend
-    ));
-    this.providers.set('mango', new MangoProvider(
-      connection,
-      config.flashLoanProviders.mango,
-      FLASH_LOAN_FEES.mango
-    ));
-    this.providers.set('kamino', new KaminoProvider(
-      connection,
-      config.flashLoanProviders.kamino,
-      FLASH_LOAN_FEES.kamino
-    ));
-    this.providers.set('portFinance', new PortFinanceProvider(
-      connection,
-      config.flashLoanProviders.portFinance,
-      FLASH_LOAN_FEES.portFinance
-    ));
-    this.providers.set('saveFinance', new SaveFinanceProvider(
-      connection,
-      config.flashLoanProviders.saveFinance,
-      FLASH_LOAN_FEES.saveFinance
-    ));
-    this.providers.set('tulip', new TulipProvider(
-      connection,
-      config.flashLoanProviders.tulip,
-      FLASH_LOAN_FEES.tulip
-    ));
-    this.providers.set('drift', new DriftProvider(
-      connection,
-      config.flashLoanProviders.drift,
-      FLASH_LOAN_FEES.drift
-    ));
-    this.providers.set('jet', new JetProvider(
-      connection,
-      config.flashLoanProviders.jet,
-      FLASH_LOAN_FEES.jet
-    ));
+    this.providers.set(
+      "marginfi",
+      new MarginfiProvider(
+        connection,
+        config.flashLoanProviders.marginfi,
+        FLASH_LOAN_FEES.marginfi,
+      ),
+    );
+    this.providers.set(
+      "solend",
+      new SolendProvider(
+        connection,
+        config.flashLoanProviders.solend,
+        FLASH_LOAN_FEES.solend,
+      ),
+    );
+    this.providers.set(
+      "mango",
+      new MangoProvider(
+        connection,
+        config.flashLoanProviders.mango,
+        FLASH_LOAN_FEES.mango,
+      ),
+    );
+    this.providers.set(
+      "kamino",
+      new KaminoProvider(
+        connection,
+        config.flashLoanProviders.kamino,
+        FLASH_LOAN_FEES.kamino,
+      ),
+    );
+    this.providers.set(
+      "portFinance",
+      new PortFinanceProvider(
+        connection,
+        config.flashLoanProviders.portFinance,
+        FLASH_LOAN_FEES.portFinance,
+      ),
+    );
+    this.providers.set(
+      "saveFinance",
+      new SaveFinanceProvider(
+        connection,
+        config.flashLoanProviders.saveFinance,
+        FLASH_LOAN_FEES.saveFinance,
+      ),
+    );
+    this.providers.set(
+      "tulip",
+      new TulipProvider(
+        connection,
+        config.flashLoanProviders.tulip,
+        FLASH_LOAN_FEES.tulip,
+      ),
+    );
+    this.providers.set(
+      "drift",
+      new DriftProvider(
+        connection,
+        config.flashLoanProviders.drift,
+        FLASH_LOAN_FEES.drift,
+      ),
+    );
+    this.providers.set(
+      "jet",
+      new JetProvider(
+        connection,
+        config.flashLoanProviders.jet,
+        FLASH_LOAN_FEES.jet,
+      ),
+    );
 
     // Configuration
     this.arbitrageConfig = {
       minProfitThreshold: arbitrageConfig?.minProfitThreshold ?? 0.001 * 1e9, // 0.001 SOL default
       maxSlippage: arbitrageConfig?.maxSlippage ?? config.arbitrage.maxSlippage,
-      priorityFeeUrgency: arbitrageConfig?.priorityFeeUrgency ?? 'high',
+      priorityFeeUrgency: arbitrageConfig?.priorityFeeUrgency ?? "high",
       useJito: arbitrageConfig?.useJito ?? true,
       requireGXQWallet: arbitrageConfig?.requireGXQWallet ?? false,
       routeLegs: arbitrageConfig?.routeLegs ?? { min: 3, max: 7 },
     };
 
-    console.log('[ArbitrageOrchestrator] Initialized with config:', this.arbitrageConfig);
-    console.log(`[ArbitrageOrchestrator] Loaded ${this.providers.size} flash loan providers`);
+    console.log(
+      "[ArbitrageOrchestrator] Initialized with config:",
+      this.arbitrageConfig,
+    );
+    console.log(
+      `[ArbitrageOrchestrator] Loaded ${this.providers.size} flash loan providers`,
+    );
   }
 
   /**
@@ -139,9 +181,11 @@ export class MainnetArbitrageOrchestrator {
    */
   async scanForOpportunities(
     tokens: string[],
-    loanAmount: number = 100000000 // 0.1 SOL default
+    loanAmount: number = 100000000, // 0.1 SOL default
   ): Promise<ArbitrageOpportunity[]> {
-    console.log(`[ArbitrageOrchestrator] Scanning for opportunities with ${tokens.length} tokens...`);
+    console.log(
+      `[ArbitrageOrchestrator] Scanning for opportunities with ${tokens.length} tokens...`,
+    );
 
     const opportunities: ArbitrageOpportunity[] = [];
 
@@ -155,14 +199,16 @@ export class MainnetArbitrageOrchestrator {
           const outputMint = tokens[j];
 
           // Get intermediate tokens
-          const intermediateTokens = tokens.filter((_, idx) => idx !== i && idx !== j);
+          const intermediateTokens = tokens.filter(
+            (_, idx) => idx !== i && idx !== j,
+          );
 
           // Find optimal routes
           const routes = await this.jupiter.findOptimalRoutes(
             inputMint,
             outputMint,
             loanAmount,
-            intermediateTokens
+            intermediateTokens,
           );
 
           // For each route, check profitability with each provider
@@ -172,10 +218,14 @@ export class MainnetArbitrageOrchestrator {
                 route,
                 provider,
                 providerName,
-                loanAmount
+                loanAmount,
               );
 
-              if (opportunity && opportunity.estimatedProfit >= this.arbitrageConfig.minProfitThreshold) {
+              if (
+                opportunity &&
+                opportunity.estimatedProfit >=
+                  this.arbitrageConfig.minProfitThreshold
+              ) {
                 opportunities.push(opportunity);
               }
             }
@@ -186,11 +236,16 @@ export class MainnetArbitrageOrchestrator {
       // Sort by profit (descending)
       opportunities.sort((a, b) => b.estimatedProfit - a.estimatedProfit);
 
-      console.log(`[ArbitrageOrchestrator] Found ${opportunities.length} profitable opportunities`);
+      console.log(
+        `[ArbitrageOrchestrator] Found ${opportunities.length} profitable opportunities`,
+      );
 
       return opportunities;
     } catch (error) {
-      console.error('[ArbitrageOrchestrator] Error scanning for opportunities:', error);
+      console.error(
+        "[ArbitrageOrchestrator] Error scanning for opportunities:",
+        error,
+      );
       return [];
     }
   }
@@ -202,7 +257,7 @@ export class MainnetArbitrageOrchestrator {
     route: JupiterMultiHopRoute,
     provider: BaseFlashLoanProvider,
     providerName: string,
-    loanAmount: number
+    loanAmount: number,
   ): Promise<ArbitrageOpportunity | null> {
     try {
       // Calculate costs
@@ -226,7 +281,10 @@ export class MainnetArbitrageOrchestrator {
         fee: flashLoanFee,
       };
     } catch (error) {
-      console.error(`[ArbitrageOrchestrator] Error evaluating opportunity with ${providerName}:`, error);
+      console.error(
+        `[ArbitrageOrchestrator] Error evaluating opportunity with ${providerName}:`,
+        error,
+      );
       return null;
     }
   }
@@ -236,33 +294,41 @@ export class MainnetArbitrageOrchestrator {
    */
   async executeOpportunity(
     opportunity: ArbitrageOpportunity,
-    userKeypair: Keypair
+    userKeypair: Keypair,
   ): Promise<ArbitrageExecutionResult> {
-    console.log('[ArbitrageOrchestrator] Executing arbitrage opportunity...');
+    console.log("[ArbitrageOrchestrator] Executing arbitrage opportunity...");
     console.log(`  Provider: ${opportunity.provider.getName()}`);
     console.log(`  Route: ${opportunity.route.legs} legs`);
-    console.log(`  Expected profit: ${opportunity.estimatedProfit / 1e9} SOL (${opportunity.estimatedProfitPercentage.toFixed(2)}%)`);
+    console.log(
+      `  Expected profit: ${opportunity.estimatedProfit / 1e9} SOL (${opportunity.estimatedProfitPercentage.toFixed(2)}%)`,
+    );
 
     try {
       // Check if GXQ wallet is required
       let executionKeypair = userKeypair;
       if (this.arbitrageConfig.requireGXQWallet) {
         const isValidGXQ = validateGXQWallet(userKeypair.publicKey.toString());
-        
+
         if (!isValidGXQ) {
-          console.log('[ArbitrageOrchestrator] User wallet does not end with GXQ, generating one...');
-          
+          console.log(
+            "[ArbitrageOrchestrator] User wallet does not end with GXQ, generating one...",
+          );
+
           // Get or generate a GXQ wallet
           const gxqWallet = await this.getOrGenerateGXQWallet();
-          
+
           // In production, you would transfer funds to this wallet first
-          console.warn('[ArbitrageOrchestrator] ⚠️  GXQ wallet generation successful, but fund transfer not implemented');
-          console.log(`[ArbitrageOrchestrator] GXQ Wallet: ${gxqWallet.publicKey}`);
-          
+          console.warn(
+            "[ArbitrageOrchestrator] ⚠️  GXQ wallet generation successful, but fund transfer not implemented",
+          );
+          console.log(
+            `[ArbitrageOrchestrator] GXQ Wallet: ${gxqWallet.publicKey}`,
+          );
+
           // For now, we'll continue with the user's wallet
           // executionKeypair = Keypair.fromSecretKey(gxqWallet.privateKey);
         } else {
-          console.log('[ArbitrageOrchestrator] ✓ User wallet ends with GXQ');
+          console.log("[ArbitrageOrchestrator] ✓ User wallet ends with GXQ");
         }
       }
 
@@ -271,15 +337,16 @@ export class MainnetArbitrageOrchestrator {
       // In production, you would build the complete swap instructions using Jupiter
       const swapInstructions: any[] = []; // Placeholder for Jupiter swap instructions
 
-      const flashLoanInstructions = await opportunity.provider.createFlashLoanInstruction(
-        opportunity.loanAmount,
-        new PublicKey(opportunity.route.inputMint),
-        executionKeypair.publicKey,
-        swapInstructions
-      );
+      const flashLoanInstructions =
+        await opportunity.provider.createFlashLoanInstruction(
+          opportunity.loanAmount,
+          new PublicKey(opportunity.route.inputMint),
+          executionKeypair.publicKey,
+          swapInstructions,
+        );
 
       if (flashLoanInstructions.length === 0) {
-        throw new Error('Failed to create flash loan instructions');
+        throw new Error("Failed to create flash loan instructions");
       }
 
       // Build transaction
@@ -288,17 +355,21 @@ export class MainnetArbitrageOrchestrator {
 
       // Execute with or without Jito
       let result: TransactionExecutionResult;
-      
+
       if (this.arbitrageConfig.useJito && this.executor.getJitoIntegration()) {
-        console.log('[ArbitrageOrchestrator] Executing with Jito MEV protection...');
+        console.log(
+          "[ArbitrageOrchestrator] Executing with Jito MEV protection...",
+        );
         result = await this.executor.executeAtomicBundleWithJito(
           [transaction],
           [executionKeypair],
-          opportunity.estimatedProfit
+          opportunity.estimatedProfit,
         );
       } else {
-        console.log('[ArbitrageOrchestrator] Executing without Jito...');
-        result = await this.executor.executeTransaction(transaction, [executionKeypair]);
+        console.log("[ArbitrageOrchestrator] Executing without Jito...");
+        result = await this.executor.executeTransaction(transaction, [
+          executionKeypair,
+        ]);
       }
 
       // If successful, distribute profits
@@ -306,13 +377,14 @@ export class MainnetArbitrageOrchestrator {
       let profitDistributionSignature: string | undefined;
 
       if (result.success && config.profitDistribution.enabled) {
-        console.log('[ArbitrageOrchestrator] Distributing profits...');
-        
-        profitDistributionSignature = await this.profitManager.distributeSolProfit(
-          opportunity.estimatedProfit,
-          executionKeypair,
-          userKeypair.publicKey
-        ) ?? undefined;
+        console.log("[ArbitrageOrchestrator] Distributing profits...");
+
+        profitDistributionSignature =
+          (await this.profitManager.distributeSolProfit(
+            opportunity.estimatedProfit,
+            executionKeypair,
+            userKeypair.publicKey,
+          )) ?? undefined;
 
         profitDistributed = !!profitDistributionSignature;
       }
@@ -324,8 +396,12 @@ export class MainnetArbitrageOrchestrator {
         profitDistributionSignature,
       };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      console.error('[ArbitrageOrchestrator] Error executing opportunity:', errorMessage);
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
+      console.error(
+        "[ArbitrageOrchestrator] Error executing opportunity:",
+        errorMessage,
+      );
 
       return {
         success: false,
@@ -345,14 +421,16 @@ export class MainnetArbitrageOrchestrator {
     }
 
     // Generate new GXQ wallet
-    console.log('[ArbitrageOrchestrator] Generating GXQ wallet...');
+    console.log("[ArbitrageOrchestrator] Generating GXQ wallet...");
     const wallet = await generateGXQWallet({
-      suffix: 'GXQ',
+      suffix: "GXQ",
       caseSensitive: false,
       maxAttempts: 1000000,
       onProgress: (attempts) => {
         if (attempts % 50000 === 0) {
-          console.log(`[ArbitrageOrchestrator] Generated ${attempts} attempts...`);
+          console.log(
+            `[ArbitrageOrchestrator] Generated ${attempts} attempts...`,
+          );
         }
       },
     });
@@ -378,7 +456,10 @@ export class MainnetArbitrageOrchestrator {
       ...config,
     };
 
-    console.log('[ArbitrageOrchestrator] Configuration updated:', this.arbitrageConfig);
+    console.log(
+      "[ArbitrageOrchestrator] Configuration updated:",
+      this.arbitrageConfig,
+    );
 
     // Update executor Jito setting
     if (config.useJito !== undefined) {

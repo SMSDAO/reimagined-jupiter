@@ -1,9 +1,9 @@
 /**
  * Centralized API Configuration Module
- * 
+ *
  * Manages all external API endpoints with dynamic environment-based switching,
  * runtime validation, and health checking capabilities.
- * 
+ *
  * Features:
  * - Production mode detection
  * - Automatic endpoint switching based on environment
@@ -15,7 +15,7 @@
 /**
  * Environment type detection
  */
-export type Environment = 'development' | 'production' | 'test';
+export type Environment = "development" | "production" | "test";
 
 /**
  * API endpoint configuration interface
@@ -60,42 +60,42 @@ export class EnvironmentDetector {
    */
   static getEnvironment(): Environment {
     // Check NODE_ENV first
-    if (process.env.NODE_ENV === 'test') {
-      return 'test';
+    if (process.env.NODE_ENV === "test") {
+      return "test";
     }
-    
+
     // Check for Vercel production deployment
-    if (process.env.VERCEL_ENV === 'production') {
-      return 'production';
+    if (process.env.VERCEL_ENV === "production") {
+      return "production";
     }
-    
+
     // Check NODE_ENV for production
-    if (process.env.NODE_ENV === 'production') {
-      return 'production';
+    if (process.env.NODE_ENV === "production") {
+      return "production";
     }
-    
-    return 'development';
+
+    return "development";
   }
 
   /**
    * Check if running in production
    */
   static isProduction(): boolean {
-    return this.getEnvironment() === 'production';
+    return this.getEnvironment() === "production";
   }
 
   /**
    * Check if running in development
    */
   static isDevelopment(): boolean {
-    return this.getEnvironment() === 'development';
+    return this.getEnvironment() === "development";
   }
 
   /**
    * Check if running in test environment
    */
   static isTest(): boolean {
-    return this.getEnvironment() === 'test';
+    return this.getEnvironment() === "test";
   }
 
   /**
@@ -128,9 +128,9 @@ export class EnvironmentValidator {
     const warnings: string[] = [];
 
     // Critical variables - must be set
-    const criticalVars = ['NEXT_PUBLIC_RPC_URL'];
-    
-    criticalVars.forEach(varName => {
+    const criticalVars = ["NEXT_PUBLIC_RPC_URL"];
+
+    criticalVars.forEach((varName) => {
       if (!process.env[varName]) {
         errors.push(`Missing required environment variable: ${varName}`);
       }
@@ -138,12 +138,12 @@ export class EnvironmentValidator {
 
     // Recommended variables - should be set for optimal performance
     const recommendedVars = [
-      'NEXT_PUBLIC_HELIUS_RPC',
-      'NEXT_PUBLIC_QUICKNODE_RPC',
-      'NEXT_PUBLIC_JUPITER_API_URL',
+      "NEXT_PUBLIC_HELIUS_RPC",
+      "NEXT_PUBLIC_QUICKNODE_RPC",
+      "NEXT_PUBLIC_JUPITER_API_URL",
     ];
 
-    recommendedVars.forEach(varName => {
+    recommendedVars.forEach((varName) => {
       if (!process.env[varName]) {
         warnings.push(`Recommended environment variable not set: ${varName}`);
       }
@@ -151,8 +151,13 @@ export class EnvironmentValidator {
 
     // Production-specific validation
     if (EnvironmentDetector.isProduction()) {
-      if (!process.env.NEXT_PUBLIC_HELIUS_RPC && !process.env.NEXT_PUBLIC_QUICKNODE_RPC) {
-        warnings.push('Production deployment should use premium RPC endpoints (Helius or QuickNode)');
+      if (
+        !process.env.NEXT_PUBLIC_HELIUS_RPC &&
+        !process.env.NEXT_PUBLIC_QUICKNODE_RPC
+      ) {
+        warnings.push(
+          "Production deployment should use premium RPC endpoints (Helius or QuickNode)",
+        );
       }
     }
 
@@ -168,23 +173,23 @@ export class EnvironmentValidator {
    */
   static logValidation(): void {
     const result = this.validate();
-    
-    console.log('=== Environment Validation ===');
+
+    console.log("=== Environment Validation ===");
     console.log(`Environment: ${EnvironmentDetector.getEnvironment()}`);
     console.log(`Running on Vercel: ${EnvironmentDetector.isVercel()}`);
-    
+
     if (result.errors.length > 0) {
-      console.error('❌ Environment Errors:');
-      result.errors.forEach(error => console.error(`  - ${error}`));
+      console.error("❌ Environment Errors:");
+      result.errors.forEach((error) => console.error(`  - ${error}`));
     }
-    
+
     if (result.warnings.length > 0) {
-      console.warn('⚠️  Environment Warnings:');
-      result.warnings.forEach(warning => console.warn(`  - ${warning}`));
+      console.warn("⚠️  Environment Warnings:");
+      result.warnings.forEach((warning) => console.warn(`  - ${warning}`));
     }
-    
+
     if (result.valid && result.warnings.length === 0) {
-      console.log('✅ Environment validation passed');
+      console.log("✅ Environment validation passed");
     }
   }
 }
@@ -198,9 +203,9 @@ export class APIConfigManager {
 
   private constructor() {
     this.config = this.initializeConfig();
-    
+
     // Log validation on initialization
-    if (typeof window === 'undefined') {
+    if (typeof window === "undefined") {
       // Server-side only
       EnvironmentValidator.logValidation();
     }
@@ -221,16 +226,19 @@ export class APIConfigManager {
    */
   private initializeConfig(): APIConfiguration {
     // Use new Jupiter API v6 endpoints
-    const jupiterApiUrl = process.env.NEXT_PUBLIC_JUPITER_API_URL || 'https://api.jup.ag';
-    const jupiterPriceUrl = process.env.NEXT_PUBLIC_JUPITER_PRICE_API_URL || 'https://price.jup.ag';
-    const pythHermesUrl = process.env.PYTH_HERMES_ENDPOINT || 'https://hermes.pyth.network';
+    const jupiterApiUrl =
+      process.env.NEXT_PUBLIC_JUPITER_API_URL || "https://api.jup.ag";
+    const jupiterPriceUrl =
+      process.env.NEXT_PUBLIC_JUPITER_PRICE_API_URL || "https://price.jup.ag";
+    const pythHermesUrl =
+      process.env.PYTH_HERMES_ENDPOINT || "https://hermes.pyth.network";
 
     return {
       jupiter: {
         quote: [
           {
             url: `${jupiterApiUrl}/v6`,
-            name: 'Jupiter Quote API v6',
+            name: "Jupiter Quote API v6",
             healthy: true,
             lastChecked: 0,
           },
@@ -238,29 +246,29 @@ export class APIConfigManager {
         price: [
           {
             url: `${jupiterPriceUrl}/v6`,
-            name: 'Jupiter Price API v6',
+            name: "Jupiter Price API v6",
             healthy: true,
             lastChecked: 0,
           },
           {
             url: `${jupiterPriceUrl}/v4`,
-            name: 'Jupiter Price API v4 (fallback)',
+            name: "Jupiter Price API v4 (fallback)",
             healthy: true,
             lastChecked: 0,
           },
         ],
         tokens: [
           {
-            url: 'https://token.jup.ag/all',
-            name: 'Jupiter Token List',
+            url: "https://token.jup.ag/all",
+            name: "Jupiter Token List",
             healthy: true,
             lastChecked: 0,
           },
         ],
         worker: [
           {
-            url: 'https://worker.jup.ag',
-            name: 'Jupiter Worker API',
+            url: "https://worker.jup.ag",
+            name: "Jupiter Worker API",
             healthy: true,
             lastChecked: 0,
           },
@@ -270,7 +278,7 @@ export class APIConfigManager {
         hermes: [
           {
             url: pythHermesUrl,
-            name: 'Pyth Hermes',
+            name: "Pyth Hermes",
             healthy: true,
             lastChecked: 0,
           },
@@ -279,15 +287,15 @@ export class APIConfigManager {
       jito: {
         api: [
           {
-            url: 'https://kek.jito.network/api/v1',
-            name: 'Jito API v1',
+            url: "https://kek.jito.network/api/v1",
+            name: "Jito API v1",
             healthy: true,
             lastChecked: 0,
           },
         ],
       },
       solana: {
-        explorer: 'https://solscan.io',
+        explorer: "https://solscan.io",
       },
       vercel: {
         deployUrl: EnvironmentDetector.getVercelUrl(),
@@ -355,7 +363,7 @@ export class APIConfigManager {
    * Get first healthy endpoint from a list
    */
   private getHealthyEndpoint(endpoints: APIEndpoint[]): string {
-    const healthy = endpoints.find(e => e.healthy);
+    const healthy = endpoints.find((e) => e.healthy);
     return healthy?.url || endpoints[0].url;
   }
 
@@ -368,7 +376,7 @@ export class APIConfigManager {
       const timeoutId = setTimeout(() => controller.abort(), 5000);
 
       const response = await fetch(endpoint.url, {
-        method: 'GET',
+        method: "GET",
         signal: controller.signal,
       });
 
@@ -381,7 +389,10 @@ export class APIConfigManager {
     } catch (error) {
       endpoint.healthy = false;
       endpoint.lastChecked = Date.now();
-      console.warn(`Health check failed for ${endpoint.name}:`, error instanceof Error ? error.message : 'Unknown error');
+      console.warn(
+        `Health check failed for ${endpoint.name}:`,
+        error instanceof Error ? error.message : "Unknown error",
+      );
       return false;
     }
   }
@@ -400,7 +411,7 @@ export class APIConfigManager {
     ];
 
     await Promise.all(
-      allEndpoints.map(endpoint => this.checkEndpointHealth(endpoint))
+      allEndpoints.map((endpoint) => this.checkEndpointHealth(endpoint)),
     );
   }
 
@@ -422,7 +433,7 @@ export class APIConfigManager {
       ...this.config.jito.api,
     ];
 
-    return allEndpoints.map(e => ({
+    return allEndpoints.map((e) => ({
       endpoint: e.url,
       name: e.name,
       healthy: e.healthy,
@@ -443,7 +454,7 @@ export class APIConfigManager {
       ...this.config.jito.api,
     ];
 
-    const endpoint = allEndpoints.find(e => e.url === url);
+    const endpoint = allEndpoints.find((e) => e.url === url);
     if (endpoint) {
       endpoint.healthy = false;
       endpoint.lastChecked = Date.now();

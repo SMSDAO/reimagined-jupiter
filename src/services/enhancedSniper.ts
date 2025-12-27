@@ -1,7 +1,7 @@
 /**
  * Enhanced Sniper Bot Service
  * Monitors Raydium, Orca, Pump.fun, Meteora, and Phoenix for new pools
- * 
+ *
  * Features:
  * - Multi-DEX pool monitoring
  * - Strict risk limits (position caps, price impact, priority fee caps)
@@ -18,11 +18,25 @@ import {
   TransactionInstruction,
   SystemProgram,
   ComputeBudgetProgram,
-} from '@solana/web3.js';
-import { BotExecutionEngine, OfflineTransactionBuilder } from './botFramework.js';
+} from "@solana/web3.js";
+import {
+  BotExecutionEngine,
+  OfflineTransactionBuilder,
+} from "./botFramework.js";
 
-export type SupportedDEX = 'RAYDIUM' | 'ORCA' | 'PUMP_FUN' | 'METEORA' | 'PHOENIX' | 'JUPITER';
-export type SniperStatus = 'ACTIVE' | 'PAUSED' | 'EXECUTED' | 'CANCELLED' | 'EXPIRED';
+export type SupportedDEX =
+  | "RAYDIUM"
+  | "ORCA"
+  | "PUMP_FUN"
+  | "METEORA"
+  | "PHOENIX"
+  | "JUPITER";
+export type SniperStatus =
+  | "ACTIVE"
+  | "PAUSED"
+  | "EXECUTED"
+  | "CANCELLED"
+  | "EXPIRED";
 
 export interface SniperTarget {
   id: string;
@@ -75,13 +89,13 @@ export interface SniperExecution {
  * DEX Program IDs on Solana Mainnet
  */
 const DEX_PROGRAM_IDS = {
-  RAYDIUM_V4: 'RVKd61ztZW9GUwhRbbLoYVRE5Xf1B2tVscKqwZqXgEr',
-  RAYDIUM_CPMM: 'CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C',
-  ORCA_WHIRLPOOL: 'whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc',
-  ORCA_LEGACY: '9W959DqEETiGZocYWCQPaJ6sBmUzgfxXfqGeTEdp3aQP',
-  PUMP_FUN: '6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P',
-  METEORA: 'LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo',
-  PHOENIX: 'PhoeNiXZ8ByJGLkxNfZRnkUfjvmuYqLR89jjFHGqdXY',
+  RAYDIUM_V4: "RVKd61ztZW9GUwhRbbLoYVRE5Xf1B2tVscKqwZqXgEr",
+  RAYDIUM_CPMM: "CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C",
+  ORCA_WHIRLPOOL: "whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc",
+  ORCA_LEGACY: "9W959DqEETiGZocYWCQPaJ6sBmUzgfxXfqGeTEdp3aQP",
+  PUMP_FUN: "6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P",
+  METEORA: "LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo",
+  PHOENIX: "PhoeNiXZ8ByJGLkxNfZRnkUfjvmuYqLR89jjFHGqdXY",
 };
 
 /**
@@ -99,13 +113,13 @@ const RISK_LIMITS = {
  * Jito Configuration
  */
 const JITO_CONFIG = {
-  BLOCK_ENGINE_URL: 'https://mainnet.block-engine.jito.wtf',
+  BLOCK_ENGINE_URL: "https://mainnet.block-engine.jito.wtf",
   MIN_TIP_LAMPORTS: 1000,
   MAX_TIP_LAMPORTS: 100_000,
   TIP_ACCOUNTS: [
-    'Cw8CFyM9FkoMi7K7Crf6HNQqf4uEMzpKw6QNghXLvLkY',
-    'DttWaMuVvTiduZRnguLF7jNxTgiMBZ1hyAumKUiL2KRL',
-    '96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5',
+    "Cw8CFyM9FkoMi7K7Crf6HNQqf4uEMzpKw6QNghXLvLkY",
+    "DttWaMuVvTiduZRnguLF7jNxTgiMBZ1hyAumKUiL2KRL",
+    "96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5",
   ],
 };
 
@@ -126,14 +140,16 @@ export class EnhancedSniperService {
   /**
    * Create sniper target with risk validation
    */
-  createTarget(config: Omit<SniperTarget, 'id' | 'status' | 'executed' | 'createdAt'>): SniperTarget {
+  createTarget(
+    config: Omit<SniperTarget, "id" | "status" | "executed" | "createdAt">,
+  ): SniperTarget {
     // Validate risk limits
     this.validateRiskLimits(config);
 
     const target: SniperTarget = {
       ...config,
       id: crypto.randomUUID(),
-      status: 'ACTIVE',
+      status: "ACTIVE",
       executed: false,
       createdAt: new Date(),
     };
@@ -142,10 +158,10 @@ export class EnhancedSniperService {
 
     console.log(`🎯 Sniper target created:`);
     console.log(`   DEX: ${target.dex}`);
-    console.log(`   Token: ${target.tokenMint || 'Any new pool'}`);
+    console.log(`   Token: ${target.tokenMint || "Any new pool"}`);
     console.log(`   Max Position: ${target.maxPositionSizeSol} SOL`);
     console.log(`   Max Impact: ${target.maxPriceImpact}%`);
-    console.log(`   Jito: ${target.useJito ? 'Enabled' : 'Disabled'}`);
+    console.log(`   Jito: ${target.useJito ? "Enabled" : "Disabled"}`);
 
     return target;
   }
@@ -159,55 +175,69 @@ export class EnhancedSniperService {
     // Price impact check
     if (config.maxPriceImpact !== undefined) {
       if (config.maxPriceImpact > RISK_LIMITS.MAX_PRICE_IMPACT_BPS / 100) {
-        errors.push(`Max price impact exceeds limit: ${RISK_LIMITS.MAX_PRICE_IMPACT_BPS / 100}%`);
+        errors.push(
+          `Max price impact exceeds limit: ${RISK_LIMITS.MAX_PRICE_IMPACT_BPS / 100}%`,
+        );
       }
       if (config.maxPriceImpact <= 0) {
-        errors.push('Max price impact must be positive');
+        errors.push("Max price impact must be positive");
       }
     }
 
     // Position size check
     if (config.maxPositionSizeSol !== undefined) {
       if (config.maxPositionSizeSol > RISK_LIMITS.MAX_POSITION_SIZE_SOL) {
-        errors.push(`Max position size exceeds limit: ${RISK_LIMITS.MAX_POSITION_SIZE_SOL} SOL`);
+        errors.push(
+          `Max position size exceeds limit: ${RISK_LIMITS.MAX_POSITION_SIZE_SOL} SOL`,
+        );
       }
       if (config.maxPositionSizeSol <= 0) {
-        errors.push('Max position size must be positive');
+        errors.push("Max position size must be positive");
       }
     }
 
     // Priority fee check (hard cap at 10M lamports)
     if (config.maxPriorityFeeLamports !== undefined) {
-      if (config.maxPriorityFeeLamports > RISK_LIMITS.MAX_PRIORITY_FEE_LAMPORTS) {
-        errors.push(`Priority fee exceeds hard cap: ${RISK_LIMITS.MAX_PRIORITY_FEE_LAMPORTS} lamports`);
+      if (
+        config.maxPriorityFeeLamports > RISK_LIMITS.MAX_PRIORITY_FEE_LAMPORTS
+      ) {
+        errors.push(
+          `Priority fee exceeds hard cap: ${RISK_LIMITS.MAX_PRIORITY_FEE_LAMPORTS} lamports`,
+        );
       }
       if (config.maxPriorityFeeLamports < 0) {
-        errors.push('Priority fee cannot be negative');
+        errors.push("Priority fee cannot be negative");
       }
     }
 
     // Slippage check
     if (config.maxSlippageBps !== undefined) {
       if (config.maxSlippageBps > RISK_LIMITS.MAX_SLIPPAGE_BPS) {
-        errors.push(`Max slippage exceeds limit: ${RISK_LIMITS.MAX_SLIPPAGE_BPS} bps`);
+        errors.push(
+          `Max slippage exceeds limit: ${RISK_LIMITS.MAX_SLIPPAGE_BPS} bps`,
+        );
       }
       if (config.maxSlippageBps <= 0) {
-        errors.push('Max slippage must be positive');
+        errors.push("Max slippage must be positive");
       }
     }
 
     // Jito tip check
     if (config.useJito && config.jitoTipLamports !== undefined) {
       if (config.jitoTipLamports < JITO_CONFIG.MIN_TIP_LAMPORTS) {
-        errors.push(`Jito tip below minimum: ${JITO_CONFIG.MIN_TIP_LAMPORTS} lamports`);
+        errors.push(
+          `Jito tip below minimum: ${JITO_CONFIG.MIN_TIP_LAMPORTS} lamports`,
+        );
       }
       if (config.jitoTipLamports > JITO_CONFIG.MAX_TIP_LAMPORTS) {
-        errors.push(`Jito tip exceeds maximum: ${JITO_CONFIG.MAX_TIP_LAMPORTS} lamports`);
+        errors.push(
+          `Jito tip exceeds maximum: ${JITO_CONFIG.MAX_TIP_LAMPORTS} lamports`,
+        );
       }
     }
 
     if (errors.length > 0) {
-      throw new Error(`Risk validation failed:\n${errors.join('\n')}`);
+      throw new Error(`Risk validation failed:\n${errors.join("\n")}`);
     }
   }
 
@@ -216,7 +246,7 @@ export class EnhancedSniperService {
    */
   async monitorDEX(
     dex: SupportedDEX,
-    callback: (pool: PoolInfo) => void
+    callback: (pool: PoolInfo) => void,
   ): Promise<void> {
     const programId = this.getDEXProgramId(dex);
 
@@ -225,9 +255,9 @@ export class EnhancedSniperService {
 
     // In production, this would use WebSocket subscriptions to monitor
     // account changes for the DEX program ID
-    
+
     // Example: this.connection.onProgramAccountChange(programId, ...)
-    
+
     // For now, this is a placeholder structure
     // Real implementation would parse DEX-specific pool creation events
   }
@@ -237,15 +267,15 @@ export class EnhancedSniperService {
    */
   private getDEXProgramId(dex: SupportedDEX): string {
     switch (dex) {
-      case 'RAYDIUM':
+      case "RAYDIUM":
         return DEX_PROGRAM_IDS.RAYDIUM_V4;
-      case 'ORCA':
+      case "ORCA":
         return DEX_PROGRAM_IDS.ORCA_WHIRLPOOL;
-      case 'PUMP_FUN':
+      case "PUMP_FUN":
         return DEX_PROGRAM_IDS.PUMP_FUN;
-      case 'METEORA':
+      case "METEORA":
         return DEX_PROGRAM_IDS.METEORA;
-      case 'PHOENIX':
+      case "PHOENIX":
         return DEX_PROGRAM_IDS.PHOENIX;
       default:
         throw new Error(`Unsupported DEX: ${dex}`);
@@ -258,13 +288,13 @@ export class EnhancedSniperService {
   async executeSnipe(
     target: SniperTarget,
     pool: PoolInfo,
-    signer: Keypair
+    signer: Keypair,
   ): Promise<SniperExecution> {
     if (target.executed) {
-      throw new Error('Target already executed');
+      throw new Error("Target already executed");
     }
 
-    if (target.status !== 'ACTIVE') {
+    if (target.status !== "ACTIVE") {
       throw new Error(`Target not active: ${target.status}`);
     }
 
@@ -283,23 +313,25 @@ export class EnhancedSniperService {
 
     // Estimate price impact
     const estimatedImpact = this.estimatePriceImpact(amountIn, pool.liquidity);
-    
+
     if (estimatedImpact > target.maxPriceImpact) {
-      throw new Error(`Price impact too high: ${estimatedImpact}% > ${target.maxPriceImpact}%`);
+      throw new Error(
+        `Price impact too high: ${estimatedImpact}% > ${target.maxPriceImpact}%`,
+      );
     }
 
     // Build swap transaction
     const builder = this.botEngine.createTransactionBuilder(
       signer.publicKey,
-      target.botId || 'sniper',
-      target.userId || 'system',
-      target.id
+      target.botId || "sniper",
+      target.userId || "system",
+      target.id,
     );
 
     // Add compute budget with priority fee (capped at 10M lamports)
     const priorityFee = Math.min(
       target.maxPriorityFeeLamports,
-      RISK_LIMITS.MAX_PRIORITY_FEE_LAMPORTS
+      RISK_LIMITS.MAX_PRIORITY_FEE_LAMPORTS,
     );
 
     builder.addPriorityFee(priorityFee);
@@ -309,7 +341,7 @@ export class EnhancedSniperService {
       target,
       pool,
       amountIn,
-      signer.publicKey
+      signer.publicKey,
     );
 
     builder.addInstructions(swapInstructions);
@@ -318,7 +350,7 @@ export class EnhancedSniperService {
     if (target.useJito) {
       const jitoInstruction = this.buildJitoTipInstruction(
         signer.publicKey,
-        target.jitoTipLamports
+        target.jitoTipLamports,
       );
       builder.addInstruction(jitoInstruction);
     }
@@ -327,8 +359,11 @@ export class EnhancedSniperService {
     const transaction = await builder.build(this.connection);
 
     // Simulate first
-    const simulation = await this.botEngine.simulateTransaction(transaction, signer);
-    
+    const simulation = await this.botEngine.simulateTransaction(
+      transaction,
+      signer,
+    );
+
     if (!simulation.success) {
       throw new Error(`Simulation failed: ${simulation.error}`);
     }
@@ -339,11 +374,11 @@ export class EnhancedSniperService {
     // Execute transaction
     const execution = await this.botEngine.executeTransaction(
       {
-        id: target.botId || 'sniper',
-        userId: target.userId || 'system',
-        name: 'Sniper Bot',
-        botType: 'SNIPER',
-        signingMode: 'CLIENT_SIDE',
+        id: target.botId || "sniper",
+        userId: target.userId || "system",
+        name: "Sniper Bot",
+        botType: "SNIPER",
+        signingMode: "CLIENT_SIDE",
         strategyConfig: {},
         isActive: true,
         isPaused: false,
@@ -353,16 +388,16 @@ export class EnhancedSniperService {
       {
         skipPreflight: false,
         maxRetries: 2,
-      }
+      },
     );
 
-    if (execution.status !== 'CONFIRMED') {
+    if (execution.status !== "CONFIRMED") {
       throw new Error(`Execution failed: ${execution.errorMessage}`);
     }
 
     // Mark target as executed
     target.executed = true;
-    target.status = 'EXECUTED';
+    target.status = "EXECUTED";
     target.executionSignature = execution.transactionSignature;
     target.executionPrice = pool.price;
     target.executedAt = new Date();
@@ -376,7 +411,9 @@ export class EnhancedSniperService {
       price: pool.price,
       priceImpact: estimatedImpact,
       priorityFee: priorityFee / 1_000_000_000, // Convert to SOL
-      jitoTip: target.useJito ? target.jitoTipLamports / 1_000_000_000 : undefined,
+      jitoTip: target.useJito
+        ? target.jitoTipLamports / 1_000_000_000
+        : undefined,
       executedAt: new Date(),
     };
 
@@ -396,15 +433,15 @@ export class EnhancedSniperService {
     target: SniperTarget,
     pool: PoolInfo,
     amountIn: number,
-    userPublicKey: PublicKey
+    userPublicKey: PublicKey,
   ): Promise<TransactionInstruction[]> {
     // In production, build actual swap instructions based on DEX
     // For now, return placeholder
-    
+
     // Example for Raydium:
     // - Create user token accounts if needed
     // - Build swap instruction with proper accounts and data
-    
+
     // Example for Jupiter:
     // - Use Jupiter aggregator API to get best route
     // - Build instructions from route
@@ -419,10 +456,12 @@ export class EnhancedSniperService {
    */
   private buildJitoTipInstruction(
     payer: PublicKey,
-    tipLamports: number
+    tipLamports: number,
   ): TransactionInstruction {
     // Select random Jito tip account
-    const randomIndex = Math.floor(Math.random() * JITO_CONFIG.TIP_ACCOUNTS.length);
+    const randomIndex = Math.floor(
+      Math.random() * JITO_CONFIG.TIP_ACCOUNTS.length,
+    );
     const tipAccount = new PublicKey(JITO_CONFIG.TIP_ACCOUNTS[randomIndex]);
 
     return SystemProgram.transfer({
@@ -447,7 +486,7 @@ export class EnhancedSniperService {
   pauseTarget(targetId: string): void {
     const target = this.activeTargets.get(targetId);
     if (target) {
-      target.status = 'PAUSED';
+      target.status = "PAUSED";
       console.log(`⏸️  Target paused: ${targetId}`);
     }
   }
@@ -458,7 +497,7 @@ export class EnhancedSniperService {
   resumeTarget(targetId: string): void {
     const target = this.activeTargets.get(targetId);
     if (target) {
-      target.status = 'ACTIVE';
+      target.status = "ACTIVE";
       console.log(`▶️  Target resumed: ${targetId}`);
     }
   }
@@ -469,7 +508,7 @@ export class EnhancedSniperService {
   cancelTarget(targetId: string): void {
     const target = this.activeTargets.get(targetId);
     if (target) {
-      target.status = 'CANCELLED';
+      target.status = "CANCELLED";
       this.activeTargets.delete(targetId);
       console.log(`❌ Target cancelled: ${targetId}`);
     }
@@ -480,7 +519,7 @@ export class EnhancedSniperService {
    */
   getActiveTargets(): SniperTarget[] {
     return Array.from(this.activeTargets.values()).filter(
-      t => t.status === 'ACTIVE'
+      (t) => t.status === "ACTIVE",
     );
   }
 
@@ -489,10 +528,10 @@ export class EnhancedSniperService {
    */
   cleanupExpiredTargets(): void {
     const now = new Date();
-    
+
     for (const [id, target] of this.activeTargets.entries()) {
       if (target.expiresAt && target.expiresAt < now) {
-        target.status = 'EXPIRED';
+        target.status = "EXPIRED";
         this.activeTargets.delete(id);
         console.log(`⏰ Target expired: ${id}`);
       }

@@ -1,6 +1,6 @@
 /**
  * Professional Bot Framework Infrastructure
- * 
+ *
  * Wallet Governance & Security Features:
  * - ✅ Minimum SOL balance check (0.05 SOL) before execution
  * - ✅ Strict per-user sandbox isolation (no shared signers)
@@ -8,7 +8,7 @@
  * - ✅ Web panel integration with local signing (CLIENT_SIDE mode)
  * - ✅ Auto-execution after validation (replay protection, balance checks, Oracle)
  * - ✅ Session-based execution with isolated state
- * 
+ *
  * Framework Features:
  * - Scriptable BOT.exe style execution engine
  * - Offline transaction builder
@@ -19,9 +19,9 @@
  * - Comprehensive audit logging with database integration
  */
 
-import { 
-  Connection, 
-  Transaction, 
+import {
+  Connection,
+  Transaction,
   TransactionInstruction,
   PublicKey,
   Keypair,
@@ -29,19 +29,33 @@ import {
   ComputeBudgetProgram,
   sendAndConfirmTransaction,
   LAMPORTS_PER_SOL,
-} from '@solana/web3.js';
-import crypto from 'crypto';
-import { ProfitDistributionManager } from '../utils/profitDistribution.js';
-import { getProfitTracker, initializeProfitTracker } from '../../lib/profit-tracker.js';
-import { insertWalletAuditLog } from '../../db/database.js';
-import { config } from '../config/index.js';
-import { OracleService } from './intelligence/OracleService.js';
-import { AnalysisContext } from './intelligence/types.js';
+} from "@solana/web3.js";
+import crypto from "crypto";
+import { ProfitDistributionManager } from "../utils/profitDistribution.js";
+import {
+  getProfitTracker,
+  initializeProfitTracker,
+} from "../../lib/profit-tracker.js";
+import { insertWalletAuditLog } from "../../db/database.js";
+import { config } from "../config/index.js";
+import { OracleService } from "./intelligence/OracleService.js";
+import { AnalysisContext } from "./intelligence/types.js";
 
-export type SigningMode = 'CLIENT_SIDE' | 'SERVER_SIDE' | 'ENCLAVE';
-export type BotType = 'ARBITRAGE' | 'SNIPER' | 'FLASH_LOAN' | 'TRIANGULAR' | 'CUSTOM';
-export type BotStatus = 'ACTIVE' | 'PAUSED' | 'STOPPED' | 'ERROR';
-export type ExecutionStatus = 'PENDING' | 'SIMULATING' | 'SUBMITTED' | 'CONFIRMED' | 'FAILED' | 'CANCELLED';
+export type SigningMode = "CLIENT_SIDE" | "SERVER_SIDE" | "ENCLAVE";
+export type BotType =
+  | "ARBITRAGE"
+  | "SNIPER"
+  | "FLASH_LOAN"
+  | "TRIANGULAR"
+  | "CUSTOM";
+export type BotStatus = "ACTIVE" | "PAUSED" | "STOPPED" | "ERROR";
+export type ExecutionStatus =
+  | "PENDING"
+  | "SIMULATING"
+  | "SUBMITTED"
+  | "CONFIRMED"
+  | "FAILED"
+  | "CANCELLED";
 
 export interface BotConfig {
   id: string;
@@ -109,13 +123,13 @@ export class OfflineTransactionBuilder {
   private instructions: TransactionInstruction[] = [];
   private feePayer: PublicKey;
   private signers: Keypair[] = [];
-  private metadata: OfflineTransaction['metadata'];
+  private metadata: OfflineTransaction["metadata"];
 
   constructor(
     feePayer: PublicKey,
     botId: string,
     userId: string,
-    executionId: string
+    executionId: string,
   ) {
     this.feePayer = feePayer;
     this.metadata = {
@@ -148,7 +162,7 @@ export class OfflineTransactionBuilder {
   addComputeBudget(units: number, microLamports: number): this {
     this.instructions.unshift(
       ComputeBudgetProgram.setComputeUnitLimit({ units }),
-      ComputeBudgetProgram.setComputeUnitPrice({ microLamports })
+      ComputeBudgetProgram.setComputeUnitPrice({ microLamports }),
     );
     return this;
   }
@@ -160,13 +174,17 @@ export class OfflineTransactionBuilder {
     // Enforce 10M lamports cap (10,000,000 lamports = 10,000 microlamports per compute unit)
     const maxMicroLamports = 10_000_000;
     const cappedMicroLamports = Math.min(microLamports, maxMicroLamports);
-    
+
     if (microLamports > maxMicroLamports) {
-      console.warn(`⚠️ Priority fee capped at ${maxMicroLamports} microLamports (requested: ${microLamports})`);
+      console.warn(
+        `⚠️ Priority fee capped at ${maxMicroLamports} microLamports (requested: ${microLamports})`,
+      );
     }
-    
+
     this.instructions.unshift(
-      ComputeBudgetProgram.setComputeUnitPrice({ microLamports: cappedMicroLamports })
+      ComputeBudgetProgram.setComputeUnitPrice({
+        microLamports: cappedMicroLamports,
+      }),
     );
     return this;
   }
@@ -188,7 +206,9 @@ export class OfflineTransactionBuilder {
   async build(connection: Connection): Promise<Transaction> {
     const transaction = new Transaction();
     transaction.feePayer = this.feePayer;
-    transaction.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
+    transaction.recentBlockhash = (
+      await connection.getLatestBlockhash()
+    ).blockhash;
     transaction.instructions = this.instructions;
     return transaction;
   }
@@ -200,20 +220,20 @@ export class OfflineTransactionBuilder {
     const errors: string[] = [];
 
     if (this.instructions.length === 0) {
-      errors.push('Transaction has no instructions');
+      errors.push("Transaction has no instructions");
     }
 
     if (!this.feePayer) {
-      errors.push('Fee payer not set');
+      errors.push("Fee payer not set");
     }
 
     // Validate instruction structure
     for (const instruction of this.instructions) {
       if (!instruction.programId) {
-        errors.push('Instruction missing program ID');
+        errors.push("Instruction missing program ID");
       }
       if (!instruction.keys || instruction.keys.length === 0) {
-        errors.push('Instruction has no keys');
+        errors.push("Instruction has no keys");
       }
     }
 
@@ -230,45 +250,54 @@ export class OfflineTransactionBuilder {
 export class ReplayProtection {
   // Layer 1: Unique nonces (in-memory cache + database)
   private nonceCache = new Set<string>();
-  
+
   // Layer 2: SHA-256 transaction hash deduplication
   private txHashCache = new Set<string>();
-  
+
   // Layer 3: Timestamp windows (10 minutes default)
   private readonly timestampWindow = 10 * 60 * 1000; // 10 minutes
-  
+
   // Layer 4: Rate limiting per user
-  private rateLimitCache = new Map<string, { count: number; resetTime: number }>();
+  private rateLimitCache = new Map<
+    string,
+    { count: number; resetTime: number }
+  >();
 
   /**
    * Generate unique nonce
    */
   generateNonce(): string {
-    return crypto.randomBytes(32).toString('hex');
+    return crypto.randomBytes(32).toString("hex");
   }
 
   /**
    * Compute transaction hash (SHA-256)
    */
-  computeTransactionHash(transaction: OfflineTransaction | Transaction): string {
+  computeTransactionHash(
+    transaction: OfflineTransaction | Transaction,
+  ): string {
     let data: string;
-    
-    if ('metadata' in transaction) {
+
+    if ("metadata" in transaction) {
       // OfflineTransaction
       data = JSON.stringify({
-        instructions: transaction.instructions.map(ix => ({
+        instructions: transaction.instructions.map((ix) => ({
           programId: ix.programId.toBase58(),
-          keys: ix.keys.map(k => ({ pubkey: k.pubkey.toBase58(), isSigner: k.isSigner, isWritable: k.isWritable })),
-          data: Buffer.from(ix.data).toString('hex'),
+          keys: ix.keys.map((k) => ({
+            pubkey: k.pubkey.toBase58(),
+            isSigner: k.isSigner,
+            isWritable: k.isWritable,
+          })),
+          data: Buffer.from(ix.data).toString("hex"),
         })),
         feePayer: transaction.feePayer.toBase58(),
       });
     } else {
       // Transaction
-      data = transaction.serializeMessage().toString('hex');
+      data = transaction.serializeMessage().toString("hex");
     }
-    
-    return crypto.createHash('sha256').update(data).digest('hex');
+
+    return crypto.createHash("sha256").update(data).digest("hex");
   }
 
   /**
@@ -283,11 +312,14 @@ export class ReplayProtection {
    */
   markNonceUsed(nonce: string): void {
     this.nonceCache.add(nonce);
-    
+
     // Cleanup old nonces after 1 hour
-    setTimeout(() => {
-      this.nonceCache.delete(nonce);
-    }, 60 * 60 * 1000);
+    setTimeout(
+      () => {
+        this.nonceCache.delete(nonce);
+      },
+      60 * 60 * 1000,
+    );
   }
 
   /**
@@ -302,11 +334,14 @@ export class ReplayProtection {
    */
   markTransactionProcessed(txHash: string): void {
     this.txHashCache.add(txHash);
-    
+
     // Cleanup old hashes after 1 hour
-    setTimeout(() => {
-      this.txHashCache.delete(txHash);
-    }, 60 * 60 * 1000);
+    setTimeout(
+      () => {
+        this.txHashCache.delete(txHash);
+      },
+      60 * 60 * 1000,
+    );
   }
 
   /**
@@ -316,7 +351,7 @@ export class ReplayProtection {
     const now = Date.now();
     const txTime = timestamp.getTime();
     const age = now - txTime;
-    
+
     // Must be recent (within window) and not from future
     return age >= 0 && age <= this.timestampWindow;
   }
@@ -326,11 +361,11 @@ export class ReplayProtection {
    */
   checkRateLimit(
     userId: string,
-    maxPerMinute: number = 10
+    maxPerMinute: number = 10,
   ): { allowed: boolean; remaining: number } {
     const now = Date.now();
     const record = this.rateLimitCache.get(userId);
-    
+
     if (!record || now > record.resetTime) {
       this.rateLimitCache.set(userId, {
         count: 1,
@@ -338,11 +373,11 @@ export class ReplayProtection {
       });
       return { allowed: true, remaining: maxPerMinute - 1 };
     }
-    
+
     if (record.count >= maxPerMinute) {
       return { allowed: false, remaining: 0 };
     }
-    
+
     record.count++;
     return { allowed: true, remaining: maxPerMinute - record.count };
   }
@@ -355,30 +390,30 @@ export class ReplayProtection {
     transaction: OfflineTransaction | Transaction,
     timestamp: Date,
     userId: string,
-    maxRatePerMinute: number = 10
+    maxRatePerMinute: number = 10,
   ): { valid: boolean; errors: string[] } {
     const errors: string[] = [];
 
     // Layer 1: Nonce check
     if (this.isNonceUsed(nonce)) {
-      errors.push('Nonce already used (Layer 1)');
+      errors.push("Nonce already used (Layer 1)");
     }
 
     // Layer 2: Transaction hash check
     const txHash = this.computeTransactionHash(transaction);
     if (this.isTransactionDuplicate(txHash)) {
-      errors.push('Duplicate transaction detected (Layer 2)');
+      errors.push("Duplicate transaction detected (Layer 2)");
     }
 
     // Layer 3: Timestamp validation
     if (!this.isTimestampValid(timestamp)) {
-      errors.push('Transaction timestamp outside valid window (Layer 3)');
+      errors.push("Transaction timestamp outside valid window (Layer 3)");
     }
 
     // Layer 4: Rate limiting
     const rateLimit = this.checkRateLimit(userId, maxRatePerMinute);
     if (!rateLimit.allowed) {
-      errors.push('Rate limit exceeded (Layer 4)');
+      errors.push("Rate limit exceeded (Layer 4)");
     }
 
     return {
@@ -392,7 +427,7 @@ export class ReplayProtection {
    */
   markExecutionProcessed(
     nonce: string,
-    transaction: OfflineTransaction | Transaction
+    transaction: OfflineTransaction | Transaction,
   ): void {
     this.markNonceUsed(nonce);
     const txHash = this.computeTransactionHash(transaction);
@@ -402,7 +437,7 @@ export class ReplayProtection {
 
 /**
  * Per-User Sandbox Isolation
- * 
+ *
  * Security Features:
  * - Strict per-user execution isolation
  * - No shared signers across users
@@ -414,7 +449,12 @@ export class BotSandbox {
   private context: SandboxContext;
   private readonly createdAt: Date;
 
-  constructor(userId: string, botId: string, walletAddress: string, permissions: string[]) {
+  constructor(
+    userId: string,
+    botId: string,
+    walletAddress: string,
+    permissions: string[],
+  ) {
     this.createdAt = new Date();
     this.context = {
       userId,
@@ -429,16 +469,20 @@ export class BotSandbox {
       },
       isolatedState: new Map(), // Isolated state - never shared between users
     };
-    
-    console.log(`🔒 Sandbox created for user=${userId}, bot=${botId}, wallet=${walletAddress}`);
+
+    console.log(
+      `🔒 Sandbox created for user=${userId}, bot=${botId}, wallet=${walletAddress}`,
+    );
   }
 
   /**
    * Check if user has permission
    */
   hasPermission(permission: string): boolean {
-    return this.context.permissions.includes(permission) || 
-           this.context.permissions.includes('*');
+    return (
+      this.context.permissions.includes(permission) ||
+      this.context.permissions.includes("*")
+    );
   }
 
   /**
@@ -447,31 +491,48 @@ export class BotSandbox {
    */
   async execute<T>(
     operation: () => Promise<T>,
-    requiredPermission: string
+    requiredPermission: string,
   ): Promise<T> {
     if (!this.hasPermission(requiredPermission)) {
-      throw new Error(`Permission denied: ${requiredPermission} for user=${this.context.userId}`);
+      throw new Error(
+        `Permission denied: ${requiredPermission} for user=${this.context.userId}`,
+      );
     }
 
     // Check rate limits (per-user, not global)
-    if (this.context.rateLimit.currentMinute >= this.context.rateLimit.maxExecutionsPerMinute) {
-      throw new Error(`Rate limit exceeded: too many executions per minute for user=${this.context.userId}`);
+    if (
+      this.context.rateLimit.currentMinute >=
+      this.context.rateLimit.maxExecutionsPerMinute
+    ) {
+      throw new Error(
+        `Rate limit exceeded: too many executions per minute for user=${this.context.userId}`,
+      );
     }
 
-    if (this.context.rateLimit.currentHour >= this.context.rateLimit.maxExecutionsPerHour) {
-      throw new Error(`Rate limit exceeded: too many executions per hour for user=${this.context.userId}`);
+    if (
+      this.context.rateLimit.currentHour >=
+      this.context.rateLimit.maxExecutionsPerHour
+    ) {
+      throw new Error(
+        `Rate limit exceeded: too many executions per hour for user=${this.context.userId}`,
+      );
     }
 
     try {
       this.context.rateLimit.currentMinute++;
       this.context.rateLimit.currentHour++;
-      
-      console.log(`▶️ Executing in isolated sandbox: user=${this.context.userId}, bot=${this.context.botId}`);
-      
+
+      console.log(
+        `▶️ Executing in isolated sandbox: user=${this.context.userId}, bot=${this.context.botId}`,
+      );
+
       // Execute operation in isolated context
       return await operation();
     } catch (error) {
-      console.error(`❌ Sandbox execution failed for user=${this.context.userId}:`, error);
+      console.error(
+        `❌ Sandbox execution failed for user=${this.context.userId}:`,
+        error,
+      );
       throw error;
     }
   }
@@ -495,7 +556,9 @@ export class BotSandbox {
    */
   clearState(): void {
     this.context.isolatedState.clear();
-    console.log(`🗑️ Cleared isolated state for user=${this.context.userId}, bot=${this.context.botId}`);
+    console.log(
+      `🗑️ Cleared isolated state for user=${this.context.userId}, bot=${this.context.botId}`,
+    );
   }
 
   /**
@@ -504,7 +567,7 @@ export class BotSandbox {
   getContext(): Readonly<SandboxContext> {
     return { ...this.context };
   }
-  
+
   /**
    * Get sandbox age (for monitoring)
    */
@@ -523,7 +586,7 @@ export class BotExecutionEngine {
   private profitDistributionManager: ProfitDistributionManager;
   private profitTrackerInitialized = false;
   private oracleService?: OracleService;
-  
+
   // Minimum SOL balance required for bot execution
   private readonly MIN_SOL_BALANCE = 0.05; // 0.05 SOL minimum
 
@@ -532,9 +595,11 @@ export class BotExecutionEngine {
     this.replayProtection = new ReplayProtection();
     this.profitDistributionManager = new ProfitDistributionManager(connection);
     this.oracleService = oracleService;
-    
+
     if (oracleService) {
-      console.log('✅ Bot Execution Engine initialized with Oracle Intelligence');
+      console.log(
+        "✅ Bot Execution Engine initialized with Oracle Intelligence",
+      );
     }
   }
 
@@ -542,19 +607,29 @@ export class BotExecutionEngine {
    * Get or create sandbox for user (per-user isolation)
    * Each user gets their own isolated sandbox - NO SHARED CONTEXT
    */
-  getSandbox(userId: string, botId: string, walletAddress: string, permissions: string[]): BotSandbox {
+  getSandbox(
+    userId: string,
+    botId: string,
+    walletAddress: string,
+    permissions: string[],
+  ): BotSandbox {
     // Create unique key per user AND bot for strict isolation
     const key = `${userId}:${botId}:${walletAddress}`;
-    
+
     // Always create fresh sandbox if not exists (no reuse)
     if (!this.sandboxes.has(key)) {
-      this.sandboxes.set(key, new BotSandbox(userId, botId, walletAddress, permissions));
-      console.log(`✅ Created isolated sandbox for user=${userId}, bot=${botId}, wallet=${walletAddress}`);
+      this.sandboxes.set(
+        key,
+        new BotSandbox(userId, botId, walletAddress, permissions),
+      );
+      console.log(
+        `✅ Created isolated sandbox for user=${userId}, bot=${botId}, wallet=${walletAddress}`,
+      );
     }
-    
+
     return this.sandboxes.get(key)!;
   }
-  
+
   /**
    * Clear sandbox for user (cleanup after execution)
    */
@@ -567,7 +642,7 @@ export class BotExecutionEngine {
       console.log(`🗑️ Cleared sandbox for user=${userId}, bot=${botId}`);
     }
   }
-  
+
   /**
    * Pre-flight validation: Check minimum SOL balance
    */
@@ -579,7 +654,7 @@ export class BotExecutionEngine {
     try {
       const balance = await this.connection.getBalance(walletAddress);
       const balanceInSol = balance / 1e9; // Convert lamports to SOL
-      
+
       if (balanceInSol < this.MIN_SOL_BALANCE) {
         return {
           valid: false,
@@ -587,7 +662,7 @@ export class BotExecutionEngine {
           error: `Insufficient balance: ${balanceInSol.toFixed(4)} SOL (minimum: ${this.MIN_SOL_BALANCE} SOL required)`,
         };
       }
-      
+
       return {
         valid: true,
         balance: balanceInSol,
@@ -596,7 +671,7 @@ export class BotExecutionEngine {
       return {
         valid: false,
         balance: 0,
-        error: `Failed to check balance: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        error: `Failed to check balance: ${error instanceof Error ? error.message : "Unknown error"}`,
       };
     }
   }
@@ -608,14 +683,14 @@ export class BotExecutionEngine {
     feePayer: PublicKey,
     botId: string,
     userId: string,
-    executionId: string
+    executionId: string,
   ): OfflineTransactionBuilder {
     return new OfflineTransactionBuilder(feePayer, botId, userId, executionId);
   }
 
   /**
    * Execute bot transaction with full protection and balance checks
-   * 
+   *
    * Deterministic execution flow:
    * 1. Pre-flight Balance Check
    * 2. Replay Protection Validation
@@ -636,12 +711,12 @@ export class BotExecutionEngine {
       skipPreflight?: boolean;
       maxRetries?: number;
       analysisContext?: Partial<AnalysisContext>;
-    } = {}
+    } = {},
   ): Promise<BotExecution> {
     const executionId = crypto.randomUUID();
     const nonce = this.replayProtection.generateNonce();
     const timestamp = new Date();
-    
+
     let sandbox: BotSandbox | undefined;
     let preTradeBalance = 0;
     let postTradeBalance = 0;
@@ -651,13 +726,13 @@ export class BotExecutionEngine {
     let distributionSignature: string | undefined;
     let executionSuccess = false;
     let errorMessage: string | undefined;
-    
+
     try {
       // STEP 1: Pre-flight Balance Check
       const balanceCheck = await this.validateMinimumBalance(signer.publicKey);
       if (!balanceCheck.valid) {
         errorMessage = `Pre-flight failed: ${balanceCheck.error}`;
-        
+
         // Log failed pre-flight
         await this.logExecutionToDatabase(
           bot,
@@ -667,21 +742,23 @@ export class BotExecutionEngine {
           0,
           0,
           false,
-          errorMessage
+          errorMessage,
         );
-        
+
         return {
           id: executionId,
           botId: bot.id,
           userId: bot.userId,
           executionType: bot.botType,
-          status: 'FAILED',
+          status: "FAILED",
           errorMessage,
           executedAt: timestamp,
         };
       }
-      
-      console.log(`✅ Pre-flight balance check passed: ${balanceCheck.balance.toFixed(4)} SOL`);
+
+      console.log(
+        `✅ Pre-flight balance check passed: ${balanceCheck.balance.toFixed(4)} SOL`,
+      );
 
       // STEP 2: Replay Protection Validation
       const validation = this.replayProtection.validateExecution(
@@ -689,12 +766,12 @@ export class BotExecutionEngine {
         transaction,
         timestamp,
         bot.userId,
-        10 // max 10 per minute
+        10, // max 10 per minute
       );
 
       if (!validation.valid) {
-        errorMessage = `Replay protection failed: ${validation.errors.join(', ')}`;
-        
+        errorMessage = `Replay protection failed: ${validation.errors.join(", ")}`;
+
         // Log replay protection failure
         await this.logExecutionToDatabase(
           bot,
@@ -704,15 +781,15 @@ export class BotExecutionEngine {
           0,
           0,
           false,
-          errorMessage
+          errorMessage,
         );
-        
+
         return {
           id: executionId,
           botId: bot.id,
           userId: bot.userId,
           executionType: bot.botType,
-          status: 'FAILED',
+          status: "FAILED",
           errorMessage,
           executedAt: timestamp,
         };
@@ -720,8 +797,8 @@ export class BotExecutionEngine {
 
       // STEP 3: Pre-execution Intelligence Analysis (Oracle)
       if (this.oracleService) {
-        console.log('🔮 Running Oracle intelligence analysis...');
-        
+        console.log("🔮 Running Oracle intelligence analysis...");
+
         const analysisContext: AnalysisContext = {
           botId: bot.id,
           userId: bot.userId,
@@ -729,16 +806,19 @@ export class BotExecutionEngine {
           botType: bot.botType,
           ...options.analysisContext,
         };
-        
+
         try {
-          const oracleResult = await this.oracleService.analyzeExecution(analysisContext);
-          
-          console.log(`🔮 Oracle recommendation: ${oracleResult.overallRecommendation} (${oracleResult.confidence} confidence)`);
-          
+          const oracleResult =
+            await this.oracleService.analyzeExecution(analysisContext);
+
+          console.log(
+            `🔮 Oracle recommendation: ${oracleResult.overallRecommendation} (${oracleResult.confidence} confidence)`,
+          );
+
           // If Oracle recommends ABORT, stop execution
-          if (oracleResult.recommendation === 'ABORT') {
+          if (oracleResult.recommendation === "ABORT") {
             errorMessage = `Oracle intelligence blocked execution: ${oracleResult.reasoning}`;
-            
+
             // Log Oracle abort
             await this.logExecutionToDatabase(
               bot,
@@ -748,31 +828,42 @@ export class BotExecutionEngine {
               0,
               0,
               false,
-              errorMessage
+              errorMessage,
             );
-            
+
             return {
               id: executionId,
               botId: bot.id,
               userId: bot.userId,
               executionType: bot.botType,
-              status: 'FAILED',
+              status: "FAILED",
               errorMessage,
               executedAt: timestamp,
             };
           }
-          
+
           // If Oracle recommends ADJUST, apply adjustments
-          if (oracleResult.recommendation === 'ADJUST' && oracleResult.adjustments) {
-            console.log('🔧 Applying Oracle adjustments:', oracleResult.adjustments);
-            
+          if (
+            oracleResult.recommendation === "ADJUST" &&
+            oracleResult.adjustments
+          ) {
+            console.log(
+              "🔧 Applying Oracle adjustments:",
+              oracleResult.adjustments,
+            );
+
             // Adjustments could be applied here if transaction is mutable
             // For now, log the recommendations
-            console.log('ℹ️ Oracle adjustments logged but not applied to pre-built transaction');
+            console.log(
+              "ℹ️ Oracle adjustments logged but not applied to pre-built transaction",
+            );
           }
         } catch (oracleError) {
           // Log Oracle error but don't abort execution (fail-safe)
-          console.error('⚠️ Oracle analysis error (proceeding anyway):', oracleError);
+          console.error(
+            "⚠️ Oracle analysis error (proceeding anyway):",
+            oracleError,
+          );
         }
       }
 
@@ -781,12 +872,14 @@ export class BotExecutionEngine {
         bot.userId,
         bot.id,
         signer.publicKey.toBase58(),
-        ['bot.execute', 'wallet.sign']
+        ["bot.execute", "wallet.sign"],
       );
 
       // STEP 5: Pre-trade Balance Snapshot
       preTradeBalance = await this.connection.getBalance(signer.publicKey);
-      console.log(`📸 Pre-trade balance snapshot: ${(preTradeBalance / LAMPORTS_PER_SOL).toFixed(6)} SOL`);
+      console.log(
+        `📸 Pre-trade balance snapshot: ${(preTradeBalance / LAMPORTS_PER_SOL).toFixed(6)} SOL`,
+      );
 
       // STEP 6: Transaction Submission & Confirmation
       signature = await sandbox.execute(async () => {
@@ -797,54 +890,67 @@ export class BotExecutionEngine {
           {
             skipPreflight: options.skipPreflight ?? false,
             maxRetries: options.maxRetries ?? 3,
-          }
+          },
         );
-      }, 'bot.execute');
+      }, "bot.execute");
 
       // Mark as processed
       this.replayProtection.markExecutionProcessed(nonce, transaction);
-      
+
       console.log(`✅ Transaction confirmed: ${signature}`);
 
       // STEP 7: Post-trade Balance Snapshot & Profit Calculation
       postTradeBalance = await this.connection.getBalance(signer.publicKey);
-      console.log(`📸 Post-trade balance snapshot: ${(postTradeBalance / LAMPORTS_PER_SOL).toFixed(6)} SOL`);
-      
+      console.log(
+        `📸 Post-trade balance snapshot: ${(postTradeBalance / LAMPORTS_PER_SOL).toFixed(6)} SOL`,
+      );
+
       // Calculate profit (positive means gain, negative means loss)
       profitLamports = postTradeBalance - preTradeBalance;
       gasUsed = Math.abs(Math.min(0, profitLamports)); // If negative, it's gas cost
-      
-      console.log(`💰 Profit calculation: ${(profitLamports / LAMPORTS_PER_SOL).toFixed(6)} SOL`);
+
+      console.log(
+        `💰 Profit calculation: ${(profitLamports / LAMPORTS_PER_SOL).toFixed(6)} SOL`,
+      );
 
       // STEP 8: DAO Skim (if applicable)
       if (profitLamports > 0 && config.profitDistribution.enabled) {
-        console.log(`🏦 Profit detected (${(profitLamports / LAMPORTS_PER_SOL).toFixed(6)} SOL), triggering DAO skim...`);
-        
+        console.log(
+          `🏦 Profit detected (${(profitLamports / LAMPORTS_PER_SOL).toFixed(6)} SOL), triggering DAO skim...`,
+        );
+
         try {
           // Important: Distribution must happen BEFORE key wipe
-          distributionSignature = await this.profitDistributionManager.distributeSolProfit(
-            profitLamports,
-            signer,
-            signer.publicKey // Calling wallet gets gas/slippage coverage
-          );
-          
+          distributionSignature =
+            await this.profitDistributionManager.distributeSolProfit(
+              profitLamports,
+              signer,
+              signer.publicKey, // Calling wallet gets gas/slippage coverage
+            );
+
           if (distributionSignature) {
             console.log(`✅ DAO skim completed: ${distributionSignature}`);
           } else {
-            console.warn(`⚠️ DAO skim returned null (might have failed silently)`);
+            console.warn(
+              `⚠️ DAO skim returned null (might have failed silently)`,
+            );
           }
         } catch (distError) {
           console.error(`❌ DAO skim failed:`, distError);
           // Don't fail the whole execution if distribution fails
         }
       } else if (profitLamports <= 0) {
-        console.log(`ℹ️ No profit detected (${(profitLamports / LAMPORTS_PER_SOL).toFixed(6)} SOL), skipping DAO skim`);
+        console.log(
+          `ℹ️ No profit detected (${(profitLamports / LAMPORTS_PER_SOL).toFixed(6)} SOL), skipping DAO skim`,
+        );
       } else {
-        console.log(`ℹ️ Profit distribution disabled in config, skipping DAO skim`);
+        console.log(
+          `ℹ️ Profit distribution disabled in config, skipping DAO skim`,
+        );
       }
 
       executionSuccess = true;
-      
+
       // STEP 9: Telemetry Recording
       // 8a. Database audit log
       await this.logExecutionToDatabase(
@@ -855,18 +961,18 @@ export class BotExecutionEngine {
         profitLamports,
         gasUsed,
         true,
-        undefined
+        undefined,
       );
-      
+
       // 8b. Profit tracker
       this.recordTradeInProfitTracker(
         executionId,
         bot.botType,
         profitLamports,
         gasUsed,
-        signature
+        signature,
       );
-      
+
       // Clear sandbox state after execution to prevent context leakage
       sandbox.clearState();
 
@@ -875,7 +981,7 @@ export class BotExecutionEngine {
         botId: bot.id,
         userId: bot.userId,
         executionType: bot.botType,
-        status: 'CONFIRMED',
+        status: "CONFIRMED",
         transactionSignature: signature,
         profitSol: profitLamports / LAMPORTS_PER_SOL,
         gasFeeSol: gasUsed / LAMPORTS_PER_SOL,
@@ -884,10 +990,10 @@ export class BotExecutionEngine {
       };
     } catch (error) {
       executionSuccess = false;
-      errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      
+      errorMessage = error instanceof Error ? error.message : "Unknown error";
+
       console.error(`❌ Transaction execution failed:`, error);
-      
+
       // Log failed execution
       await this.logExecutionToDatabase(
         bot,
@@ -897,15 +1003,15 @@ export class BotExecutionEngine {
         profitLamports,
         gasUsed,
         false,
-        errorMessage
+        errorMessage,
       );
-      
+
       return {
         id: executionId,
         botId: bot.id,
         userId: bot.userId,
         executionType: bot.botType,
-        status: 'FAILED',
+        status: "FAILED",
         errorMessage,
         executedAt: timestamp,
       };
@@ -915,14 +1021,14 @@ export class BotExecutionEngine {
       if (sandbox) {
         sandbox.clearState();
       }
-      
+
       // Zero out private key from memory
       signer.secretKey.fill(0);
-      
+
       console.log(`🔒 Cleanup complete: sandbox cleared, private key wiped`);
     }
   }
-  
+
   /**
    * Log execution to database audit log
    */
@@ -934,13 +1040,13 @@ export class BotExecutionEngine {
     profitLamports: number,
     gasUsed: number,
     success: boolean,
-    errorMessage: string | undefined
+    errorMessage: string | undefined,
   ): Promise<void> {
     try {
       await insertWalletAuditLog({
-        walletId: bot.walletId || 'unknown',
+        walletId: bot.walletId || "unknown",
         userId: bot.userId,
-        operation: 'BOT_EXECUTION',
+        operation: "BOT_EXECUTION",
         operationData: {
           botId: bot.id,
           executionId,
@@ -948,20 +1054,20 @@ export class BotExecutionEngine {
           gas: gasUsed / LAMPORTS_PER_SOL,
           signature,
           distributionSignature,
-          status: success ? 'SUCCESS' : 'FAILED',
+          status: success ? "SUCCESS" : "FAILED",
         },
         transactionSignature: signature,
         success,
         errorMessage,
       });
-      
+
       console.log(`📊 Execution logged to database: ${executionId}`);
     } catch (dbError) {
       console.error(`❌ Failed to log execution to database:`, dbError);
       // Don't throw - logging failure shouldn't fail the execution
     }
   }
-  
+
   /**
    * Record trade in profit tracker
    */
@@ -970,7 +1076,7 @@ export class BotExecutionEngine {
     botType: BotType,
     profitLamports: number,
     gasUsed: number,
-    signature: string | undefined
+    signature: string | undefined,
   ): void {
     try {
       // Initialize profit tracker if not already done
@@ -979,24 +1085,28 @@ export class BotExecutionEngine {
         initializeProfitTracker(1.0);
         this.profitTrackerInitialized = true;
       }
-      
+
       const tracker = getProfitTracker();
       const profitSol = profitLamports / LAMPORTS_PER_SOL;
       const gasSol = gasUsed / LAMPORTS_PER_SOL;
-      
+
       // Calculate dev fee if enabled
-      const devFee = config.devFee.enabled && profitSol > 0
-        ? profitSol * config.devFee.percentage
-        : 0;
-      
+      const devFee =
+        config.devFee.enabled && profitSol > 0
+          ? profitSol * config.devFee.percentage
+          : 0;
+
       const netProfit = profitSol - gasSol - devFee;
-      
+
       tracker.recordTrade({
         id: executionId,
         timestamp: Date.now(),
-        type: botType.toLowerCase() as 'arbitrage' | 'flash-loan' | 'triangular',
-        inputToken: 'SOL',
-        outputToken: 'SOL',
+        type: botType.toLowerCase() as
+          | "arbitrage"
+          | "flash-loan"
+          | "triangular",
+        inputToken: "SOL",
+        outputToken: "SOL",
         inputAmount: 0, // Not tracked in this context
         outputAmount: 0, // Not tracked in this context
         profit: profitSol,
@@ -1005,10 +1115,15 @@ export class BotExecutionEngine {
         devFee,
         signature,
       });
-      
-      console.log(`📊 Trade recorded in profit tracker: ${executionId}, net profit: ${netProfit.toFixed(6)} SOL`);
+
+      console.log(
+        `📊 Trade recorded in profit tracker: ${executionId}, net profit: ${netProfit.toFixed(6)} SOL`,
+      );
     } catch (trackerError) {
-      console.error(`❌ Failed to record trade in profit tracker:`, trackerError);
+      console.error(
+        `❌ Failed to record trade in profit tracker:`,
+        trackerError,
+      );
       // Don't throw - tracking failure shouldn't fail the execution
     }
   }
@@ -1018,11 +1133,14 @@ export class BotExecutionEngine {
    */
   async simulateTransaction(
     transaction: Transaction,
-    signer: Keypair
+    signer: Keypair,
   ): Promise<{ success: boolean; logs?: string[]; error?: string }> {
     try {
-      const simulation = await this.connection.simulateTransaction(transaction, [signer]);
-      
+      const simulation = await this.connection.simulateTransaction(
+        transaction,
+        [signer],
+      );
+
       if (simulation.value.err) {
         return {
           success: false,
@@ -1030,7 +1148,7 @@ export class BotExecutionEngine {
           logs: simulation.value.logs || undefined,
         };
       }
-      
+
       return {
         success: true,
         logs: simulation.value.logs || undefined,
@@ -1038,7 +1156,7 @@ export class BotExecutionEngine {
     } catch (error) {
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Simulation failed',
+        error: error instanceof Error ? error.message : "Simulation failed",
       };
     }
   }

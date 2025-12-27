@@ -1,10 +1,10 @@
 /**
  * API Middleware for Vercel Serverless Functions
- * 
+ *
  * Provides request timeout handling and performance monitoring to ensure
  * compliance with Vercel's 10-second timeout limit for Hobby tier
  * and 60-second limit for Pro tier.
- * 
+ *
  * Features:
  * - Request timeout with AbortController
  * - Performance monitoring
@@ -12,7 +12,7 @@
  * - Error handling
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from "next/server";
 
 // Configuration
 const REQUEST_TIMEOUT_MS = 8000; // 8 seconds (safe margin under 10s Vercel limit)
@@ -30,7 +30,7 @@ export interface MiddlewareConfig {
 export async function withTimeout(
   request: NextRequest,
   handler: (req: NextRequest) => Promise<NextResponse>,
-  config: MiddlewareConfig = {}
+  config: MiddlewareConfig = {},
 ): Promise<NextResponse> {
   const startTime = Date.now();
   const timeoutMs = config.timeoutMs || REQUEST_TIMEOUT_MS;
@@ -48,8 +48,8 @@ export async function withTimeout(
     const response = await Promise.race([
       handler(request),
       new Promise<NextResponse>((_, reject) => {
-        abortController.signal.addEventListener('abort', () => {
-          reject(new Error('Request timeout'));
+        abortController.signal.addEventListener("abort", () => {
+          reject(new Error("Request timeout"));
         });
       }),
     ]);
@@ -67,8 +67,8 @@ export async function withTimeout(
 
     // Add performance headers if enabled
     if (enablePerformanceHeaders) {
-      response.headers.set('X-Response-Time', `${duration}ms`);
-      response.headers.set('X-Request-Id', crypto.randomUUID());
+      response.headers.set("X-Response-Time", `${duration}ms`);
+      response.headers.set("X-Request-Id", crypto.randomUUID());
     }
 
     return response;
@@ -80,43 +80,43 @@ export async function withTimeout(
     const duration = Date.now() - startTime;
 
     // Handle timeout error
-    if (error instanceof Error && error.message === 'Request timeout') {
+    if (error instanceof Error && error.message === "Request timeout") {
       console.error(`❌ Request timeout after ${duration}ms: ${request.url}`);
-      
+
       return NextResponse.json(
         {
           success: false,
-          error: 'Request timeout',
+          error: "Request timeout",
           message: `Request exceeded ${timeoutMs}ms timeout limit`,
           timestamp: Date.now(),
         },
         {
           status: 504,
           headers: {
-            'X-Response-Time': `${duration}ms`,
-            'X-Request-Id': crypto.randomUUID(),
+            "X-Response-Time": `${duration}ms`,
+            "X-Request-Id": crypto.randomUUID(),
           },
-        }
+        },
       );
     }
 
     // Handle other errors
     console.error(`❌ Request error after ${duration}ms:`, error);
-    
+
     return NextResponse.json(
       {
         success: false,
-        error: 'Internal server error',
-        message: error instanceof Error ? error.message : 'Unknown error',
+        error: "Internal server error",
+        message: error instanceof Error ? error.message : "Unknown error",
         timestamp: Date.now(),
       },
       {
         status: 500,
         headers: {
-          'X-Response-Time': `${duration}ms`,
-          'X-Request-Id': crypto.randomUUID(),
+          "X-Response-Time": `${duration}ms`,
+          "X-Request-Id": crypto.randomUUID(),
         },
-      }
+      },
     );
   }
 }
@@ -136,7 +136,7 @@ export function createTimeoutWrapper(config: MiddlewareConfig = {}) {
  * Performance monitoring decorator
  */
 export function withPerformanceMonitoring(
-  handler: (req: NextRequest) => Promise<NextResponse>
+  handler: (req: NextRequest) => Promise<NextResponse>,
 ): (req: NextRequest) => Promise<NextResponse> {
   return async (request: NextRequest) => {
     const startTime = Date.now();
@@ -152,7 +152,7 @@ export function withPerformanceMonitoring(
       console.log(`📤 ${method} ${url} - ${response.status} (${duration}ms)`);
 
       // Add performance header
-      response.headers.set('X-Response-Time', `${duration}ms`);
+      response.headers.set("X-Response-Time", `${duration}ms`);
 
       return response;
     } catch (error) {
@@ -172,13 +172,14 @@ const RATE_LIMIT_MAX_REQUESTS = 60; // 60 requests per minute
 
 export function withRateLimit(
   handler: (req: NextRequest) => Promise<NextResponse>,
-  maxRequests: number = RATE_LIMIT_MAX_REQUESTS
+  maxRequests: number = RATE_LIMIT_MAX_REQUESTS,
 ): (req: NextRequest) => Promise<NextResponse> {
   return async (request: NextRequest) => {
     // Get client IP or identifier
-    const clientId = request.headers.get('x-forwarded-for') || 
-                     request.headers.get('x-real-ip') || 
-                     'unknown';
+    const clientId =
+      request.headers.get("x-forwarded-for") ||
+      request.headers.get("x-real-ip") ||
+      "unknown";
 
     const now = Date.now();
     const clientData = requestCounts.get(clientId);
@@ -195,23 +196,23 @@ export function withRateLimit(
     // Check rate limit
     if (clientData.count >= maxRequests) {
       const remainingTime = Math.ceil((clientData.resetTime - now) / 1000);
-      
+
       return NextResponse.json(
         {
           success: false,
-          error: 'Rate limit exceeded',
+          error: "Rate limit exceeded",
           message: `Too many requests. Try again in ${remainingTime} seconds.`,
           timestamp: Date.now(),
         },
         {
           status: 429,
           headers: {
-            'Retry-After': remainingTime.toString(),
-            'X-RateLimit-Limit': maxRequests.toString(),
-            'X-RateLimit-Remaining': '0',
-            'X-RateLimit-Reset': clientData.resetTime.toString(),
+            "Retry-After": remainingTime.toString(),
+            "X-RateLimit-Limit": maxRequests.toString(),
+            "X-RateLimit-Remaining": "0",
+            "X-RateLimit-Reset": clientData.resetTime.toString(),
           },
-        }
+        },
       );
     }
 
@@ -225,35 +226,39 @@ export function withRateLimit(
  * Compose multiple middleware functions
  */
 export function composeMiddleware(
-  ...middlewares: Array<(handler: (req: NextRequest) => Promise<NextResponse>) => (req: NextRequest) => Promise<NextResponse>>
+  ...middlewares: Array<
+    (
+      handler: (req: NextRequest) => Promise<NextResponse>,
+    ) => (req: NextRequest) => Promise<NextResponse>
+  >
 ) {
   return (handler: (req: NextRequest) => Promise<NextResponse>) => {
     return middlewares.reduceRight(
       (acc, middleware) => middleware(acc),
-      handler
+      handler,
     );
   };
 }
 
 /**
  * Example usage:
- * 
+ *
  * ```typescript
  * import { withTimeout, withPerformanceMonitoring, withRateLimit, composeMiddleware } from './_middleware';
- * 
+ *
  * // Single middleware
  * export const GET = withTimeout(async (request: NextRequest) => {
  *   // Your handler logic
  *   return NextResponse.json({ success: true });
  * });
- * 
+ *
  * // Multiple middleware
  * const middleware = composeMiddleware(
  *   withTimeout,
  *   withPerformanceMonitoring,
  *   withRateLimit
  * );
- * 
+ *
  * export const GET = middleware(async (request: NextRequest) => {
  *   // Your handler logic
  *   return NextResponse.json({ success: true });

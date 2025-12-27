@@ -1,9 +1,9 @@
 /**
  * Realtime Scanner for Webapp
- * 
+ *
  * Provides real-time arbitrage scanning with proper WebSocket cleanup
  * to prevent memory leaks in long-running browser sessions.
- * 
+ *
  * Features:
  * - WebSocket connection management
  * - Automatic cleanup on unmount
@@ -12,11 +12,11 @@
  * - Event listener cleanup
  */
 
-import { Connection, PublicKey } from '@solana/web3.js';
+import { Connection, PublicKey } from "@solana/web3.js";
 
 export interface ArbitrageOpportunity {
   id: string;
-  type: 'arbitrage' | 'flash-loan' | 'triangular';
+  type: "arbitrage" | "flash-loan" | "triangular";
   inputMint: string;
   outputMint: string;
   inputSymbol: string;
@@ -46,11 +46,12 @@ export class RealTimeScanner {
   private isScanning: boolean = false;
   private scanInterval: NodeJS.Timeout | null = null;
   private opportunityCallbacks: OpportunityCallback[] = [];
-  
+
   // Cleanup tracking
   private webSocketConnections: Set<WebSocket> = new Set();
   private intervals: Set<NodeJS.Timeout> = new Set();
-  private eventListeners: Map<EventTarget, Map<string, EventListener>> = new Map();
+  private eventListeners: Map<EventTarget, Map<string, EventListener>> =
+    new Map();
   private isCleanedUp: boolean = false;
 
   constructor(connection: Connection, config: ScannerConfig = {}) {
@@ -60,9 +61,9 @@ export class RealTimeScanner {
       minProfitThreshold: config.minProfitThreshold || 0.5,
       enableWebSocket: config.enableWebSocket ?? false,
     };
-    
+
     // Register cleanup on browser/tab close
-    if (typeof window !== 'undefined') {
+    if (typeof window !== "undefined") {
       this.registerBrowserCleanupHandlers();
     }
   }
@@ -75,29 +76,33 @@ export class RealTimeScanner {
     const unloadHandler = () => {
       this.cleanup();
     };
-    
-    window.addEventListener('beforeunload', unloadHandler);
-    this.trackEventListener(window, 'beforeunload', unloadHandler);
-    
+
+    window.addEventListener("beforeunload", unloadHandler);
+    this.trackEventListener(window, "beforeunload", unloadHandler);
+
     // Cleanup on visibility change (tab hidden)
     const visibilityHandler = () => {
       if (document.hidden) {
-        console.log('[Scanner] Tab hidden, pausing scanning...');
+        console.log("[Scanner] Tab hidden, pausing scanning...");
         this.pauseScanning();
       } else {
-        console.log('[Scanner] Tab visible, resuming scanning...');
+        console.log("[Scanner] Tab visible, resuming scanning...");
         this.resumeScanning();
       }
     };
-    
-    document.addEventListener('visibilitychange', visibilityHandler);
-    this.trackEventListener(document, 'visibilitychange', visibilityHandler);
+
+    document.addEventListener("visibilitychange", visibilityHandler);
+    this.trackEventListener(document, "visibilitychange", visibilityHandler);
   }
 
   /**
    * Track event listener for cleanup
    */
-  private trackEventListener(target: EventTarget, type: string, listener: EventListener): void {
+  private trackEventListener(
+    target: EventTarget,
+    type: string,
+    listener: EventListener,
+  ): void {
     if (!this.eventListeners.has(target)) {
       this.eventListeners.set(target, new Map());
     }
@@ -109,12 +114,12 @@ export class RealTimeScanner {
    */
   start(): void {
     if (this.isScanning) {
-      console.warn('[Scanner] Already scanning');
+      console.warn("[Scanner] Already scanning");
       return;
     }
 
     this.isScanning = true;
-    console.log('[Scanner] Starting real-time scanning...');
+    console.log("[Scanner] Starting real-time scanning...");
 
     // Perform initial scan
     this.performScan();
@@ -144,7 +149,7 @@ export class RealTimeScanner {
     }
 
     this.isScanning = false;
-    console.log('[Scanner] Stopping scanning...');
+    console.log("[Scanner] Stopping scanning...");
 
     if (this.scanInterval) {
       clearInterval(this.scanInterval);
@@ -173,7 +178,7 @@ export class RealTimeScanner {
           this.performScan();
         }
       }, this.config.pollingIntervalMs!);
-      
+
       this.intervals.add(this.scanInterval);
     }
   }
@@ -184,14 +189,14 @@ export class RealTimeScanner {
   private connectWebSocket(): void {
     try {
       // Example: Connect to Pyth price feed or custom WebSocket server
-      const wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'wss://example.com/ws';
+      const wsUrl = process.env.NEXT_PUBLIC_WS_URL || "wss://example.com/ws";
       const ws = new WebSocket(wsUrl);
 
       // Track connection for cleanup
       this.webSocketConnections.add(ws);
 
       ws.onopen = () => {
-        console.log('[Scanner] WebSocket connected');
+        console.log("[Scanner] WebSocket connected");
       };
 
       ws.onmessage = (event) => {
@@ -199,18 +204,18 @@ export class RealTimeScanner {
           const data = JSON.parse(event.data);
           this.handleWebSocketMessage(data);
         } catch (error) {
-          console.error('[Scanner] WebSocket message parse error:', error);
+          console.error("[Scanner] WebSocket message parse error:", error);
         }
       };
 
       ws.onerror = (error) => {
-        console.error('[Scanner] WebSocket error:', error);
+        console.error("[Scanner] WebSocket error:", error);
       };
 
       ws.onclose = () => {
-        console.log('[Scanner] WebSocket closed');
+        console.log("[Scanner] WebSocket closed");
         this.webSocketConnections.delete(ws);
-        
+
         // Reconnect if still scanning
         if (this.isScanning && !this.isCleanedUp) {
           setTimeout(() => {
@@ -221,7 +226,7 @@ export class RealTimeScanner {
         }
       };
     } catch (error) {
-      console.error('[Scanner] WebSocket connection error:', error);
+      console.error("[Scanner] WebSocket connection error:", error);
     }
   }
 
@@ -231,7 +236,7 @@ export class RealTimeScanner {
   private handleWebSocketMessage(data: any): void {
     // Process real-time data from WebSocket
     // This could be price updates, new opportunities, etc.
-    console.log('[Scanner] WebSocket message:', data);
+    console.log("[Scanner] WebSocket message:", data);
   }
 
   /**
@@ -239,19 +244,18 @@ export class RealTimeScanner {
    */
   private async performScan(): Promise<void> {
     try {
-      console.log('[Scanner] Scanning for opportunities...');
-      
+      console.log("[Scanner] Scanning for opportunities...");
+
       // In a real implementation, this would:
       // 1. Fetch current prices
       // 2. Check for arbitrage opportunities
       // 3. Calculate profitability
       // 4. Notify callbacks
-      
+
       // For now, this is a placeholder
       // The actual scanning logic would be implemented based on requirements
-      
     } catch (error) {
-      console.error('[Scanner] Scan error:', error);
+      console.error("[Scanner] Scan error:", error);
     }
   }
 
@@ -266,11 +270,11 @@ export class RealTimeScanner {
    * Notify all callbacks of new opportunity
    */
   private notifyOpportunity(opportunity: ArbitrageOpportunity): void {
-    this.opportunityCallbacks.forEach(callback => {
+    this.opportunityCallbacks.forEach((callback) => {
       try {
         callback(opportunity);
       } catch (error) {
-        console.error('[Scanner] Callback error:', error);
+        console.error("[Scanner] Callback error:", error);
       }
     });
   }
@@ -284,21 +288,24 @@ export class RealTimeScanner {
       return;
     }
 
-    console.log('[Scanner] Cleaning up resources...');
+    console.log("[Scanner] Cleaning up resources...");
 
     // Stop scanning
     this.stop();
 
     // Close all WebSocket connections
-    this.webSocketConnections.forEach(ws => {
-      if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
+    this.webSocketConnections.forEach((ws) => {
+      if (
+        ws.readyState === WebSocket.OPEN ||
+        ws.readyState === WebSocket.CONNECTING
+      ) {
         ws.close();
       }
     });
     this.webSocketConnections.clear();
 
     // Clear all intervals
-    this.intervals.forEach(interval => {
+    this.intervals.forEach((interval) => {
       clearInterval(interval);
     });
     this.intervals.clear();
@@ -315,7 +322,7 @@ export class RealTimeScanner {
     this.opportunityCallbacks = [];
 
     this.isCleanedUp = true;
-    console.log('[Scanner] Cleanup complete');
+    console.log("[Scanner] Cleanup complete");
   }
 
   /**
@@ -341,13 +348,15 @@ export class RealTimeScanner {
  */
 export function useRealTimeScanner(
   connection: Connection,
-  config?: ScannerConfig
+  config?: ScannerConfig,
 ): RealTimeScanner | null {
-  if (typeof window === 'undefined') {
+  if (typeof window === "undefined") {
     return null; // Server-side
   }
 
-  const [scanner] = React.useState(() => new RealTimeScanner(connection, config));
+  const [scanner] = React.useState(
+    () => new RealTimeScanner(connection, config),
+  );
 
   React.useEffect(() => {
     // Cleanup on unmount
@@ -364,4 +373,4 @@ export { RealTimeScanner as default };
 
 // Need to import React for the hook
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-import React from 'react';
+import React from "react";

@@ -1,6 +1,6 @@
 /**
  * Execution Agent
- * 
+ *
  * Optimizes transaction submission (e.g., Jito tip levels, RPC selection)
  * based on network congestion.
  */
@@ -11,7 +11,7 @@ import {
   AgentStatus,
   AnalysisContext,
   AnalysisResult,
-} from '../types.js';
+} from "../types.js";
 
 export interface ExecutionAgentConfig {
   baseJitoTip: number; // Base Jito tip in lamports
@@ -24,7 +24,7 @@ export interface ExecutionAgentConfig {
 
 export class ExecutionAgent implements IntelligenceAgent {
   readonly metadata: AgentMetadata;
-  status: AgentStatus = 'INACTIVE';
+  status: AgentStatus = "INACTIVE";
   private config: ExecutionAgentConfig;
 
   constructor(config?: Partial<ExecutionAgentConfig>) {
@@ -38,25 +38,26 @@ export class ExecutionAgent implements IntelligenceAgent {
     };
 
     this.metadata = {
-      id: 'execution-agent-v1',
-      name: 'Execution Optimization Agent',
-      version: '1.0.0',
-      type: 'EXECUTION',
-      author: 'GXQ STUDIO',
-      description: 'Optimizes transaction submission based on network conditions',
+      id: "execution-agent-v1",
+      name: "Execution Optimization Agent",
+      version: "1.0.0",
+      type: "EXECUTION",
+      author: "GXQ STUDIO",
+      description:
+        "Optimizes transaction submission based on network conditions",
       createdAt: new Date(),
       updatedAt: new Date(),
     };
   }
 
   async initialize(): Promise<void> {
-    this.status = 'ACTIVE';
-    console.log('✅ Execution Agent initialized with config:', this.config);
+    this.status = "ACTIVE";
+    console.log("✅ Execution Agent initialized with config:", this.config);
   }
 
   async cleanup(): Promise<void> {
-    this.status = 'INACTIVE';
-    console.log('🗑️ Execution Agent cleaned up');
+    this.status = "INACTIVE";
+    console.log("🗑️ Execution Agent cleaned up");
   }
 
   async healthCheck(): Promise<{ healthy: boolean; error?: string }> {
@@ -68,27 +69,33 @@ export class ExecutionAgent implements IntelligenceAgent {
     const recommendations: string[] = [];
 
     try {
-      const currentPriorityFee = context.executionParams?.priorityFee ?? this.config.basePriorityFee;
-      const currentJitoTip = context.executionParams?.jitoTipLamports ?? this.config.baseJitoTip;
+      const currentPriorityFee =
+        context.executionParams?.priorityFee ?? this.config.basePriorityFee;
+      const currentJitoTip =
+        context.executionParams?.jitoTipLamports ?? this.config.baseJitoTip;
       const networkCongestion = this.estimateNetworkCongestion(context);
 
       // 1. Optimize priority fee based on congestion
-      const optimalPriorityFee = this.calculateOptimalPriorityFee(networkCongestion);
+      const optimalPriorityFee =
+        this.calculateOptimalPriorityFee(networkCongestion);
       if (optimalPriorityFee !== currentPriorityFee) {
         adjustments.priorityFee = optimalPriorityFee;
         recommendations.push(
-          `Adjust priority fee to ${optimalPriorityFee} microlamports (current: ${currentPriorityFee})`
+          `Adjust priority fee to ${optimalPriorityFee} microlamports (current: ${currentPriorityFee})`,
         );
       }
 
       // 2. Optimize Jito tip based on urgency and congestion
-      const optimalJitoTip = this.calculateOptimalJitoTip(networkCongestion, context);
+      const optimalJitoTip = this.calculateOptimalJitoTip(
+        networkCongestion,
+        context,
+      );
       if (optimalJitoTip !== currentJitoTip) {
         adjustments.jitoTipLamports = optimalJitoTip;
         recommendations.push(
           `Adjust Jito tip to ${optimalJitoTip} lamports (${(
             optimalJitoTip / 1e9
-          ).toFixed(6)} SOL)`
+          ).toFixed(6)} SOL)`,
         );
       }
 
@@ -109,24 +116,27 @@ export class ExecutionAgent implements IntelligenceAgent {
       // 5. Network congestion warning
       if (networkCongestion > this.config.congestionThreshold) {
         recommendations.push(
-          `High network congestion detected (${(networkCongestion * 100).toFixed(1)}%) - increased fees recommended`
+          `High network congestion detected (${(networkCongestion * 100).toFixed(1)}%) - increased fees recommended`,
         );
       }
 
       const reasoning = [
-        'Execution optimization analysis:',
+        "Execution optimization analysis:",
         `Network congestion: ${(networkCongestion * 100).toFixed(1)}%`,
         `Optimal priority fee: ${optimalPriorityFee} microlamports`,
         `Optimal Jito tip: ${(optimalJitoTip / 1e9).toFixed(6)} SOL`,
-        ...(recommendations.length > 0 ? ['Recommendations:', ...recommendations] : []),
-      ].join('\n- ');
+        ...(recommendations.length > 0
+          ? ["Recommendations:", ...recommendations]
+          : []),
+      ].join("\n- ");
 
       return {
         agentId: this.metadata.id,
         agentType: this.metadata.type,
         success: true,
-        confidence: 'HIGH',
-        recommendation: Object.keys(adjustments).length > 0 ? 'ADJUST' : 'PROCEED',
+        confidence: "HIGH",
+        recommendation:
+          Object.keys(adjustments).length > 0 ? "ADJUST" : "PROCEED",
         reasoning,
         adjustments,
         metadata: {
@@ -139,15 +149,15 @@ export class ExecutionAgent implements IntelligenceAgent {
         timestamp: new Date(),
       };
     } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-      console.error('❌ Execution Agent analysis failed:', error);
+      const errorMsg = error instanceof Error ? error.message : "Unknown error";
+      console.error("❌ Execution Agent analysis failed:", error);
 
       return {
         agentId: this.metadata.id,
         agentType: this.metadata.type,
         success: false,
-        confidence: 'LOW',
-        recommendation: 'PROCEED', // Don't abort on execution optimization failure
+        confidence: "LOW",
+        recommendation: "PROCEED", // Don't abort on execution optimization failure
         reasoning: `Execution analysis failed: ${errorMsg}. Using default parameters.`,
         timestamp: new Date(),
       };
@@ -163,7 +173,7 @@ export class ExecutionAgent implements IntelligenceAgent {
     // - Transaction confirmation times
     // - Fee market data
     // - RPC node health metrics
-    
+
     // For now, return a simulated value
     return 0.3; // 30% congestion
   }
@@ -173,10 +183,11 @@ export class ExecutionAgent implements IntelligenceAgent {
    */
   private calculateOptimalPriorityFee(congestion: number): number {
     const { basePriorityFee, maxPriorityFee } = this.config;
-    
+
     // Linear scaling based on congestion
-    const fee = basePriorityFee + (maxPriorityFee - basePriorityFee) * congestion;
-    
+    const fee =
+      basePriorityFee + (maxPriorityFee - basePriorityFee) * congestion;
+
     // Enforce hard cap of 10M lamports (10_000_000 microlamports)
     return Math.min(Math.round(fee), 10_000_000);
   }
@@ -184,18 +195,22 @@ export class ExecutionAgent implements IntelligenceAgent {
   /**
    * Calculate optimal Jito tip based on congestion and urgency
    */
-  private calculateOptimalJitoTip(congestion: number, context: AnalysisContext): number {
+  private calculateOptimalJitoTip(
+    congestion: number,
+    context: AnalysisContext,
+  ): number {
     const { baseJitoTip, maxJitoTip } = this.config;
-    
+
     // Higher tips during high congestion
     let tip = baseJitoTip + (maxJitoTip - baseJitoTip) * congestion;
-    
+
     // Increase tip for higher-value trades
     const tradeValue = context.expectedAmountOut ?? 0;
-    if (tradeValue > 1.0) { // > 1 SOL
+    if (tradeValue > 1.0) {
+      // > 1 SOL
       tip *= 1.5;
     }
-    
+
     return Math.min(Math.round(tip), maxJitoTip);
   }
 
@@ -208,13 +223,15 @@ export class ExecutionAgent implements IntelligenceAgent {
     // - Monitor rate limits
     // - Track success rates
     // - Load balance across endpoints
-    
+
     if (this.config.preferredRpcEndpoints.length > 0) {
       // Simple round-robin (would be more sophisticated in production)
-      const index = Math.floor(Math.random() * this.config.preferredRpcEndpoints.length);
+      const index = Math.floor(
+        Math.random() * this.config.preferredRpcEndpoints.length,
+      );
       return this.config.preferredRpcEndpoints[index];
     }
-    
+
     return undefined;
   }
 
@@ -230,14 +247,14 @@ export class ExecutionAgent implements IntelligenceAgent {
       SNIPER: 150_000,
       CUSTOM: 200_000,
     };
-    
-    const botType = context.botType || 'CUSTOM';
+
+    const botType = context.botType || "CUSTOM";
     let computeUnits = baseComputeUnits[botType] || 200_000;
-    
+
     // Add buffer for complex routes
     const routeComplexity = context.route?.hops?.length ?? 1;
     computeUnits += (routeComplexity - 1) * 50_000;
-    
+
     // Cap at 1.4M compute units (Solana limit)
     return Math.min(computeUnits, 1_400_000);
   }
@@ -247,7 +264,7 @@ export class ExecutionAgent implements IntelligenceAgent {
    */
   updateConfig(config: Partial<ExecutionAgentConfig>): void {
     this.config = { ...this.config, ...config };
-    console.log('✅ Execution Agent configuration updated:', config);
+    console.log("✅ Execution Agent configuration updated:", config);
   }
 
   /**

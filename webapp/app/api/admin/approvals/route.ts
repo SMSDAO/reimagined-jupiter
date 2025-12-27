@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from "next/server";
 
 /**
  * GET /api/admin/approvals
@@ -15,16 +15,16 @@ export async function GET(request: NextRequest) {
     // Mock data for now
     const mockApprovals = [
       {
-        id: '550e8400-e29b-41d4-a716-446655440000',
-        transactionHash: 'abc123def456...',
-        transactionType: 'PROGRAM_DEPLOYMENT',
+        id: "550e8400-e29b-41d4-a716-446655440000",
+        transactionHash: "abc123def456...",
+        transactionType: "PROGRAM_DEPLOYMENT",
         valueAtRisk: 2.5,
-        targetProgramId: 'Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS',
-        description: 'Deploy new trading program v2.0',
+        targetProgramId: "Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS",
+        description: "Deploy new trading program v2.0",
         instructionsCount: 3,
-        requestedBy: '123e4567-e89b-12d3-a456-426614174000',
-        requestedByUsername: 'admin_user',
-        status: 'PENDING',
+        requestedBy: "123e4567-e89b-12d3-a456-426614174000",
+        requestedByUsername: "admin_user",
+        status: "PENDING",
         createdAt: new Date(Date.now() - 3600000).toISOString(), // 1 hour ago
         expiresAt: new Date(Date.now() + 82800000).toISOString(), // 23 hours from now
       },
@@ -35,13 +35,13 @@ export async function GET(request: NextRequest) {
       approvals: mockApprovals,
     });
   } catch (error) {
-    console.error('Error fetching pending approvals:', error);
+    console.error("Error fetching pending approvals:", error);
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: error instanceof Error ? error.message : "Unknown error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -64,13 +64,18 @@ export async function POST(request: NextRequest) {
     } = body;
 
     // Validate input
-    if (!serializedTransaction || !transactionType || valueAtRisk === undefined || !instructionsCount) {
+    if (
+      !serializedTransaction ||
+      !transactionType ||
+      valueAtRisk === undefined ||
+      !instructionsCount
+    ) {
       return NextResponse.json(
         {
           success: false,
-          error: 'Missing required fields',
+          error: "Missing required fields",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -86,16 +91,16 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       approvalId,
-      message: 'Approval request created successfully',
+      message: "Approval request created successfully",
     });
   } catch (error) {
-    console.error('Error creating approval request:', error);
+    console.error("Error creating approval request:", error);
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: error instanceof Error ? error.message : "Unknown error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

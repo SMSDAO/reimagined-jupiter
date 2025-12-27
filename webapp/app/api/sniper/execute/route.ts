@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { PublicKey } from '@solana/web3.js';
+import { NextRequest, NextResponse } from "next/server";
+import { PublicKey } from "@solana/web3.js";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
 interface SniperExecuteRequest {
   tokenMint: string;
@@ -29,7 +29,7 @@ interface SniperExecuteResponse {
 /**
  * POST /api/sniper/execute
  * Execute a sniper buy order using Jupiter with high priority fee
- * 
+ *
  * Body:
  * - tokenMint: Target token mint address
  * - buyAmountSol: Amount of SOL to spend
@@ -46,9 +46,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          error: 'Missing required parameters: tokenMint, buyAmountSol, slippageBps, userPublicKey',
+          error:
+            "Missing required parameters: tokenMint, buyAmountSol, slippageBps, userPublicKey",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -56,9 +57,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          error: 'buyAmountSol must be greater than 0',
+          error: "buyAmountSol must be greater than 0",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -70,13 +71,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          error: 'Invalid public key format',
+          error: "Invalid public key format",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
-    console.log('[Sniper] Executing snipe:', {
+    console.log("[Sniper] Executing snipe:", {
       tokenMint,
       buyAmountSol,
       slippageBps,
@@ -87,33 +88,34 @@ export async function POST(request: NextRequest) {
     const amountInLamports = Math.floor(buyAmountSol * 1e9);
 
     // SOL mint address (wrapped SOL)
-    const SOL_MINT = 'So11111111111111111111111111111111111111112';
+    const SOL_MINT = "So11111111111111111111111111111111111111112";
 
     // Get Jupiter API URL from environment
-    const jupiterApiUrl = process.env.NEXT_PUBLIC_JUPITER_API_URL || 'https://api.jup.ag';
+    const jupiterApiUrl =
+      process.env.NEXT_PUBLIC_JUPITER_API_URL || "https://api.jup.ag";
 
     // Step 1: Get quote from Jupiter
     const quoteUrl = `${jupiterApiUrl}/v6/quote?inputMint=${SOL_MINT}&outputMint=${tokenMint}&amount=${amountInLamports}&slippageBps=${slippageBps}`;
-    
-    console.log('[Sniper] Fetching quote from Jupiter:', quoteUrl);
-    
+
+    console.log("[Sniper] Fetching quote from Jupiter:", quoteUrl);
+
     const quoteResponse = await fetch(quoteUrl);
-    
+
     if (!quoteResponse.ok) {
       const errorText = await quoteResponse.text();
-      console.error('[Sniper] Quote fetch failed:', errorText);
+      console.error("[Sniper] Quote fetch failed:", errorText);
       return NextResponse.json(
         {
           success: false,
           error: `Failed to get quote from Jupiter: ${quoteResponse.statusText}`,
         },
-        { status: 502 }
+        { status: 502 },
       );
     }
 
     const quote = await quoteResponse.json();
-    
-    console.log('[Sniper] Got quote:', {
+
+    console.log("[Sniper] Got quote:", {
       inputAmount: quote.inAmount,
       outputAmount: quote.outAmount,
       priceImpact: quote.priceImpactPct,
@@ -121,11 +123,11 @@ export async function POST(request: NextRequest) {
 
     // Calculate estimated output in tokens
     const estimatedOutput = parseInt(quote.outAmount) / 1e9;
-    const priceImpact = parseFloat(quote.priceImpactPct || '0');
+    const priceImpact = parseFloat(quote.priceImpactPct || "0");
 
     // Check if price impact is too high (>5% warning)
     if (priceImpact > 5) {
-      console.warn('[Sniper] High price impact detected:', priceImpact);
+      console.warn("[Sniper] High price impact detected:", priceImpact);
     }
 
     // Step 2: Get swap transaction with high priority fee
@@ -134,34 +136,34 @@ export async function POST(request: NextRequest) {
       quoteResponse: quote,
       userPublicKey,
       wrapAndUnwrapSol: true,
-      prioritizationFeeLamports: 'auto', // Use auto for optimal priority fee
+      prioritizationFeeLamports: "auto", // Use auto for optimal priority fee
       dynamicComputeUnitLimit: true, // Optimize compute units
     };
 
-    console.log('[Sniper] Requesting swap transaction');
+    console.log("[Sniper] Requesting swap transaction");
 
     const swapResponse = await fetch(swapUrl, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
       body: JSON.stringify(swapPayload),
     });
 
     if (!swapResponse.ok) {
       const errorText = await swapResponse.text();
-      console.error('[Sniper] Swap transaction creation failed:', errorText);
+      console.error("[Sniper] Swap transaction creation failed:", errorText);
       return NextResponse.json(
         {
           success: false,
           error: `Failed to create swap transaction: ${swapResponse.statusText}`,
         },
-        { status: 502 }
+        { status: 502 },
       );
     }
 
     const swapResult = await swapResponse.json();
-    
+
     const response: SniperExecuteResponse = {
       success: true,
       quote,
@@ -170,25 +172,25 @@ export async function POST(request: NextRequest) {
       priceImpact,
     };
 
-    console.log('[Sniper] Snipe prepared successfully:', {
+    console.log("[Sniper] Snipe prepared successfully:", {
       estimatedOutput,
       priceImpact,
     });
 
     return NextResponse.json(response, {
       headers: {
-        'Cache-Control': 'no-store, must-revalidate',
+        "Cache-Control": "no-store, must-revalidate",
       },
     });
   } catch (error) {
-    console.error('[Sniper] Execution error:', error);
-    
+    console.error("[Sniper] Execution error:", error);
+
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: error instanceof Error ? error.message : "Unknown error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

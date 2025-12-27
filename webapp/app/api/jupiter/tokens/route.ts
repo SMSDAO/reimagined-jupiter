@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { API } from '@/lib/config';
+import { NextRequest, NextResponse } from "next/server";
+import { API } from "@/lib/config";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
 interface JupiterToken {
   address: string;
@@ -35,7 +35,7 @@ const CACHE_DURATION = 3600000; // 1 hour in milliseconds
 /**
  * GET /api/jupiter/tokens
  * Fetch token list from Jupiter with caching
- * 
+ *
  * Query parameters:
  * - search: Optional search term to filter tokens
  * - limit: Maximum number of tokens to return (default: 100)
@@ -43,60 +43,65 @@ const CACHE_DURATION = 3600000; // 1 hour in milliseconds
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
-    const searchTerm = searchParams.get('search')?.toLowerCase();
-    const limit = parseInt(searchParams.get('limit') || '100');
+    const searchTerm = searchParams.get("search")?.toLowerCase();
+    const limit = parseInt(searchParams.get("limit") || "100");
 
     // Check if we have valid cached data
-    if (tokenListCache && Date.now() - tokenListCache.timestamp < CACHE_DURATION) {
-      console.log('[Jupiter] Using cached token list');
-      
+    if (
+      tokenListCache &&
+      Date.now() - tokenListCache.timestamp < CACHE_DURATION
+    ) {
+      console.log("[Jupiter] Using cached token list");
+
       let tokens = tokenListCache.data;
-      
+
       // Apply search filter if provided
       if (searchTerm) {
         tokens = tokens.filter(
           (token) =>
             token.symbol.toLowerCase().includes(searchTerm) ||
             token.name.toLowerCase().includes(searchTerm) ||
-            token.address.toLowerCase().includes(searchTerm)
+            token.address.toLowerCase().includes(searchTerm),
         );
       }
-      
+
       // Apply limit
       tokens = tokens.slice(0, limit);
-      
+
       const response: TokenListResponse = {
         success: true,
         tokens,
         count: tokens.length,
         timestamp: Date.now(),
       };
-      
+
       return NextResponse.json(response, {
         headers: {
-          'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=7200',
+          "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=7200",
         },
       });
     }
 
     // Fetch fresh token list from Jupiter
-    console.log('[Jupiter] Fetching token list from Jupiter API');
-    
+    console.log("[Jupiter] Fetching token list from Jupiter API");
+
     // Jupiter token list endpoint
     const tokenListUrl = API.jupiterTokens();
-    
+
     const fetchResponse = await fetch(tokenListUrl, {
       headers: {
-        'Accept': 'application/json',
+        Accept: "application/json",
       },
     });
 
     if (!fetchResponse.ok) {
-      throw new Error(`Failed to fetch token list: ${fetchResponse.statusText}`);
+      throw new Error(
+        `Failed to fetch token list: ${fetchResponse.statusText}`,
+      );
     }
 
     const tokens: JupiterToken[] = await fetchResponse.json();
-    
+
     console.log(`[Jupiter] Fetched ${tokens.length} tokens`);
 
     // Update cache
@@ -112,7 +117,7 @@ export async function GET(request: NextRequest) {
         (token) =>
           token.symbol.toLowerCase().includes(searchTerm) ||
           token.name.toLowerCase().includes(searchTerm) ||
-          token.address.toLowerCase().includes(searchTerm)
+          token.address.toLowerCase().includes(searchTerm),
       );
     }
 
@@ -128,16 +133,16 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(response, {
       headers: {
-        'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=7200',
+        "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=7200",
       },
     });
   } catch (error) {
-    console.error('[Jupiter] Token list fetch error:', error);
-    
+    console.error("[Jupiter] Token list fetch error:", error);
+
     const errorResponse: TokenListResponse = {
       success: false,
       timestamp: Date.now(),
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: error instanceof Error ? error.message : "Unknown error",
     };
 
     return NextResponse.json(errorResponse, { status: 500 });
@@ -157,28 +162,33 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          error: 'Token address is required',
+          error: "Token address is required",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     // Use cached data if available
     let tokens: JupiterToken[] = [];
-    
-    if (tokenListCache && Date.now() - tokenListCache.timestamp < CACHE_DURATION) {
+
+    if (
+      tokenListCache &&
+      Date.now() - tokenListCache.timestamp < CACHE_DURATION
+    ) {
       tokens = tokenListCache.data;
     } else {
       // Fetch fresh data
       const tokenListUrl = API.jupiterTokens();
       const fetchResponse = await fetch(tokenListUrl);
-      
+
       if (!fetchResponse.ok) {
-        throw new Error(`Failed to fetch token list: ${fetchResponse.statusText}`);
+        throw new Error(
+          `Failed to fetch token list: ${fetchResponse.statusText}`,
+        );
       }
-      
+
       tokens = await fetchResponse.json();
-      
+
       // Update cache
       tokenListCache = {
         data: tokens,
@@ -193,9 +203,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          error: 'Token not found',
+          error: "Token not found",
         },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -205,14 +215,14 @@ export async function POST(request: NextRequest) {
       timestamp: Date.now(),
     });
   } catch (error) {
-    console.error('[Jupiter] Token details fetch error:', error);
-    
+    console.error("[Jupiter] Token details fetch error:", error);
+
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: error instanceof Error ? error.message : "Unknown error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

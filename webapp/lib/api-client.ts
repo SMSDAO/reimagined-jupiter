@@ -3,7 +3,7 @@
  * Centralizes all API calls with proper error handling and type safety
  */
 
-import { API } from './config';
+import { API } from "./config";
 
 export interface TokenPrice {
   mint: string;
@@ -39,13 +39,13 @@ export class JupiterPriceAPI {
    * Fetch prices for multiple token mints
    */
   static async getPrices(mints: string[]): Promise<PriceResponse> {
-    const mintAddresses = mints.join(',');
+    const mintAddresses = mints.join(",");
     const response = await fetch(`${this.BASE_URL}/price?ids=${mintAddresses}`);
-    
+
     if (!response.ok) {
       throw new Error(`Failed to fetch prices: ${response.statusText}`);
     }
-    
+
     return response.json();
   }
 
@@ -61,7 +61,7 @@ export class JupiterPriceAPI {
    * Get SOL price
    */
   static async getSOLPrice(): Promise<number> {
-    return this.getPrice('So11111111111111111111111111111111111111112');
+    return this.getPrice("So11111111111111111111111111111111111111112");
   }
 }
 
@@ -80,16 +80,16 @@ export class JupiterQuoteAPI {
     inputMint: string,
     outputMint: string,
     amount: number,
-    slippageBps: number = 50
+    slippageBps: number = 50,
   ) {
     const response = await fetch(
-      `${this.BASE_URL}/quote?inputMint=${inputMint}&outputMint=${outputMint}&amount=${amount}&slippageBps=${slippageBps}`
+      `${this.BASE_URL}/quote?inputMint=${inputMint}&outputMint=${outputMint}&amount=${amount}&slippageBps=${slippageBps}`,
     );
-    
+
     if (!response.ok) {
       throw new Error(`Failed to get quote: ${response.statusText}`);
     }
-    
+
     return response.json();
   }
 }
@@ -105,27 +105,29 @@ export class JupiterAirdropAPI {
   /**
    * Check Jupiter airdrop eligibility for a wallet
    */
-  static async checkEligibility(walletAddress: string): Promise<AirdropEligibility> {
+  static async checkEligibility(
+    walletAddress: string,
+  ): Promise<AirdropEligibility> {
     try {
       const response = await fetch(
-        `${this.BASE_URL}/jup-claim-proof/${walletAddress}`
+        `${this.BASE_URL}/jup-claim-proof/${walletAddress}`,
       );
-      
+
       if (response.status === 404) {
         return { eligible: false };
       }
-      
+
       if (!response.ok) {
         throw new Error(`Failed to check eligibility: ${response.statusText}`);
       }
-      
+
       const data = await response.json();
       return {
         amount: data.amount,
         eligible: !!data.amount,
       };
     } catch (error) {
-      console.error('Jupiter airdrop check failed:', error);
+      console.error("Jupiter airdrop check failed:", error);
       return { eligible: false };
     }
   }
@@ -142,27 +144,29 @@ export class JitoAirdropAPI {
   /**
    * Check Jito airdrop allocation for a wallet
    */
-  static async checkAllocation(walletAddress: string): Promise<AirdropEligibility> {
+  static async checkAllocation(
+    walletAddress: string,
+  ): Promise<AirdropEligibility> {
     try {
       const response = await fetch(
-        `${this.BASE_URL}/airdrop_allocation/${walletAddress}`
+        `${this.BASE_URL}/airdrop_allocation/${walletAddress}`,
       );
-      
+
       if (response.status === 404) {
         return { eligible: false };
       }
-      
+
       if (!response.ok) {
         throw new Error(`Failed to check allocation: ${response.statusText}`);
       }
-      
+
       const data = await response.json();
       return {
         allocation: data.allocation,
         eligible: !!data.allocation,
       };
     } catch (error) {
-      console.error('Jito airdrop check failed:', error);
+      console.error("Jito airdrop check failed:", error);
       return { eligible: false };
     }
   }
@@ -172,17 +176,17 @@ export class JitoAirdropAPI {
  * Known token list for symbol resolution
  */
 export const KNOWN_TOKENS: { [mint: string]: string } = {
-  'So11111111111111111111111111111111111111112': 'SOL',
-  'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v': 'USDC',
-  'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB': 'USDT',
-  'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263': 'BONK',
-  'JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN': 'JUP',
-  'jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL': 'JTO',
-  '4k3Dyjzvzp8eMZWUXbBCjEvwSkkk59S5iCNLY3QrkX6R': 'RAY',
-  'orcaEKTdK7LKz57vaAYr9QeNsVEPfiu6QeMU1kektZE': 'ORCA',
-  'EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm': 'WIF',
-  'mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So': 'mSOL',
-  'HZ1JovNiVvGrGNiiYvEozEVgZ58xaU3RKwX8eACQBCt3': 'PYTH',
+  So11111111111111111111111111111111111111112: "SOL",
+  EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v: "USDC",
+  Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB: "USDT",
+  DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263: "BONK",
+  JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN: "JUP",
+  jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL: "JTO",
+  "4k3Dyjzvzp8eMZWUXbBCjEvwSkkk59S5iCNLY3QrkX6R": "RAY",
+  orcaEKTdK7LKz57vaAYr9QeNsVEPfiu6QeMU1kektZE: "ORCA",
+  EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm: "WIF",
+  mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So: "mSOL",
+  HZ1JovNiVvGrGNiiYvEozEVgZ58xaU3RKwX8eACQBCt3: "PYTH",
 };
 
 /**
@@ -195,7 +199,10 @@ export function getTokenSymbol(mint: string): string {
 /**
  * Utility: Format token amount with appropriate decimals
  */
-export function formatTokenAmount(amount: number, decimals: number = 6): string {
+export function formatTokenAmount(
+  amount: number,
+  decimals: number = 6,
+): string {
   if (amount >= 1000000) {
     return `${(amount / 1000000).toFixed(2)}M`;
   }

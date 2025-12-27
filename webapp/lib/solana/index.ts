@@ -1,6 +1,6 @@
 /**
  * Resilient Solana Connection Library
- * 
+ *
  * Export all public APIs for easy importing
  */
 
@@ -10,7 +10,7 @@ export {
   createResilientConnection,
   type RpcEndpoint,
   type ResilientConnectionConfig,
-} from './connection';
+} from "./connection";
 
 // Transaction builder
 export {
@@ -18,7 +18,7 @@ export {
   type PriorityFeeConfig,
   type TransactionExecutionResult,
   type TransactionUrgency,
-} from './transaction-builder';
+} from "./transaction-builder";
 
 // Examples (for reference/documentation)
-export * as examples from './examples';
+export * as examples from "./examples";
