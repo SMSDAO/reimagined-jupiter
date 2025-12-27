@@ -1,0 +1,210 @@
+name: GXQ Deploy Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      deploy_target:
+        description: 'Deployment target'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - vercel
+          - railway
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+  deployments: write
+
+jobs:
+  prepare-deployment:
+    name: Prepare Deployment
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        
+      - name: Setup Node.js 20.x
+        uses: actions/setup-node@v6
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: |
+          npm ci
+          cd webapp && npm ci
+      
+      - name: Build all
+        run: |
+          npm run build:backend
+          npm run build:webapp
+        env:
+          NEXT_PUBLIC_RPC_URL: ${{ secrets.NEXT_PUBLIC_RPC_URL || 'https://api.mainnet-beta.solana.com' }}
+      
+      - name: Validate build
+        run: bash scripts/validate-build.sh
+      
+      - name: Upload backend artifacts
+        uses: actions/upload-artifact@v6
+        with:
+          name: backend-dist
+          path: dist/
+          retention-days: 1
+      
+      - name: Upload webapp artifacts
+        uses: actions/upload-artifact@v6
+        with:
+          name: webapp-build
+          path: webapp/.next/
+          retention-days: 1
+          if-no-files-found: warn
+
+  deploy-vercel:
+    name: Deploy to Vercel
+    runs-on: ubuntu-latest
+    needs: prepare-deployment
+    timeout-minutes: 15
+    if: ${{ github.event.inputs.deploy_target == 'vercel' || github.event.inputs.deploy_target == 'all' || github.event_name == 'push' }}
+    environment:
+      name: production-vercel
+      url: https://your-app.vercel.app
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+      
+      - name: Setup Node.js 20.x
+        uses: actions/setup-node@v6
+        with:
+          node-version: '20'
+      
+      - name: Deploy to Vercel
+        run: bash scripts/deploy-vercel.sh
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+  deploy-railway:
+    name: Deploy to Railway
+    runs-on: ubuntu-latest
+    needs: prepare-deployment
+    timeout-minutes: 15
+    if: ${{ github.event.inputs.deploy_target == 'railway' || github.event.inputs.deploy_target == 'all' || github.event_name == 'push' }}
+    environment:
+      name: production-railway
+      url: https://your-app.railway.app
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+      
+      - name: Setup Node.js 20.x
+        uses: actions/setup-node@v6
+        with:
+          node-version: '20'
+      
+      - name: Download backend artifacts
+        uses: actions/download-artifact@v7
+        with:
+          name: backend-dist
+          path: dist/
+      
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+      
+      - name: Deploy to Railway
+        run: railway up --service backend
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+
+  post-deployment-health:
+    name: Post-Deployment Health Check
+    runs-on: ubuntu-latest
+    needs: [deploy-vercel, deploy-railway]
+    if: always()
+    timeout-minutes: 10
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+      
+      - name: Wait for deployment to stabilize
+        run: sleep 30
+      
+      - name: Check Vercel health
+        run: |
+          VERCEL_URL="${{ secrets.VERCEL_PRODUCTION_URL || 'https://your-app.vercel.app' }}"
+          curl -f -s "$VERCEL_URL" || echo "⚠️ Vercel health check failed"
+        continue-on-error: true
+      
+      - name: Check Railway health
+        run: |
+          RAILWAY_URL="${{ secrets.RAILWAY_PRODUCTION_URL || 'https://your-app.railway.app' }}"
+          curl -f -s "$RAILWAY_URL/health" || echo "⚠️ Railway health check failed"
+        continue-on-error: true
+      
+      - name: Notify deployment status
+        if: always()
+        run: |
+          echo "## 🚀 Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Service | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|---------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Vercel | ${{ needs.deploy-vercel.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Railway | ${{ needs.deploy-railway.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [[ "${{ needs.deploy-vercel.result }}" == "success" ]] && [[ "${{ needs.deploy-railway.result }}" == "success" ]]; then
+            echo "✅ All deployments successful!" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ Some deployments may have issues" >> $GITHUB_STEP_SUMMARY
+          fi
+
+  notify-deployment:
+    name: Notify Deployment Complete
+    runs-on: ubuntu-latest
+    needs: [post-deployment-health]
+    if: always()
+    
+    steps:
+      - name: Send Slack notification
+        if: ${{ secrets.SLACK_WEBHOOK_URL != '' }}
+        uses: slackapi/slack-github-action@v2
+        with:
+          payload: |
+            {
+              "text": "🚀 GXQ Studio Production Deployment Complete",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*GXQ Studio Production Deployment*\n\nStatus: ${{ needs.post-deployment-health.result == 'success' && '✅ Success' || '⚠️ Issues detected' }}\n\nCommit: ${{ github.sha }}\nTriggered by: ${{ github.actor }}"
+                  }
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
+        continue-on-error: true
+      
+      - name: Create deployment summary
+        run: |
+          echo "# 🚀 GXQ Studio Production Deployment" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Timestamp:** $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Triggered by:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Deployment Status" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "All deployment jobs completed. Check individual job results above." >> $GITHUB_STEP_SUMMARY

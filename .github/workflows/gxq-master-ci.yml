@@ -1,0 +1,314 @@
+name: GXQ Master CI Pipeline
+
+on:
+  push:
+    branches:
+      - master
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+  checks: write
+  pull-requests: write
+
+jobs:
+  validate-environment:
+    name: Validate Environment
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        
+      - name: Setup Node.js 20.x
+        uses: actions/setup-node@v6
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Create mock environment file
+        run: |
+          cat > .env << EOF
+          SOLANA_RPC_URL=https://api.mainnet-beta.solana.com
+          WALLET_PRIVATE_KEY=mock_key_for_testing
+          JWT_SECRET=mock_jwt_secret_for_ci
+          ADMIN_USERNAME=admin
+          ADMIN_PASSWORD=mock_password
+          EOF
+      
+      - name: Run environment check
+        run: bash scripts/env-check.sh
+
+  install-dependencies:
+    name: Install Dependencies
+    runs-on: ubuntu-latest
+    needs: validate-environment
+    timeout-minutes: 10
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        
+      - name: Setup Node.js 20.x
+        uses: actions/setup-node@v6
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Install backend dependencies
+        run: npm ci
+        
+      - name: Cache backend node_modules
+        uses: actions/cache@v5
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-20-backend-${{ hashFiles('package-lock.json') }}
+          
+      - name: Install webapp dependencies
+        working-directory: ./webapp
+        run: npm ci
+        
+      - name: Cache webapp node_modules
+        uses: actions/cache@v5
+        with:
+          path: webapp/node_modules
+          key: ${{ runner.os }}-node-20-webapp-${{ hashFiles('webapp/package-lock.json') }}
+
+  lint-and-typecheck:
+    name: Lint and Type Check
+    runs-on: ubuntu-latest
+    needs: install-dependencies
+    timeout-minutes: 10
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        
+      - name: Setup Node.js 20.x
+        uses: actions/setup-node@v6
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Restore backend cache
+        uses: actions/cache@v5
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-20-backend-${{ hashFiles('package-lock.json') }}
+      
+      - name: Install backend dependencies (if cache miss)
+        run: npm ci --prefer-offline || npm ci
+      
+      - name: Run backend lint
+        run: npm run lint
+        continue-on-error: true
+      
+      - name: Run backend type-check
+        run: npm run type-check
+      
+      - name: Restore webapp cache
+        uses: actions/cache@v5
+        with:
+          path: webapp/node_modules
+          key: ${{ runner.os }}-node-20-webapp-${{ hashFiles('webapp/package-lock.json') }}
+      
+      - name: Install webapp dependencies (if cache miss)
+        working-directory: ./webapp
+        run: npm ci --prefer-offline || npm ci
+      
+      - name: Run webapp lint
+        run: npm run lint:webapp
+        continue-on-error: true
+      
+      - name: Run webapp type-check
+        run: npm run type-check:webapp
+
+  build-backend:
+    name: Build Backend
+    runs-on: ubuntu-latest
+    needs: lint-and-typecheck
+    timeout-minutes: 15
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        
+      - name: Setup Node.js 20.x
+        uses: actions/setup-node@v6
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Restore backend cache
+        uses: actions/cache@v5
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-20-backend-${{ hashFiles('package-lock.json') }}
+      
+      - name: Install backend dependencies (if cache miss)
+        run: npm ci --prefer-offline || npm ci
+      
+      - name: Build backend
+        run: npm run build:backend
+      
+      - name: Upload backend artifacts
+        uses: actions/upload-artifact@v6
+        with:
+          name: backend-dist
+          path: dist/
+          retention-days: 7
+
+  build-webapp:
+    name: Build Webapp
+    runs-on: ubuntu-latest
+    needs: lint-and-typecheck
+    timeout-minutes: 15
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        
+      - name: Setup Node.js 20.x
+        uses: actions/setup-node@v6
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Restore webapp cache
+        uses: actions/cache@v5
+        with:
+          path: webapp/node_modules
+          key: ${{ runner.os }}-node-20-webapp-${{ hashFiles('webapp/package-lock.json') }}
+      
+      - name: Install webapp dependencies (if cache miss)
+        working-directory: ./webapp
+        run: npm ci --prefer-offline || npm ci
+      
+      - name: Build webapp
+        run: npm run build:webapp
+        env:
+          NEXT_PUBLIC_RPC_URL: https://api.mainnet-beta.solana.com
+      
+      - name: Upload webapp artifacts
+        uses: actions/upload-artifact@v6
+        with:
+          name: webapp-build
+          path: webapp/.next/
+          retention-days: 7
+          if-no-files-found: warn
+
+  validate-build:
+    name: Validate Build Artifacts
+    runs-on: ubuntu-latest
+    needs: [build-backend, build-webapp]
+    timeout-minutes: 10
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+      
+      - name: Download backend artifacts
+        uses: actions/download-artifact@v7
+        with:
+          name: backend-dist
+          path: dist/
+      
+      - name: Download webapp artifacts
+        uses: actions/download-artifact@v7
+        with:
+          name: webapp-build
+          path: webapp/.next/
+        continue-on-error: true
+      
+      - name: Run build validation
+        run: bash scripts/validate-build.sh
+
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    needs: install-dependencies
+    timeout-minutes: 10
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        
+      - name: Setup Node.js 20.x
+        uses: actions/setup-node@v6
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Restore backend cache
+        uses: actions/cache@v5
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-20-backend-${{ hashFiles('package-lock.json') }}
+      
+      - name: Install backend dependencies (if cache miss)
+        run: npm ci --prefer-offline || npm ci
+      
+      - name: Run npm audit (backend)
+        run: npm audit --production --audit-level=high || echo "⚠️ Security vulnerabilities found"
+        continue-on-error: true
+      
+      - name: Restore webapp cache
+        uses: actions/cache@v5
+        with:
+          path: webapp/node_modules
+          key: ${{ runner.os }}-node-20-webapp-${{ hashFiles('webapp/package-lock.json') }}
+      
+      - name: Install webapp dependencies (if cache miss)
+        working-directory: ./webapp
+        run: npm ci --prefer-offline || npm ci
+      
+      - name: Run npm audit (webapp)
+        working-directory: ./webapp
+        run: npm audit --production --audit-level=high || echo "⚠️ Security vulnerabilities found"
+        continue-on-error: true
+
+  master-ci-summary:
+    name: Master CI Summary
+    runs-on: ubuntu-latest
+    needs:
+      - validate-environment
+      - install-dependencies
+      - lint-and-typecheck
+      - build-backend
+      - build-webapp
+      - validate-build
+      - security-scan
+    if: always()
+    
+    steps:
+      - name: Check CI status
+        run: |
+          echo "## Master CI Pipeline Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Validate Environment | ${{ needs.validate-environment.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Install Dependencies | ${{ needs.install-dependencies.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Lint & Type Check | ${{ needs.lint-and-typecheck.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Build Backend | ${{ needs.build-backend.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Build Webapp | ${{ needs.build-webapp.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Validate Build | ${{ needs.validate-build.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Security Scan | ${{ needs.security-scan.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [[ "${{ needs.validate-environment.result }}" == "failure" ]] || \
+             [[ "${{ needs.lint-and-typecheck.result }}" == "failure" ]] || \
+             [[ "${{ needs.build-backend.result }}" == "failure" ]] || \
+             [[ "${{ needs.build-webapp.result }}" == "failure" ]] || \
+             [[ "${{ needs.validate-build.result }}" == "failure" ]]; then
+            echo "❌ Master CI checks failed!" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          else
+            echo "✅ All Master CI checks passed!" >> $GITHUB_STEP_SUMMARY
+          fi
