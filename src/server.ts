@@ -1,6 +1,6 @@
 /**
  * Unified Express Server for Multi-Platform Deployment
- * 
+ *
  * This server provides a robust backend for persistent deployments across:
  * - Railway (Container)
  * - AWS (App Runner, ECS)
@@ -9,7 +9,7 @@
  * - Docker/Docker Compose
  * - VPS (PM2, systemd)
  * - Localhost (Dev/Prod)
- * 
+ *
  * Features:
  * - Health checks and monitoring endpoints
  * - Continuous arbitrage scanning
@@ -18,17 +18,17 @@
  * - WebSocket support for real-time updates
  */
 
-import express, { Request, Response } from 'express';
-import { Connection, Keypair } from '@solana/web3.js';
-import bs58 from 'bs58';
-import { scanOpportunities } from '../lib/scanner.js';
-import { executeTrade } from '../lib/executor.js';
-import { logger } from '../lib/logger.js';
-import { enforceProductionSafety } from './utils/productionGuardrails.js';
+import express, { Request, Response } from "express";
+import { Connection, Keypair } from "@solana/web3.js";
+import bs58 from "bs58";
+import { scanOpportunities } from "../lib/scanner.js";
+import { executeTrade } from "../lib/executor.js";
+import { logger } from "../lib/logger.js";
+import { enforceProductionSafety } from "./utils/productionGuardrails.js";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const HOST = process.env.HOST || '0.0.0.0';
+const HOST = process.env.HOST || "0.0.0.0";
 
 // Bot state
 let isRunning = false;
@@ -50,20 +50,23 @@ let keypair: Keypair | null = null;
 async function initialize() {
   try {
     // Initialize RPC connection
-    const rpcUrl = process.env.SOLANA_RPC_URL || process.env.NEXT_PUBLIC_RPC_URL;
+    const rpcUrl =
+      process.env.SOLANA_RPC_URL || process.env.NEXT_PUBLIC_RPC_URL;
     if (!rpcUrl) {
-      throw new Error('SOLANA_RPC_URL not configured');
+      throw new Error("SOLANA_RPC_URL not configured");
     }
-    
+
     connection = new Connection(rpcUrl, {
-      commitment: 'confirmed',
+      commitment: "confirmed",
       wsEndpoint: process.env.SOLANA_WS_URL,
     });
-    logger.info('Connected to Solana RPC', { rpcUrl: rpcUrl.split('//')[1]?.split('@')[0] || 'unknown' });
-    
+    logger.info("Connected to Solana RPC", {
+      rpcUrl: rpcUrl.split("//")[1]?.split("@")[0] || "unknown",
+    });
+
     // Run production safety checks
     await enforceProductionSafety(connection);
-    
+
     // Test connection with retry logic
     let retries = 3;
     let slot;
@@ -77,34 +80,34 @@ async function initialize() {
         await sleep(2000);
       }
     }
-    logger.info('RPC connection verified', { currentSlot: slot });
-    
+    logger.info("RPC connection verified", { currentSlot: slot });
+
     // Initialize wallet
     const privateKeyString = process.env.WALLET_PRIVATE_KEY;
     if (!privateKeyString) {
-      throw new Error('WALLET_PRIVATE_KEY not configured');
+      throw new Error("WALLET_PRIVATE_KEY not configured");
     }
-    
-    const privateKey = privateKeyString.includes('[')
+
+    const privateKey = privateKeyString.includes("[")
       ? Uint8Array.from(JSON.parse(privateKeyString))
       : bs58.decode(privateKeyString);
-    
+
     keypair = Keypair.fromSecretKey(privateKey);
-    logger.info('Wallet loaded', { address: keypair.publicKey.toString() });
-    
+    logger.info("Wallet loaded", { address: keypair.publicKey.toString() });
+
     // Check wallet balance
     const balance = await connection.getBalance(keypair.publicKey);
     const balanceSol = balance / 1e9;
-    logger.info('Wallet balance', { balance: balanceSol, unit: 'SOL' });
-    
+    logger.info("Wallet balance", { balance: balanceSol, unit: "SOL" });
+
     if (balanceSol < 0.01) {
-      logger.warn('Low wallet balance', { balance: balanceSol, minimum: 0.01 });
+      logger.warn("Low wallet balance", { balance: balanceSol, minimum: 0.01 });
     }
-    
+
     return true;
   } catch (error) {
-    logger.error('Initialization failed', { 
-      error: error instanceof Error ? error.message : 'Unknown error' 
+    logger.error("Initialization failed", {
+      error: error instanceof Error ? error.message : "Unknown error",
     });
     return false;
   }
@@ -113,30 +116,30 @@ async function initialize() {
 /**
  * Root endpoint
  */
-app.get('/', (req: Request, res: Response) => {
+app.get("/", (req: Request, res: Response) => {
   res.json({
-    name: 'GXQ Studio - Solana Arbitrage Platform',
-    version: '1.0.0',
-    status: isRunning ? 'running' : 'stopped',
+    name: "GXQ Studio - Solana Arbitrage Platform",
+    version: "1.0.0",
+    status: isRunning ? "running" : "stopped",
     endpoints: {
-      health: '/api/health',
-      metrics: '/api/metrics',
-      control: '/api/control (POST)',
+      health: "/api/health",
+      metrics: "/api/metrics",
+      control: "/api/control (POST)",
     },
-    documentation: 'https://github.com/SMSDAO/reimagined-jupiter',
+    documentation: "https://github.com/SMSDAO/reimagined-jupiter",
   });
 });
 
 /**
  * Health check endpoint (for load balancers, orchestrators)
  */
-app.get('/api/health', (req: Request, res: Response) => {
+app.get("/api/health", (req: Request, res: Response) => {
   const uptime = process.uptime();
   const memory = process.memoryUsage();
-  
-  const status = isRunning && connection && keypair ? 'healthy' : 'stopped';
-  const statusCode = status === 'healthy' ? 200 : 503;
-  
+
+  const status = isRunning && connection && keypair ? "healthy" : "stopped";
+  const statusCode = status === "healthy" ? 200 : 503;
+
   res.status(statusCode).json({
     status,
     uptime: Math.floor(uptime),
@@ -162,14 +165,14 @@ app.get('/api/health', (req: Request, res: Response) => {
 /**
  * Liveness probe (Kubernetes-compatible)
  */
-app.get('/healthz', (req: Request, res: Response) => {
-  res.status(200).send('OK');
+app.get("/healthz", (req: Request, res: Response) => {
+  res.status(200).send("OK");
 });
 
 /**
  * Readiness probe (Kubernetes-compatible)
  */
-app.get('/ready', (req: Request, res: Response) => {
+app.get("/ready", (req: Request, res: Response) => {
   const ready = connection !== null && keypair !== null;
   res.status(ready ? 200 : 503).json({
     ready,
@@ -180,7 +183,7 @@ app.get('/ready', (req: Request, res: Response) => {
 /**
  * Metrics endpoint (Prometheus-compatible)
  */
-app.get('/api/metrics', (req: Request, res: Response) => {
+app.get("/api/metrics", (req: Request, res: Response) => {
   res.json({
     success: true,
     metrics: {
@@ -199,54 +202,57 @@ app.get('/api/metrics', (req: Request, res: Response) => {
 /**
  * Control endpoint (start/stop/pause/resume)
  */
-app.post('/api/control', express.json(), (req: Request, res: Response) => {
+app.post("/api/control", express.json(), (req: Request, res: Response) => {
   const { command } = req.body;
-  
+
   switch (command) {
-    case 'start':
+    case "start":
       if (!isRunning) {
         isRunning = true;
         isPaused = false;
-        logger.info('Bot started via API');
-        res.json({ success: true, message: 'Bot started' });
+        logger.info("Bot started via API");
+        res.json({ success: true, message: "Bot started" });
       } else {
-        res.json({ success: false, message: 'Bot already running' });
+        res.json({ success: false, message: "Bot already running" });
       }
       break;
-      
-    case 'stop':
+
+    case "stop":
       if (isRunning) {
         isRunning = false;
         isPaused = false;
-        logger.info('Bot stopped via API');
-        res.json({ success: true, message: 'Bot stopped' });
+        logger.info("Bot stopped via API");
+        res.json({ success: true, message: "Bot stopped" });
       } else {
-        res.json({ success: false, message: 'Bot not running' });
+        res.json({ success: false, message: "Bot not running" });
       }
       break;
-      
-    case 'pause':
+
+    case "pause":
       if (isRunning && !isPaused) {
         isPaused = true;
-        logger.info('Bot paused via API');
-        res.json({ success: true, message: 'Bot paused' });
+        logger.info("Bot paused via API");
+        res.json({ success: true, message: "Bot paused" });
       } else {
-        res.json({ success: false, message: 'Bot not running or already paused' });
+        res.json({
+          success: false,
+          message: "Bot not running or already paused",
+        });
       }
       break;
-      
-    case 'resume':
+
+    case "resume":
       if (isRunning && isPaused) {
         isPaused = false;
-        logger.info('Bot resumed via API');
-        res.json({ success: true, message: 'Bot resumed' });
+        logger.info("Bot resumed via API");
+        res.json({ success: true, message: "Bot resumed" });
       } else {
-        res.json({ success: false, message: 'Bot not paused' });
+        res.json({ success: false, message: "Bot not paused" });
       }
       break;
-      
+
     default:
-      res.status(400).json({ success: false, message: 'Invalid command' });
+      res.status(400).json({ success: false, message: "Invalid command" });
   }
 });
 
@@ -254,8 +260,8 @@ app.post('/api/control', express.json(), (req: Request, res: Response) => {
  * Continuous monitoring loop
  */
 async function monitoringLoop() {
-  logger.info('Starting continuous arbitrage monitoring...');
-  
+  logger.info("Starting continuous arbitrage monitoring...");
+
   // eslint-disable-next-line no-constant-condition
   while (true) {
     try {
@@ -264,40 +270,40 @@ async function monitoringLoop() {
         await sleep(5000);
         continue;
       }
-      
-      logger.debug('Scanning for opportunities...');
+
+      logger.debug("Scanning for opportunities...");
       lastScanTime = Date.now();
       scanCount++;
-      
+
       // Scan for opportunities
       const opportunities = await scanOpportunities(connection, {
-        minProfit: parseFloat(process.env.MINIMUM_PROFIT_SOL || '0.01'),
+        minProfit: parseFloat(process.env.MINIMUM_PROFIT_SOL || "0.01"),
       });
-      
+
       opportunitiesFound += opportunities.length;
-      
+
       if (opportunities.length > 0) {
         logger.info(`Found ${opportunities.length} opportunities`);
-        
+
         // Execute top opportunity
         const topOpportunity = opportunities[0];
-        logger.info('Executing top opportunity', {
+        logger.info("Executing top opportunity", {
           id: topOpportunity.id,
           type: topOpportunity.type,
           estimatedProfit: topOpportunity.estimatedProfit,
         });
-        
+
         const result = await executeTrade(connection, keypair, topOpportunity, {
           maxRetries: 2,
           timeout: 25000,
         });
-        
+
         if (result.success) {
           tradesExecuted++;
           totalProfit += result.profit || 0;
           lastTradeTime = Date.now();
-          
-          logger.trade('Trade executed successfully', {
+
+          logger.trade("Trade executed successfully", {
             tokenPair: `${topOpportunity.inputToken.slice(0, 8)}.../${topOpportunity.outputToken.slice(0, 8)}...`,
             profit: result.profit || 0,
             route: topOpportunity.route,
@@ -306,23 +312,23 @@ async function monitoringLoop() {
             executionTime: result.executionTime,
           });
         } else {
-          logger.warn('Trade execution failed', {
+          logger.warn("Trade execution failed", {
             error: result.error,
             executionTime: result.executionTime,
           });
         }
       } else {
-        logger.debug('No opportunities found');
+        logger.debug("No opportunities found");
       }
-      
+
       // Wait before next scan (configurable)
-      const scanInterval = parseInt(process.env.SCAN_INTERVAL_MS || '5000');
+      const scanInterval = parseInt(process.env.SCAN_INTERVAL_MS || "5000");
       await sleep(scanInterval);
     } catch (error) {
-      logger.error('Monitoring loop error', {
-        error: error instanceof Error ? error.message : 'Unknown error',
+      logger.error("Monitoring loop error", {
+        error: error instanceof Error ? error.message : "Unknown error",
       });
-      
+
       // Back off on error
       await sleep(10000);
     }
@@ -333,7 +339,7 @@ async function monitoringLoop() {
  * Sleep utility
  */
 function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 /**
@@ -343,72 +349,74 @@ function setupGracefulShutdown() {
   const shutdown = (signal: string) => {
     logger.info(`${signal} received, shutting down gracefully...`);
     isRunning = false;
-    
+
     setTimeout(() => {
-      logger.info('Shutdown complete');
+      logger.info("Shutdown complete");
       process.exit(0);
     }, 5000);
   };
-  
-  process.on('SIGTERM', () => shutdown('SIGTERM'));
-  process.on('SIGINT', () => shutdown('SIGINT'));
+
+  process.on("SIGTERM", () => shutdown("SIGTERM"));
+  process.on("SIGINT", () => shutdown("SIGINT"));
 }
 
 /**
  * Start server and monitoring
  */
 async function start() {
-  const platform = process.env.DEPLOYMENT_PLATFORM || 'unknown';
-  logger.info('🚀 GXQ Studio - Unified Server');
+  const platform = process.env.DEPLOYMENT_PLATFORM || "unknown";
+  logger.info("🚀 GXQ Studio - Unified Server");
   logger.info(`Platform: ${platform}`);
-  logger.info(`Environment: ${process.env.NODE_ENV || 'production'}`);
+  logger.info(`Environment: ${process.env.NODE_ENV || "production"}`);
   logger.info(`Port: ${PORT}`);
   logger.info(`Host: ${HOST}`);
-  
+
   // Start Express server
   const server = app.listen(PORT, HOST, () => {
     logger.info(`Server listening on ${HOST}:${PORT}`);
   });
-  
+
   // Handle server errors
-  server.on('error', (error) => {
-    logger.error('Server error', { error: error.message });
+  server.on("error", (error) => {
+    logger.error("Server error", { error: error.message });
     process.exit(1);
   });
-  
+
   // Initialize Solana connection and wallet
   const initialized = await initialize();
-  
+
   if (!initialized) {
-    logger.error('Initialization failed, running in degraded mode');
-    logger.info('Server will respond to health checks but bot is not operational');
+    logger.error("Initialization failed, running in degraded mode");
+    logger.info(
+      "Server will respond to health checks but bot is not operational",
+    );
     return;
   }
-  
+
   // Auto-start monitoring (can be disabled via env var)
-  const autoStart = process.env.AUTO_START !== 'false';
+  const autoStart = process.env.AUTO_START !== "false";
   if (autoStart) {
     isRunning = true;
-    logger.info('Auto-starting monitoring...');
-    
+    logger.info("Auto-starting monitoring...");
+
     // Start monitoring loop (non-blocking)
-    monitoringLoop().catch(error => {
-      logger.error('Monitoring loop crashed', {
-        error: error instanceof Error ? error.message : 'Unknown error',
+    monitoringLoop().catch((error) => {
+      logger.error("Monitoring loop crashed", {
+        error: error instanceof Error ? error.message : "Unknown error",
       });
     });
   } else {
-    logger.info('Auto-start disabled. Use /api/control endpoint to start bot.');
+    logger.info("Auto-start disabled. Use /api/control endpoint to start bot.");
   }
-  
+
   // Setup graceful shutdown
   setupGracefulShutdown();
 }
 
 // Start the application
-start().catch(error => {
-  logger.error('Application startup failed', {
-    error: error instanceof Error ? error.message : 'Unknown error',
+start().catch((error) => {
+  logger.error("Application startup failed", {
+    error: error instanceof Error ? error.message : "Unknown error",
   });
   process.exit(1);
 });

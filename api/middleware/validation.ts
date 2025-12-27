@@ -3,11 +3,19 @@
  * Provides comprehensive input validation for all API endpoints
  */
 
-import type { VercelRequest, VercelResponse } from '@vercel/node';
+import type { VercelRequest, VercelResponse } from "@vercel/node";
 
 export interface ValidationRule {
   field: string;
-  type: 'string' | 'number' | 'boolean' | 'array' | 'object' | 'email' | 'url' | 'solana-address';
+  type:
+    | "string"
+    | "number"
+    | "boolean"
+    | "array"
+    | "object"
+    | "email"
+    | "url"
+    | "solana-address";
   required?: boolean;
   min?: number;
   max?: number;
@@ -60,11 +68,23 @@ function isValidUrl(url: string): boolean {
 /**
  * Validate a single field against a rule
  */
-function validateField(value: any, rule: ValidationRule): ValidationErrorDetail | null {
-  const { field, type, required, min, max, pattern, enum: enumValues, custom } = rule;
+function validateField(
+  value: any,
+  rule: ValidationRule,
+): ValidationErrorDetail | null {
+  const {
+    field,
+    type,
+    required,
+    min,
+    max,
+    pattern,
+    enum: enumValues,
+    custom,
+  } = rule;
 
   // Check if required
-  if (required && (value === undefined || value === null || value === '')) {
+  if (required && (value === undefined || value === null || value === "")) {
     return {
       field,
       message: `${field} is required`,
@@ -72,29 +92,37 @@ function validateField(value: any, rule: ValidationRule): ValidationErrorDetail 
   }
 
   // Skip validation if not required and value is empty
-  if (!required && (value === undefined || value === null || value === '')) {
+  if (!required && (value === undefined || value === null || value === "")) {
     return null;
   }
 
   // Type validation
   switch (type) {
-    case 'string':
-      if (typeof value !== 'string') {
+    case "string":
+      if (typeof value !== "string") {
         return { field, message: `${field} must be a string`, value };
       }
       if (min !== undefined && value.length < min) {
-        return { field, message: `${field} must be at least ${min} characters`, value };
+        return {
+          field,
+          message: `${field} must be at least ${min} characters`,
+          value,
+        };
       }
       if (max !== undefined && value.length > max) {
-        return { field, message: `${field} must be at most ${max} characters`, value };
+        return {
+          field,
+          message: `${field} must be at most ${max} characters`,
+          value,
+        };
       }
       if (pattern && !pattern.test(value)) {
         return { field, message: `${field} has invalid format`, value };
       }
       break;
 
-    case 'number':
-      if (typeof value !== 'number' || isNaN(value)) {
+    case "number":
+      if (typeof value !== "number" || isNaN(value)) {
         return { field, message: `${field} must be a number`, value };
       }
       if (min !== undefined && value < min) {
@@ -105,45 +133,61 @@ function validateField(value: any, rule: ValidationRule): ValidationErrorDetail 
       }
       break;
 
-    case 'boolean':
-      if (typeof value !== 'boolean') {
+    case "boolean":
+      if (typeof value !== "boolean") {
         return { field, message: `${field} must be a boolean`, value };
       }
       break;
 
-    case 'array':
+    case "array":
       if (!Array.isArray(value)) {
         return { field, message: `${field} must be an array`, value };
       }
       if (min !== undefined && value.length < min) {
-        return { field, message: `${field} must have at least ${min} items`, value };
+        return {
+          field,
+          message: `${field} must have at least ${min} items`,
+          value,
+        };
       }
       if (max !== undefined && value.length > max) {
-        return { field, message: `${field} must have at most ${max} items`, value };
+        return {
+          field,
+          message: `${field} must have at most ${max} items`,
+          value,
+        };
       }
       break;
 
-    case 'object':
-      if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    case "object":
+      if (typeof value !== "object" || value === null || Array.isArray(value)) {
         return { field, message: `${field} must be an object`, value };
       }
       break;
 
-    case 'email':
-      if (typeof value !== 'string' || !isValidEmail(value)) {
-        return { field, message: `${field} must be a valid email address`, value };
+    case "email":
+      if (typeof value !== "string" || !isValidEmail(value)) {
+        return {
+          field,
+          message: `${field} must be a valid email address`,
+          value,
+        };
       }
       break;
 
-    case 'url':
-      if (typeof value !== 'string' || !isValidUrl(value)) {
+    case "url":
+      if (typeof value !== "string" || !isValidUrl(value)) {
         return { field, message: `${field} must be a valid URL`, value };
       }
       break;
 
-    case 'solana-address':
-      if (typeof value !== 'string' || !isValidSolanaAddress(value)) {
-        return { field, message: `${field} must be a valid Solana address`, value };
+    case "solana-address":
+      if (typeof value !== "string" || !isValidSolanaAddress(value)) {
+        return {
+          field,
+          message: `${field} must be a valid Solana address`,
+          value,
+        };
       }
       break;
 
@@ -155,7 +199,7 @@ function validateField(value: any, rule: ValidationRule): ValidationErrorDetail 
   if (enumValues && !enumValues.includes(value)) {
     return {
       field,
-      message: `${field} must be one of: ${enumValues.join(', ')}`,
+      message: `${field} must be one of: ${enumValues.join(", ")}`,
       value,
     };
   }
@@ -166,7 +210,10 @@ function validateField(value: any, rule: ValidationRule): ValidationErrorDetail 
     if (customResult !== true) {
       return {
         field,
-        message: typeof customResult === 'string' ? customResult : `${field} validation failed`,
+        message:
+          typeof customResult === "string"
+            ? customResult
+            : `${field} validation failed`,
         value,
       };
     }
@@ -180,7 +227,7 @@ function validateField(value: any, rule: ValidationRule): ValidationErrorDetail 
  */
 export function validateRequest(
   body: any,
-  rules: ValidationRule[]
+  rules: ValidationRule[],
 ): { valid: boolean; errors: ValidationErrorDetail[] } {
   const errors: ValidationErrorDetail[] = [];
 
@@ -208,7 +255,7 @@ export function createValidationMiddleware(rules: ValidationRule[]) {
     if (!validation.valid) {
       return res.status(400).json({
         success: false,
-        error: 'Validation failed',
+        error: "Validation failed",
         details: validation.errors,
       });
     }
@@ -225,7 +272,7 @@ export function createValidationMiddleware(rules: ValidationRule[]) {
  */
 export function validateQuery(
   query: any,
-  rules: ValidationRule[]
+  rules: ValidationRule[],
 ): { valid: boolean; errors: ValidationErrorDetail[] } {
   return validateRequest(query, rules);
 }
@@ -234,23 +281,26 @@ export function validateQuery(
  * Sanitize input by removing potentially dangerous characters
  */
 export function sanitizeInput(input: string): string {
-  if (typeof input !== 'string') return input;
-  
+  if (typeof input !== "string") return input;
+
   // Remove script tags
-  input = input.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
-  
+  input = input.replace(
+    /<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi,
+    "",
+  );
+
   // Remove HTML tags
-  input = input.replace(/<[^>]*>/g, '');
-  
+  input = input.replace(/<[^>]*>/g, "");
+
   // Encode special characters
   input = input
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#x27;')
-    .replace(/\//g, '&#x2F;');
-  
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#x27;")
+    .replace(/\//g, "&#x2F;");
+
   return input;
 }
 
@@ -262,7 +312,7 @@ const rateLimitStore = new Map<string, { count: number; resetTime: number }>();
 export function checkRateLimit(
   identifier: string,
   maxRequests: number,
-  windowMs: number
+  windowMs: number,
 ): { allowed: boolean; remaining: number; resetIn: number } {
   const now = Date.now();
   const record = rateLimitStore.get(identifier);
@@ -310,9 +360,9 @@ export function checkRateLimit(
  */
 export function getClientIp(req: VercelRequest): string {
   return (
-    (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ||
-    (req.headers['x-real-ip'] as string) ||
-    (req.headers['cf-connecting-ip'] as string) ||
-    'unknown'
+    (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() ||
+    (req.headers["x-real-ip"] as string) ||
+    (req.headers["cf-connecting-ip"] as string) ||
+    "unknown"
   );
 }

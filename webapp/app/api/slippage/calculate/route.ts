@@ -1,12 +1,12 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getSlippageManager } from '@/lib/slippage-manager';
+import { NextRequest, NextResponse } from "next/server";
+import { getSlippageManager } from "@/lib/slippage-manager";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
 interface SlippageCalculateRequest {
   tokenAddress: string;
   amountIn: number;
-  networkCongestion?: 'low' | 'medium' | 'high';
+  networkCongestion?: "low" | "medium" | "high";
   priceImpact?: number;
   volatility?: number;
 }
@@ -14,7 +14,7 @@ interface SlippageCalculateRequest {
 /**
  * POST /api/slippage/calculate
  * Calculate recommended slippage based on market conditions
- * 
+ *
  * Body:
  * - tokenAddress: Token mint address (required)
  * - amountIn: Amount to trade (required)
@@ -25,15 +25,21 @@ interface SlippageCalculateRequest {
 export async function POST(request: NextRequest) {
   try {
     const body: SlippageCalculateRequest = await request.json();
-    const { tokenAddress, amountIn, networkCongestion, priceImpact, volatility } = body;
+    const {
+      tokenAddress,
+      amountIn,
+      networkCongestion,
+      priceImpact,
+      volatility,
+    } = body;
 
     if (!tokenAddress || !amountIn) {
       return NextResponse.json(
         {
           success: false,
-          error: 'tokenAddress and amountIn are required',
+          error: "tokenAddress and amountIn are required",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -41,13 +47,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          error: 'amountIn must be greater than 0',
+          error: "amountIn must be greater than 0",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
-    console.log('[Slippage] Calculating for:', {
+    console.log("[Slippage] Calculating for:", {
       tokenAddress,
       amountIn,
       networkCongestion,
@@ -63,7 +69,7 @@ export async function POST(request: NextRequest) {
       volatility,
     });
 
-    console.log('[Slippage] Recommendation:', recommendation);
+    console.log("[Slippage] Recommendation:", recommendation);
 
     return NextResponse.json(
       {
@@ -73,19 +79,19 @@ export async function POST(request: NextRequest) {
       },
       {
         headers: {
-          'Cache-Control': 'public, s-maxage=10, stale-while-revalidate=20',
+          "Cache-Control": "public, s-maxage=10, stale-while-revalidate=20",
         },
-      }
+      },
     );
   } catch (error) {
-    console.error('[Slippage] Calculation error:', error);
+    console.error("[Slippage] Calculation error:", error);
 
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: error instanceof Error ? error.message : "Unknown error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -93,7 +99,7 @@ export async function POST(request: NextRequest) {
 /**
  * GET /api/slippage/calculate
  * Get recommended slippage via GET request
- * 
+ *
  * Query parameters:
  * - tokenAddress: Token mint address (required)
  * - amountIn: Amount to trade (required)
@@ -104,35 +110,39 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
-    const tokenAddress = searchParams.get('tokenAddress');
-    const amountIn = searchParams.get('amountIn');
-    const networkCongestion = searchParams.get('networkCongestion') as
-      | 'low'
-      | 'medium'
-      | 'high'
+    const tokenAddress = searchParams.get("tokenAddress");
+    const amountIn = searchParams.get("amountIn");
+    const networkCongestion = searchParams.get("networkCongestion") as
+      | "low"
+      | "medium"
+      | "high"
       | null;
-    const priceImpact = searchParams.get('priceImpact');
-    const txType = searchParams.get('txType') as 'swap' | 'snipe' | 'flashloan' | null;
+    const priceImpact = searchParams.get("priceImpact");
+    const txType = searchParams.get("txType") as
+      | "swap"
+      | "snipe"
+      | "flashloan"
+      | null;
 
     // If txType is provided, return quick recommendation
     if (txType) {
       const slippageManager = getSlippageManager();
       const slippage = slippageManager.getSlippageByType(txType);
-      
+
       return NextResponse.json(
         {
           success: true,
           slippage,
           slippageBps: Math.round(slippage * 100),
           reason: `Recommended slippage for ${txType} transactions`,
-          confidence: 'high',
+          confidence: "high",
           timestamp: Date.now(),
         },
         {
           headers: {
-            'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120',
+            "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120",
           },
-        }
+        },
       );
     }
 
@@ -140,9 +150,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          error: 'tokenAddress and amountIn are required (or provide txType for quick recommendation)',
+          error:
+            "tokenAddress and amountIn are required (or provide txType for quick recommendation)",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -151,9 +162,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          error: 'amountIn must be a valid number greater than 0',
+          error: "amountIn must be a valid number greater than 0",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -173,19 +184,19 @@ export async function GET(request: NextRequest) {
       },
       {
         headers: {
-          'Cache-Control': 'public, s-maxage=10, stale-while-revalidate=20',
+          "Cache-Control": "public, s-maxage=10, stale-while-revalidate=20",
         },
-      }
+      },
     );
   } catch (error) {
-    console.error('[Slippage] Calculation error:', error);
+    console.error("[Slippage] Calculation error:", error);
 
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: error instanceof Error ? error.message : "Unknown error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

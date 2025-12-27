@@ -1,9 +1,9 @@
 /**
  * Jito MEV-Aware Transaction Execution
- * 
+ *
  * Provides atomic bundle execution with tip mechanism to protect against front-running
  * and ensure transaction inclusion with MEV protection.
- * 
+ *
  * Features:
  * - Atomic bundle creation and execution
  * - Configurable Jito tip amounts
@@ -22,8 +22,8 @@ import {
   VersionedTransaction,
   TransactionMessage,
   AddressLookupTableAccount,
-} from '@solana/web3.js';
-import axios from 'axios';
+} from "@solana/web3.js";
+import axios from "axios";
 
 export interface JitoTipConfig {
   enabled: boolean;
@@ -42,7 +42,7 @@ export interface JitoBundleResult {
 
 export interface JitoBundleStatus {
   bundleId: string;
-  status: 'pending' | 'landed' | 'failed' | 'dropped';
+  status: "pending" | "landed" | "failed" | "dropped";
   landedSlot?: number;
   transactions: {
     signature: string;
@@ -56,11 +56,11 @@ export interface JitoBundleStatus {
  * These are the official Jito Block Engine RPC endpoints
  */
 const JITO_BLOCK_ENGINE_URLS = [
-  'https://mainnet.block-engine.jito.wtf',
-  'https://amsterdam.mainnet.block-engine.jito.wtf',
-  'https://frankfurt.mainnet.block-engine.jito.wtf',
-  'https://ny.mainnet.block-engine.jito.wtf',
-  'https://tokyo.mainnet.block-engine.jito.wtf',
+  "https://mainnet.block-engine.jito.wtf",
+  "https://amsterdam.mainnet.block-engine.jito.wtf",
+  "https://frankfurt.mainnet.block-engine.jito.wtf",
+  "https://ny.mainnet.block-engine.jito.wtf",
+  "https://tokyo.mainnet.block-engine.jito.wtf",
 ];
 
 /**
@@ -68,14 +68,14 @@ const JITO_BLOCK_ENGINE_URLS = [
  * Send tips to one of these accounts to incentivize bundle inclusion
  */
 const JITO_TIP_ACCOUNTS = [
-  new PublicKey('96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5'),
-  new PublicKey('HFqU5x63VTqvQss8hp11i4wVV8bD44PvwucfZ2bU7gRe'),
-  new PublicKey('Cw8CFyM9FkoMi7K7Crf6HNQqf4uEMzpKw6QNghXLvLkY'),
-  new PublicKey('ADaUMid9yfUytqMBgopwjb2DTLSokTSzL1zt6iGPaS49'),
-  new PublicKey('DfXygSm4jCyNCybVYYK6DwvWqjKee8pbDmJGcLWNDXjh'),
-  new PublicKey('ADuUkR4vqLUMWXxW9gh6D6L8pMSawimctcNZ5pGwDcEt'),
-  new PublicKey('DttWaMuVvTiduZRnguLF7jNxTgiMBZ1hyAumKUiL2KRL'),
-  new PublicKey('3AVi9Tg9Uo68tJfuvoKvqKNWKkC5wPdSSdeBnizKZ6jT'),
+  new PublicKey("96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5"),
+  new PublicKey("HFqU5x63VTqvQss8hp11i4wVV8bD44PvwucfZ2bU7gRe"),
+  new PublicKey("Cw8CFyM9FkoMi7K7Crf6HNQqf4uEMzpKw6QNghXLvLkY"),
+  new PublicKey("ADaUMid9yfUytqMBgopwjb2DTLSokTSzL1zt6iGPaS49"),
+  new PublicKey("DfXygSm4jCyNCybVYYK6DwvWqjKee8pbDmJGcLWNDXjh"),
+  new PublicKey("ADuUkR4vqLUMWXxW9gh6D6L8pMSawimctcNZ5pGwDcEt"),
+  new PublicKey("DttWaMuVvTiduZRnguLF7jNxTgiMBZ1hyAumKUiL2KRL"),
+  new PublicKey("3AVi9Tg9Uo68tJfuvoKvqKNWKkC5wPdSSdeBnizKZ6jT"),
 ];
 
 export class JitoIntegration {
@@ -83,20 +83,23 @@ export class JitoIntegration {
   private blockEngineUrl: string;
   private tipConfig: JitoTipConfig;
 
-  constructor(
-    connection: Connection,
-    tipConfig?: Partial<JitoTipConfig>
-  ) {
+  constructor(connection: Connection, tipConfig?: Partial<JitoTipConfig>) {
     this.connection = connection;
     this.blockEngineUrl = JITO_BLOCK_ENGINE_URLS[0]; // Default to first endpoint
     this.tipConfig = {
       enabled: tipConfig?.enabled ?? true,
-      minTipLamports: tipConfig?.minTipLamports ?? parseInt(process.env.JITO_MIN_TIP_LAMPORTS || '10000'), // 0.00001 SOL default
-      maxTipLamports: tipConfig?.maxTipLamports ?? parseInt(process.env.JITO_MAX_TIP_LAMPORTS || '1000000'), // 0.001 SOL default
-      tipPercentage: tipConfig?.tipPercentage ?? parseFloat(process.env.JITO_TIP_PERCENTAGE || '0.05'), // 5% of profit default
+      minTipLamports:
+        tipConfig?.minTipLamports ??
+        parseInt(process.env.JITO_MIN_TIP_LAMPORTS || "10000"), // 0.00001 SOL default
+      maxTipLamports:
+        tipConfig?.maxTipLamports ??
+        parseInt(process.env.JITO_MAX_TIP_LAMPORTS || "1000000"), // 0.001 SOL default
+      tipPercentage:
+        tipConfig?.tipPercentage ??
+        parseFloat(process.env.JITO_TIP_PERCENTAGE || "0.05"), // 5% of profit default
     };
 
-    console.log('[Jito] Initialized with config:', {
+    console.log("[Jito] Initialized with config:", {
       enabled: this.tipConfig.enabled,
       minTip: `${this.tipConfig.minTipLamports / 1e9} SOL`,
       maxTip: `${this.tipConfig.maxTipLamports / 1e9} SOL`,
@@ -113,15 +116,19 @@ export class JitoIntegration {
     }
 
     // Calculate percentage-based tip
-    const percentageTip = Math.floor(expectedProfitLamports * this.tipConfig.tipPercentage);
+    const percentageTip = Math.floor(
+      expectedProfitLamports * this.tipConfig.tipPercentage,
+    );
 
     // Clamp between min and max
     const tipAmount = Math.max(
       this.tipConfig.minTipLamports,
-      Math.min(percentageTip, this.tipConfig.maxTipLamports)
+      Math.min(percentageTip, this.tipConfig.maxTipLamports),
     );
 
-    console.log(`[Jito] Calculated tip: ${tipAmount / 1e9} SOL (${(this.tipConfig.tipPercentage * 100).toFixed(2)}% of ${expectedProfitLamports / 1e9} SOL profit)`);
+    console.log(
+      `[Jito] Calculated tip: ${tipAmount / 1e9} SOL (${(this.tipConfig.tipPercentage * 100).toFixed(2)}% of ${expectedProfitLamports / 1e9} SOL profit)`,
+    );
 
     return tipAmount;
   }
@@ -132,11 +139,14 @@ export class JitoIntegration {
   createTipInstruction(
     from: PublicKey,
     tipLamports: number,
-    tipAccountIndex: number = 0
+    tipAccountIndex: number = 0,
   ): TransactionInstruction {
-    const tipAccount = JITO_TIP_ACCOUNTS[tipAccountIndex % JITO_TIP_ACCOUNTS.length];
+    const tipAccount =
+      JITO_TIP_ACCOUNTS[tipAccountIndex % JITO_TIP_ACCOUNTS.length];
 
-    console.log(`[Jito] Creating tip instruction: ${tipLamports / 1e9} SOL to ${tipAccount.toString()}`);
+    console.log(
+      `[Jito] Creating tip instruction: ${tipLamports / 1e9} SOL to ${tipAccount.toString()}`,
+    );
 
     return SystemProgram.transfer({
       fromPubkey: from,
@@ -151,20 +161,23 @@ export class JitoIntegration {
   async buildAtomicBundle(
     transactions: Transaction[],
     signers: Keypair[],
-    expectedProfitLamports: number = 0
+    expectedProfitLamports: number = 0,
   ): Promise<VersionedTransaction[]> {
     try {
-      console.log(`[Jito] Building atomic bundle with ${transactions.length} transactions...`);
+      console.log(
+        `[Jito] Building atomic bundle with ${transactions.length} transactions...`,
+      );
 
       if (transactions.length === 0) {
-        throw new Error('Cannot build bundle with zero transactions');
+        throw new Error("Cannot build bundle with zero transactions");
       }
 
       // Calculate tip amount
       const tipAmount = this.calculateTipAmount(expectedProfitLamports);
 
       // Get recent blockhash
-      const { blockhash, lastValidBlockHeight } = await this.connection.getLatestBlockhash('finalized');
+      const { blockhash, lastValidBlockHeight } =
+        await this.connection.getLatestBlockhash("finalized");
 
       // Convert transactions to versioned transactions and add tip to the last one
       const versionedTxs: VersionedTransaction[] = [];
@@ -178,7 +191,7 @@ export class JitoIntegration {
           const tipIx = this.createTipInstruction(
             signers[0].publicKey,
             tipAmount,
-            Math.floor(Math.random() * JITO_TIP_ACCOUNTS.length)
+            Math.floor(Math.random() * JITO_TIP_ACCOUNTS.length),
           );
           tx.add(tipIx);
         }
@@ -193,7 +206,7 @@ export class JitoIntegration {
           recentBlockhash: blockhash,
           instructions: tx.instructions,
         }).compileToV0Message();
-        
+
         const versionedTx = new VersionedTransaction(messageV0);
 
         // Sign the transaction
@@ -202,11 +215,13 @@ export class JitoIntegration {
         versionedTxs.push(versionedTx);
       }
 
-      console.log(`[Jito] Atomic bundle built with ${versionedTxs.length} transactions (tip: ${tipAmount / 1e9} SOL)`);
+      console.log(
+        `[Jito] Atomic bundle built with ${versionedTxs.length} transactions (tip: ${tipAmount / 1e9} SOL)`,
+      );
 
       return versionedTxs;
     } catch (error) {
-      console.error('[Jito] Error building atomic bundle:', error);
+      console.error("[Jito] Error building atomic bundle:", error);
       throw error;
     }
   }
@@ -214,42 +229,44 @@ export class JitoIntegration {
   /**
    * Send a bundle to Jito Block Engine
    */
-  async sendBundle(
-    bundle: VersionedTransaction[]
-  ): Promise<JitoBundleResult> {
+  async sendBundle(bundle: VersionedTransaction[]): Promise<JitoBundleResult> {
     try {
-      console.log(`[Jito] Sending bundle with ${bundle.length} transactions to ${this.blockEngineUrl}...`);
+      console.log(
+        `[Jito] Sending bundle with ${bundle.length} transactions to ${this.blockEngineUrl}...`,
+      );
 
       // Serialize transactions
-      const serializedTransactions = bundle.map(tx =>
-        Buffer.from(tx.serialize()).toString('base64')
+      const serializedTransactions = bundle.map((tx) =>
+        Buffer.from(tx.serialize()).toString("base64"),
       );
 
       // Send bundle to Jito Block Engine
       const response = await axios.post(
         `${this.blockEngineUrl}/api/v1/bundles`,
         {
-          jsonrpc: '2.0',
+          jsonrpc: "2.0",
           id: 1,
-          method: 'sendBundle',
+          method: "sendBundle",
           params: [serializedTransactions],
         },
         {
           headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
           },
           timeout: 30000, // 30 second timeout
-        }
+        },
       );
 
       if (response.data.error) {
-        throw new Error(`Jito bundle error: ${JSON.stringify(response.data.error)}`);
+        throw new Error(
+          `Jito bundle error: ${JSON.stringify(response.data.error)}`,
+        );
       }
 
       const bundleId = response.data.result;
-      const signatures = bundle.map(tx => {
+      const signatures = bundle.map((tx) => {
         const sig = tx.signatures[0];
-        return Buffer.from(sig).toString('base64');
+        return Buffer.from(sig).toString("base64");
       });
 
       console.log(`[Jito] Bundle sent successfully!`);
@@ -261,11 +278,12 @@ export class JitoIntegration {
         signatures,
       };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      console.error('[Jito] Error sending bundle:', errorMessage);
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
+      console.error("[Jito] Error sending bundle:", errorMessage);
 
       return {
-        bundleId: '',
+        bundleId: "",
         success: false,
         signatures: [],
         error: errorMessage,
@@ -283,26 +301,28 @@ export class JitoIntegration {
       const response = await axios.post(
         `${this.blockEngineUrl}/api/v1/bundles`,
         {
-          jsonrpc: '2.0',
+          jsonrpc: "2.0",
           id: 1,
-          method: 'getBundleStatuses',
+          method: "getBundleStatuses",
           params: [[bundleId]],
         },
         {
           headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
           },
           timeout: 10000,
-        }
+        },
       );
 
       if (response.data.error) {
-        throw new Error(`Jito status error: ${JSON.stringify(response.data.error)}`);
+        throw new Error(
+          `Jito status error: ${JSON.stringify(response.data.error)}`,
+        );
       }
 
       const statuses = response.data.result?.value || [];
       if (statuses.length === 0) {
-        console.log('[Jito] Bundle status not found');
+        console.log("[Jito] Bundle status not found");
         return null;
       }
 
@@ -312,12 +332,16 @@ export class JitoIntegration {
 
       return {
         bundleId,
-        status: status.confirmation_status as 'pending' | 'landed' | 'failed' | 'dropped',
+        status: status.confirmation_status as
+          | "pending"
+          | "landed"
+          | "failed"
+          | "dropped",
         landedSlot: status.slot,
         transactions: status.transactions || [],
       };
     } catch (error) {
-      console.error('[Jito] Error checking bundle status:', error);
+      console.error("[Jito] Error checking bundle status:", error);
       return null;
     }
   }
@@ -330,13 +354,17 @@ export class JitoIntegration {
     transactions: Transaction[],
     signers: Keypair[],
     expectedProfitLamports: number = 0,
-    pollForConfirmation: boolean = true
+    pollForConfirmation: boolean = true,
   ): Promise<JitoBundleResult> {
     try {
-      console.log('[Jito] Executing atomic bundle with MEV protection...');
+      console.log("[Jito] Executing atomic bundle with MEV protection...");
 
       // Build the bundle
-      const bundle = await this.buildAtomicBundle(transactions, signers, expectedProfitLamports);
+      const bundle = await this.buildAtomicBundle(
+        transactions,
+        signers,
+        expectedProfitLamports,
+      );
 
       // Send the bundle
       const result = await this.sendBundle(bundle);
@@ -347,24 +375,27 @@ export class JitoIntegration {
 
       // Poll for confirmation if requested
       if (pollForConfirmation && result.bundleId) {
-        console.log('[Jito] Polling for bundle confirmation...');
+        console.log("[Jito] Polling for bundle confirmation...");
 
         const maxAttempts = 30; // Poll for up to 30 seconds
         const pollInterval = 1000; // 1 second between polls
 
         for (let attempt = 0; attempt < maxAttempts; attempt++) {
-          await new Promise(resolve => setTimeout(resolve, pollInterval));
+          await new Promise((resolve) => setTimeout(resolve, pollInterval));
 
           const status = await this.getBundleStatus(result.bundleId);
 
           if (status) {
-            if (status.status === 'landed') {
+            if (status.status === "landed") {
               console.log(`[Jito] Bundle landed in slot ${status.landedSlot}!`);
               return {
                 ...result,
                 landedSlot: status.landedSlot,
               };
-            } else if (status.status === 'failed' || status.status === 'dropped') {
+            } else if (
+              status.status === "failed" ||
+              status.status === "dropped"
+            ) {
               console.log(`[Jito] Bundle ${status.status}`);
               return {
                 ...result,
@@ -375,16 +406,17 @@ export class JitoIntegration {
           }
         }
 
-        console.log('[Jito] Bundle confirmation timeout');
+        console.log("[Jito] Bundle confirmation timeout");
       }
 
       return result;
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      console.error('[Jito] Error executing atomic bundle:', errorMessage);
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
+      console.error("[Jito] Error executing atomic bundle:", errorMessage);
 
       return {
-        bundleId: '',
+        bundleId: "",
         success: false,
         signatures: [],
         error: errorMessage,
@@ -419,6 +451,6 @@ export class JitoIntegration {
       ...config,
     };
 
-    console.log('[Jito] Tip configuration updated:', this.tipConfig);
+    console.log("[Jito] Tip configuration updated:", this.tipConfig);
   }
 }

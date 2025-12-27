@@ -1,4 +1,4 @@
-import { PublicKey } from '@solana/web3.js';
+import { PublicKey } from "@solana/web3.js";
 
 export interface Config {
   solana: {
@@ -84,7 +84,7 @@ export interface TokenConfig {
   symbol: string;
   mint: PublicKey;
   decimals: number;
-  category: 'stable' | 'native' | 'memecoin' | 'lst' | 'gxq';
+  category: "stable" | "native" | "memecoin" | "lst" | "gxq";
 }
 
 export interface FlashLoanProvider {
@@ -102,7 +102,7 @@ export interface DEXInfo {
 }
 
 export interface ArbitrageOpportunity {
-  type: 'flash-loan' | 'triangular';
+  type: "flash-loan" | "triangular";
   provider?: string;
   path: TokenConfig[];
   estimatedProfit: number;
@@ -122,7 +122,7 @@ export interface PresetConfig {
   id: string;
   name: string;
   description: string;
-  strategy: 'flash-loan' | 'triangular' | 'hybrid';
+  strategy: "flash-loan" | "triangular" | "hybrid";
   tokens: string[];
   dexes: string[];
   minProfit: number;

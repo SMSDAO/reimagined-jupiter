@@ -1,5 +1,5 @@
-import { Connection, Logs } from '@solana/web3.js';
-import { config } from '../config/index.js';
+import { Connection, Logs } from "@solana/web3.js";
+import { config } from "../config/index.js";
 
 export interface PoolCreationEvent {
   dex: string;
@@ -30,48 +30,50 @@ export class SniperBot {
 
   async startMonitoring(): Promise<void> {
     if (this.monitoring) {
-      console.warn('[SniperBot] Already monitoring');
+      console.warn("[SniperBot] Already monitoring");
       return;
     }
 
-    console.log('[SniperBot] Starting pool creation monitoring...');
+    console.log("[SniperBot] Starting pool creation monitoring...");
     this.monitoring = true;
 
     // Monitor Raydium pool creation
-    if (this.config.monitoredDEXs.includes('raydium')) {
+    if (this.config.monitoredDEXs.includes("raydium")) {
       await this.monitorRaydiumPools();
     }
 
     // Monitor Pump.fun pool creation
-    if (this.config.monitoredDEXs.includes('pumpfun')) {
+    if (this.config.monitoredDEXs.includes("pumpfun")) {
       await this.monitorPumpFunPools();
     }
 
     // Monitor Orca pool creation
-    if (this.config.monitoredDEXs.includes('orca')) {
+    if (this.config.monitoredDEXs.includes("orca")) {
       await this.monitorOrcaPools();
     }
 
     // Monitor Meteora pool creation
-    if (this.config.monitoredDEXs.includes('meteora')) {
+    if (this.config.monitoredDEXs.includes("meteora")) {
       await this.monitorMeteoraPools();
     }
 
     // Monitor Phoenix pool creation
-    if (this.config.monitoredDEXs.includes('phoenix')) {
+    if (this.config.monitoredDEXs.includes("phoenix")) {
       await this.monitorPhoenixPools();
     }
 
-    console.log(`[SniperBot] Monitoring ${this.config.monitoredDEXs.length} DEXs`);
+    console.log(
+      `[SniperBot] Monitoring ${this.config.monitoredDEXs.length} DEXs`,
+    );
   }
 
   async stopMonitoring(): Promise<void> {
     if (!this.monitoring) {
-      console.warn('[SniperBot] Not currently monitoring');
+      console.warn("[SniperBot] Not currently monitoring");
       return;
     }
 
-    console.log('[SniperBot] Stopping pool creation monitoring...');
+    console.log("[SniperBot] Stopping pool creation monitoring...");
 
     // Unsubscribe from all log listeners
     for (const [dex, subscriptionId] of this.subscriptionIds.entries()) {
@@ -85,24 +87,26 @@ export class SniperBot {
 
     this.subscriptionIds.clear();
     this.monitoring = false;
-    console.log('[SniperBot] Monitoring stopped');
+    console.log("[SniperBot] Monitoring stopped");
   }
 
   private async monitorRaydiumPools(): Promise<void> {
     try {
       const raydiumProgramId = config.dexPrograms.raydium;
-      console.log(`[SniperBot] Monitoring Raydium pools: ${raydiumProgramId.toString().slice(0, 8)}...`);
+      console.log(
+        `[SniperBot] Monitoring Raydium pools: ${raydiumProgramId.toString().slice(0, 8)}...`,
+      );
 
       const subscriptionId = this.connection.onLogs(
         raydiumProgramId,
         (logs: Logs) => this.handleRaydiumLog(logs),
-        'confirmed'
+        "confirmed",
       );
 
-      this.subscriptionIds.set('raydium', subscriptionId);
-      console.log('[SniperBot] Raydium monitoring started');
+      this.subscriptionIds.set("raydium", subscriptionId);
+      console.log("[SniperBot] Raydium monitoring started");
     } catch (error) {
-      console.error('[SniperBot] Error monitoring Raydium pools:', error);
+      console.error("[SniperBot] Error monitoring Raydium pools:", error);
     }
   }
 
@@ -110,217 +114,241 @@ export class SniperBot {
     try {
       // Pump.fun program ID from config
       const pumpFunProgramId = config.dexPrograms.pumpfun;
-      console.log(`[SniperBot] Monitoring Pump.fun pools: ${pumpFunProgramId.toString().slice(0, 8)}...`);
+      console.log(
+        `[SniperBot] Monitoring Pump.fun pools: ${pumpFunProgramId.toString().slice(0, 8)}...`,
+      );
 
       const subscriptionId = this.connection.onLogs(
         pumpFunProgramId,
         (logs: Logs) => this.handlePumpFunLog(logs),
-        'confirmed'
+        "confirmed",
       );
 
-      this.subscriptionIds.set('pumpfun', subscriptionId);
-      console.log('[SniperBot] Pump.fun monitoring started');
+      this.subscriptionIds.set("pumpfun", subscriptionId);
+      console.log("[SniperBot] Pump.fun monitoring started");
     } catch (error) {
-      console.error('[SniperBot] Error monitoring Pump.fun pools:', error);
+      console.error("[SniperBot] Error monitoring Pump.fun pools:", error);
     }
   }
 
   private async monitorOrcaPools(): Promise<void> {
     try {
       const orcaProgramId = config.dexPrograms.orca;
-      console.log(`[SniperBot] Monitoring Orca pools: ${orcaProgramId.toString().slice(0, 8)}...`);
+      console.log(
+        `[SniperBot] Monitoring Orca pools: ${orcaProgramId.toString().slice(0, 8)}...`,
+      );
 
       const subscriptionId = this.connection.onLogs(
         orcaProgramId,
         (logs: Logs) => this.handleOrcaLog(logs),
-        'confirmed'
+        "confirmed",
       );
 
-      this.subscriptionIds.set('orca', subscriptionId);
-      console.log('[SniperBot] Orca monitoring started');
+      this.subscriptionIds.set("orca", subscriptionId);
+      console.log("[SniperBot] Orca monitoring started");
     } catch (error) {
-      console.error('[SniperBot] Error monitoring Orca pools:', error);
+      console.error("[SniperBot] Error monitoring Orca pools:", error);
     }
   }
 
   private async monitorMeteoraPools(): Promise<void> {
     try {
       const meteoraProgramId = config.dexPrograms.meteora;
-      console.log(`[SniperBot] Monitoring Meteora pools: ${meteoraProgramId.toString().slice(0, 8)}...`);
+      console.log(
+        `[SniperBot] Monitoring Meteora pools: ${meteoraProgramId.toString().slice(0, 8)}...`,
+      );
 
       const subscriptionId = this.connection.onLogs(
         meteoraProgramId,
         (logs: Logs) => this.handleMeteoraLog(logs),
-        'confirmed'
+        "confirmed",
       );
 
-      this.subscriptionIds.set('meteora', subscriptionId);
-      console.log('[SniperBot] Meteora monitoring started');
+      this.subscriptionIds.set("meteora", subscriptionId);
+      console.log("[SniperBot] Meteora monitoring started");
     } catch (error) {
-      console.error('[SniperBot] Error monitoring Meteora pools:', error);
+      console.error("[SniperBot] Error monitoring Meteora pools:", error);
     }
   }
 
   private async monitorPhoenixPools(): Promise<void> {
     try {
       const phoenixProgramId = config.dexPrograms.phoenix;
-      console.log(`[SniperBot] Monitoring Phoenix pools: ${phoenixProgramId.toString().slice(0, 8)}...`);
+      console.log(
+        `[SniperBot] Monitoring Phoenix pools: ${phoenixProgramId.toString().slice(0, 8)}...`,
+      );
 
       const subscriptionId = this.connection.onLogs(
         phoenixProgramId,
         (logs: Logs) => this.handlePhoenixLog(logs),
-        'confirmed'
+        "confirmed",
       );
 
-      this.subscriptionIds.set('phoenix', subscriptionId);
-      console.log('[SniperBot] Phoenix monitoring started');
+      this.subscriptionIds.set("phoenix", subscriptionId);
+      console.log("[SniperBot] Phoenix monitoring started");
     } catch (error) {
-      console.error('[SniperBot] Error monitoring Phoenix pools:', error);
+      console.error("[SniperBot] Error monitoring Phoenix pools:", error);
     }
   }
 
   private handleRaydiumLog(logs: Logs): void {
     try {
       // Check for pool initialization in logs
-      const hasPoolInit = logs.logs.some((log: string) => 
-        log.includes('initialize') || log.includes('InitializePool') || log.includes('init_pool')
+      const hasPoolInit = logs.logs.some(
+        (log: string) =>
+          log.includes("initialize") ||
+          log.includes("InitializePool") ||
+          log.includes("init_pool"),
       );
 
       if (hasPoolInit) {
-        console.log('[SniperBot] 🎯 Raydium pool creation detected!');
-        console.log('[SniperBot] Signature:', logs.signature);
-        
+        console.log("[SniperBot] 🎯 Raydium pool creation detected!");
+        console.log("[SniperBot] Signature:", logs.signature);
+
         const event: PoolCreationEvent = {
-          dex: 'Raydium',
+          dex: "Raydium",
           poolAddress: logs.signature, // Would parse actual pool address
-          tokenMint: '', // Would parse from transaction
-          baseTokenMint: '', // Would parse from transaction
+          tokenMint: "", // Would parse from transaction
+          baseTokenMint: "", // Would parse from transaction
           timestamp: Date.now(),
         };
 
         this.handlePoolCreationEvent(event);
       }
     } catch (error) {
-      console.error('[SniperBot] Error handling Raydium log:', error);
+      console.error("[SniperBot] Error handling Raydium log:", error);
     }
   }
 
   private handlePumpFunLog(logs: Logs): void {
     try {
       // Check for token creation/launch in logs
-      const hasTokenLaunch = logs.logs.some((log: string) => 
-        log.includes('create') || log.includes('launch') || log.includes('initialize')
+      const hasTokenLaunch = logs.logs.some(
+        (log: string) =>
+          log.includes("create") ||
+          log.includes("launch") ||
+          log.includes("initialize"),
       );
 
       if (hasTokenLaunch) {
-        console.log('[SniperBot] 🚀 Pump.fun token launch detected!');
-        console.log('[SniperBot] Signature:', logs.signature);
-        
+        console.log("[SniperBot] 🚀 Pump.fun token launch detected!");
+        console.log("[SniperBot] Signature:", logs.signature);
+
         const event: PoolCreationEvent = {
-          dex: 'Pump.fun',
+          dex: "Pump.fun",
           poolAddress: logs.signature,
-          tokenMint: '', // Would parse from transaction
-          baseTokenMint: 'So11111111111111111111111111111111111111112', // SOL
+          tokenMint: "", // Would parse from transaction
+          baseTokenMint: "So11111111111111111111111111111111111111112", // SOL
           timestamp: Date.now(),
         };
 
         this.handlePoolCreationEvent(event);
       }
     } catch (error) {
-      console.error('[SniperBot] Error handling Pump.fun log:', error);
+      console.error("[SniperBot] Error handling Pump.fun log:", error);
     }
   }
 
   private handleOrcaLog(logs: Logs): void {
     try {
-      const hasPoolInit = logs.logs.some((log: string) => 
-        log.includes('initialize') || log.includes('InitializePool')
+      const hasPoolInit = logs.logs.some(
+        (log: string) =>
+          log.includes("initialize") || log.includes("InitializePool"),
       );
 
       if (hasPoolInit) {
-        console.log('[SniperBot] 🐋 Orca pool creation detected!');
-        console.log('[SniperBot] Signature:', logs.signature);
-        
+        console.log("[SniperBot] 🐋 Orca pool creation detected!");
+        console.log("[SniperBot] Signature:", logs.signature);
+
         const event: PoolCreationEvent = {
-          dex: 'Orca',
+          dex: "Orca",
           poolAddress: logs.signature,
-          tokenMint: '',
-          baseTokenMint: '',
+          tokenMint: "",
+          baseTokenMint: "",
           timestamp: Date.now(),
         };
 
         this.handlePoolCreationEvent(event);
       }
     } catch (error) {
-      console.error('[SniperBot] Error handling Orca log:', error);
+      console.error("[SniperBot] Error handling Orca log:", error);
     }
   }
 
   private handleMeteoraLog(logs: Logs): void {
     try {
-      const hasPoolInit = logs.logs.some((log: string) => 
-        log.includes('initialize') || log.includes('create_pool')
+      const hasPoolInit = logs.logs.some(
+        (log: string) =>
+          log.includes("initialize") || log.includes("create_pool"),
       );
 
       if (hasPoolInit) {
-        console.log('[SniperBot] ☄️ Meteora pool creation detected!');
-        console.log('[SniperBot] Signature:', logs.signature);
-        
+        console.log("[SniperBot] ☄️ Meteora pool creation detected!");
+        console.log("[SniperBot] Signature:", logs.signature);
+
         const event: PoolCreationEvent = {
-          dex: 'Meteora',
+          dex: "Meteora",
           poolAddress: logs.signature,
-          tokenMint: '',
-          baseTokenMint: '',
+          tokenMint: "",
+          baseTokenMint: "",
           timestamp: Date.now(),
         };
 
         this.handlePoolCreationEvent(event);
       }
     } catch (error) {
-      console.error('[SniperBot] Error handling Meteora log:', error);
+      console.error("[SniperBot] Error handling Meteora log:", error);
     }
   }
 
   private handlePhoenixLog(logs: Logs): void {
     try {
-      const hasMarketInit = logs.logs.some((log: string) => 
-        log.includes('initialize') || log.includes('create_market')
+      const hasMarketInit = logs.logs.some(
+        (log: string) =>
+          log.includes("initialize") || log.includes("create_market"),
       );
 
       if (hasMarketInit) {
-        console.log('[SniperBot] 🔥 Phoenix market creation detected!');
-        console.log('[SniperBot] Signature:', logs.signature);
-        
+        console.log("[SniperBot] 🔥 Phoenix market creation detected!");
+        console.log("[SniperBot] Signature:", logs.signature);
+
         const event: PoolCreationEvent = {
-          dex: 'Phoenix',
+          dex: "Phoenix",
           poolAddress: logs.signature,
-          tokenMint: '',
-          baseTokenMint: '',
+          tokenMint: "",
+          baseTokenMint: "",
           timestamp: Date.now(),
         };
 
         this.handlePoolCreationEvent(event);
       }
     } catch (error) {
-      console.error('[SniperBot] Error handling Phoenix log:', error);
+      console.error("[SniperBot] Error handling Phoenix log:", error);
     }
   }
 
   private handlePoolCreationEvent(event: PoolCreationEvent): void {
-    console.log('[SniperBot] Pool creation event:', {
+    console.log("[SniperBot] Pool creation event:", {
       dex: event.dex,
-      poolAddress: event.poolAddress.slice(0, 8) + '...',
+      poolAddress: event.poolAddress.slice(0, 8) + "...",
       timestamp: new Date(event.timestamp).toISOString(),
     });
 
     // Dispatch custom event for UI (only in browser environment)
     try {
-      if (typeof globalThis !== 'undefined' && typeof (globalThis as unknown as { dispatchEvent?: (event: Event) => void }).dispatchEvent === 'function') {
-        const customEvent = new CustomEvent('pool-creation-detected', {
+      if (
+        typeof globalThis !== "undefined" &&
+        typeof (
+          globalThis as unknown as { dispatchEvent?: (event: Event) => void }
+        ).dispatchEvent === "function"
+      ) {
+        const customEvent = new CustomEvent("pool-creation-detected", {
           detail: event,
         });
         // Use globalThis directly to dispatch event in browser
-        (globalThis as unknown as { dispatchEvent: (event: Event) => void }).dispatchEvent(customEvent);
+        (
+          globalThis as unknown as { dispatchEvent: (event: Event) => void }
+        ).dispatchEvent(customEvent);
       }
     } catch (error) {
       // Ignore errors in non-browser environments
@@ -337,16 +365,18 @@ export class SniperBot {
       console.log(`[SniperBot] 🎯 Auto-sniping ${event.dex} pool...`);
       console.log(`[SniperBot] Buy amount: ${this.config.buyAmount} SOL`);
       console.log(`[SniperBot] Slippage: ${this.config.slippageBps / 100}%`);
-      
+
       // In production, this would:
       // 1. Parse token details from the transaction
       // 2. Create a swap transaction
       // 3. Submit the transaction with high priority fee
       // 4. Monitor for confirmation
-      
-      console.log('[SniperBot] ⚠️ Snipe execution not implemented (production mode)');
+
+      console.log(
+        "[SniperBot] ⚠️ Snipe execution not implemented (production mode)",
+      );
     } catch (error) {
-      console.error('[SniperBot] Error executing snipe:', error);
+      console.error("[SniperBot] Error executing snipe:", error);
     }
   }
 
@@ -359,7 +389,7 @@ export class SniperBot {
   }
 
   updateConfig(newConfig: Partial<SniperConfig>): void {
-    console.log('[SniperBot] Updating configuration:', newConfig);
+    console.log("[SniperBot] Updating configuration:", newConfig);
     this.config = { ...this.config, ...newConfig };
   }
 }

@@ -1,15 +1,18 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { PublicKey } from '@solana/web3.js';
-import { createResilientConnection } from '@/lib/solana/connection';
-import { FlashloanExecutor, ArbitrageOpportunity } from '@/lib/flashloan/executor';
-import { FLASHLOAN_PROVIDERS } from '@/lib/flashloan/providers';
-import { API } from '@/lib/config';
+import { NextRequest, NextResponse } from "next/server";
+import { PublicKey } from "@solana/web3.js";
+import { createResilientConnection } from "@/lib/solana/connection";
+import {
+  FlashloanExecutor,
+  ArbitrageOpportunity,
+} from "@/lib/flashloan/executor";
+import { FLASHLOAN_PROVIDERS } from "@/lib/flashloan/providers";
+import { API } from "@/lib/config";
 
 /**
  * POST /api/arbitrage/execute-flashloan
- * 
+ *
  * Execute flashloan-based arbitrage opportunity
- * 
+ *
  * Request body:
  * {
  *   "opportunity": {
@@ -22,7 +25,7 @@ import { API } from '@/lib/config';
  *   "walletAddress": "...",
  *   "provider": "Marginfi" // Optional, will auto-select best if not provided
  * }
- * 
+ *
  * Response:
  * {
  *   "success": true,
@@ -33,7 +36,7 @@ import { API } from '@/lib/config';
  */
 export async function POST(request: NextRequest) {
   let resilientConnection;
-  
+
   try {
     const body = await request.json();
     const { opportunity, walletAddress, provider } = body;
@@ -43,24 +46,28 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          error: 'opportunity and walletAddress are required',
+          error: "opportunity and walletAddress are required",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     // Validate opportunity structure
-    if (!opportunity.inputMint || !opportunity.outputMint || !opportunity.amount) {
+    if (
+      !opportunity.inputMint ||
+      !opportunity.outputMint ||
+      !opportunity.amount
+    ) {
       return NextResponse.json(
         {
           success: false,
-          error: 'opportunity must include inputMint, outputMint, and amount',
+          error: "opportunity must include inputMint, outputMint, and amount",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
-    console.log('⚡ Executing flashloan arbitrage...');
+    console.log("⚡ Executing flashloan arbitrage...");
     console.log(`   Wallet: ${walletAddress}`);
     console.log(`   Input: ${opportunity.inputMint}`);
     console.log(`   Output: ${opportunity.outputMint}`);
@@ -80,9 +87,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          error: 'Invalid wallet address',
+          error: "Invalid wallet address",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -99,14 +106,14 @@ export async function POST(request: NextRequest) {
     // Create executor
     const executor = new FlashloanExecutor(
       resilientConnection.getConnection(),
-      API.jupiterQuote()
+      API.jupiterQuote(),
     );
 
     // Execute arbitrage
     const result = await executor.executeArbitrageWithFlashloan(
       arbitrageOpportunity,
       userPublicKey,
-      provider
+      provider,
     );
 
     // Cleanup
@@ -116,13 +123,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          error: result.error || 'Execution failed',
+          error: result.error || "Execution failed",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
-    console.log('✅ Flashloan arbitrage executed successfully!');
+    console.log("✅ Flashloan arbitrage executed successfully!");
     console.log(`   Signature: ${result.signature}`);
     console.log(`   Profit: ${result.profit}`);
     console.log(`   Provider: ${result.provider}`);
@@ -135,33 +142,34 @@ export async function POST(request: NextRequest) {
       provider: result.provider,
       timestamp: Date.now(),
     };
-    
+
     // Only include RPC endpoint in development
-    if (process.env.NODE_ENV === 'development') {
+    if (process.env.NODE_ENV === "development") {
       response.rpcEndpoint = resilientConnection.getCurrentEndpoint();
     }
-    
+
     return NextResponse.json(response);
   } catch (error) {
-    console.error('❌ Flashloan arbitrage error:', error);
-    
+    console.error("❌ Flashloan arbitrage error:", error);
+
     if (resilientConnection) {
       resilientConnection.destroy();
     }
-    
-    const errorMessage = error instanceof Error ? error.message : 'Execution failed';
+
+    const errorMessage =
+      error instanceof Error ? error.message : "Execution failed";
     return NextResponse.json(
       { success: false, error: errorMessage },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
 
 /**
  * GET /api/arbitrage/execute-flashloan
- * 
+ *
  * Get available flashloan providers and their details
- * 
+ *
  * Response:
  * {
  *   "success": true,
@@ -170,9 +178,9 @@ export async function POST(request: NextRequest) {
  */
 export async function GET(_request: NextRequest) {
   try {
-    console.log('📋 Getting flashloan providers...');
+    console.log("📋 Getting flashloan providers...");
 
-    const providers = FLASHLOAN_PROVIDERS.map(p => ({
+    const providers = FLASHLOAN_PROVIDERS.map((p) => ({
       name: p.name,
       programId: p.programId.toString(),
       maxLoan: p.maxLoan,
@@ -186,11 +194,12 @@ export async function GET(_request: NextRequest) {
       timestamp: Date.now(),
     });
   } catch (error) {
-    console.error('❌ Get providers error:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Failed to get providers';
+    console.error("❌ Get providers error:", error);
+    const errorMessage =
+      error instanceof Error ? error.message : "Failed to get providers";
     return NextResponse.json(
       { success: false, error: errorMessage },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

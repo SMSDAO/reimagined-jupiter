@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios from "axios";
 
 export interface FarcasterProfile {
   fid: number;
@@ -58,7 +58,7 @@ export interface TrustScore {
 
 export class FarcasterScoring {
   private neynarApiKey: string;
-  private baseUrl: string = 'https://api.neynar.com/v2/farcaster';
+  private baseUrl: string = "https://api.neynar.com/v2/farcaster";
 
   constructor(neynarApiKey: string) {
     this.neynarApiKey = neynarApiKey;
@@ -67,26 +67,32 @@ export class FarcasterScoring {
   /**
    * Look up Farcaster profile by Solana wallet address
    */
-  async getProfileByWallet(walletAddress: string): Promise<FarcasterProfile | null> {
+  async getProfileByWallet(
+    walletAddress: string,
+  ): Promise<FarcasterProfile | null> {
     try {
       const response = await axios.get(`${this.baseUrl}/user/bulk-by-address`, {
         params: {
           addresses: walletAddress,
-          address_types: 'verified_addresses',
+          address_types: "verified_addresses",
         },
         headers: {
-          'api_key': this.neynarApiKey,
+          api_key: this.neynarApiKey,
         },
       });
 
-      if (response.data && response.data[walletAddress] && response.data[walletAddress].length > 0) {
+      if (
+        response.data &&
+        response.data[walletAddress] &&
+        response.data[walletAddress].length > 0
+      ) {
         const user = response.data[walletAddress][0];
         return this.mapNeynarUserToProfile(user);
       }
 
       return null;
     } catch (error) {
-      console.error('Error fetching Farcaster profile:', error);
+      console.error("Error fetching Farcaster profile:", error);
       return null;
     }
   }
@@ -94,7 +100,10 @@ export class FarcasterScoring {
   /**
    * Get user's recent casts
    */
-  async getUserCasts(fid: number, limit: number = 100): Promise<FarcasterCast[]> {
+  async getUserCasts(
+    fid: number,
+    limit: number = 100,
+  ): Promise<FarcasterCast[]> {
     try {
       const response = await axios.get(`${this.baseUrl}/feed/user/casts`, {
         params: {
@@ -102,7 +111,7 @@ export class FarcasterScoring {
           limit,
         },
         headers: {
-          'api_key': this.neynarApiKey,
+          api_key: this.neynarApiKey,
         },
       });
 
@@ -119,7 +128,7 @@ export class FarcasterScoring {
 
       return [];
     } catch (error) {
-      console.error('Error fetching casts:', error);
+      console.error("Error fetching casts:", error);
       return [];
     }
   }
@@ -128,7 +137,9 @@ export class FarcasterScoring {
    * Calculate Farcaster Score (0-100)
    * Breakdown: Followers(30pts) + Casts(20pts) + Power Badge(25pts) + Verified(15pts) + Influencer(10pts)
    */
-  async calculateFarcasterScore(walletAddress: string): Promise<FarcasterScore> {
+  async calculateFarcasterScore(
+    walletAddress: string,
+  ): Promise<FarcasterScore> {
     const profile = await this.getProfileByWallet(walletAddress);
 
     if (!profile) {
@@ -156,13 +167,20 @@ export class FarcasterScoring {
     const powerBadgeScore = profile.powerBadge ? 25 : 0;
 
     // Verified addresses (0-15 pts)
-    const verifiedScore = this.calculateVerifiedScore(profile.verifiedAddresses);
+    const verifiedScore = this.calculateVerifiedScore(
+      profile.verifiedAddresses,
+    );
 
     // Influencer status (0-10 pts)
     const influencerScore = this.calculateInfluencerScore(profile, casts);
 
     return {
-      totalScore: followerScore + castScore + powerBadgeScore + verifiedScore + influencerScore,
+      totalScore:
+        followerScore +
+        castScore +
+        powerBadgeScore +
+        verifiedScore +
+        influencerScore,
       factors: {
         followers: followerScore,
         casts: castScore,
@@ -193,22 +211,25 @@ export class FarcasterScoring {
     }
 
     const casts = await this.getUserCasts(profile.fid, 200);
-    const gmCasts = casts.filter(cast => 
-      cast.text.toLowerCase().includes('gm') || 
-      cast.text.toLowerCase().includes('good morning')
+    const gmCasts = casts.filter(
+      (cast) =>
+        cast.text.toLowerCase().includes("gm") ||
+        cast.text.toLowerCase().includes("good morning"),
     );
 
     const gmCastCount = gmCasts.length;
-    const averageLikes = gmCasts.length > 0 
-      ? gmCasts.reduce((sum, cast) => sum + cast.likes, 0) / gmCasts.length 
-      : 0;
-    const averageRecasts = gmCasts.length > 0 
-      ? gmCasts.reduce((sum, cast) => sum + cast.recasts, 0) / gmCasts.length 
-      : 0;
+    const averageLikes =
+      gmCasts.length > 0
+        ? gmCasts.reduce((sum, cast) => sum + cast.likes, 0) / gmCasts.length
+        : 0;
+    const averageRecasts =
+      gmCasts.length > 0
+        ? gmCasts.reduce((sum, cast) => sum + cast.recasts, 0) / gmCasts.length
+        : 0;
 
     // Calculate consistency (unique days with GM casts)
     const uniqueDays = new Set(
-      gmCasts.map(cast => new Date(cast.timestamp).toDateString())
+      gmCasts.map((cast) => new Date(cast.timestamp).toDateString()),
     ).size;
 
     // Scoring
@@ -217,14 +238,15 @@ export class FarcasterScoring {
     const recastsScore = Math.min(averageRecasts * 3, 20); // Max 20 pts
     const consistencyScore = Math.min(uniqueDays * 2, 25); // Max 25 pts (12.5 days)
 
-    const totalScore = gmCountScore + likesScore + recastsScore + consistencyScore;
+    const totalScore =
+      gmCountScore + likesScore + recastsScore + consistencyScore;
 
     return {
       totalScore,
       gmCastCount,
       averageLikes,
       averageRecasts,
-      communityEngagement: (likesScore + recastsScore) / 45 * 100,
+      communityEngagement: ((likesScore + recastsScore) / 45) * 100,
       consistency: uniqueDays,
     };
   }
@@ -236,7 +258,7 @@ export class FarcasterScoring {
   async calculateTrustScore(
     walletAddress: string,
     riskScore: number, // 0-100 (where 100 is highest risk)
-    walletAgeInDays: number
+    walletAgeInDays: number,
   ): Promise<TrustScore> {
     const farcasterScore = await this.calculateFarcasterScore(walletAddress);
     const gmScore = await this.calculateGMScore(walletAddress);
@@ -253,7 +275,8 @@ export class FarcasterScoring {
     // Age bonus (10%): Max score at 365+ days
     const ageBonus = Math.min(walletAgeInDays / 365, 1) * 10;
 
-    const totalScore = inverseRisk + farcasterContribution + gmContribution + ageBonus;
+    const totalScore =
+      inverseRisk + farcasterContribution + gmContribution + ageBonus;
 
     return {
       totalScore,
@@ -291,7 +314,7 @@ export class FarcasterScoring {
         sol: user.verified_addresses?.sol_addresses || [],
       },
       powerBadge: user.power_badge || false,
-      activeOnFarcaster: user.active_status === 'active',
+      activeOnFarcaster: user.active_status === "active",
     };
   }
 
@@ -323,22 +346,29 @@ export class FarcasterScoring {
     return castCount >= 1 ? 4 : 0;
   }
 
-  private calculateVerifiedScore(verifiedAddresses: { eth: string[]; sol: string[] }): number {
+  private calculateVerifiedScore(verifiedAddresses: {
+    eth: string[];
+    sol: string[];
+  }): number {
     // 0-15 points based on verified addresses
-    const totalVerified = verifiedAddresses.eth.length + verifiedAddresses.sol.length;
+    const totalVerified =
+      verifiedAddresses.eth.length + verifiedAddresses.sol.length;
     if (totalVerified >= 3) return 15;
     if (totalVerified === 2) return 10;
     if (totalVerified === 1) return 5;
     return 0;
   }
 
-  private calculateInfluencerScore(profile: FarcasterProfile, casts: FarcasterCast[]): number {
+  private calculateInfluencerScore(
+    profile: FarcasterProfile,
+    casts: FarcasterCast[],
+  ): number {
     // 0-10 points based on engagement rate
     if (casts.length === 0) return 0;
 
     const totalEngagement = casts.reduce(
       (sum, cast) => sum + cast.likes + cast.recasts + cast.replies,
-      0
+      0,
     );
     const averageEngagement = totalEngagement / casts.length;
 

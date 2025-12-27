@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useWallet } from '@solana/wallet-adapter-react';
-import { motion } from 'framer-motion';
-import './styles.css';
+import { useState } from "react";
+import { useWallet } from "@solana/wallet-adapter-react";
+import { motion } from "framer-motion";
+import "./styles.css";
 
 // Solana address length constants
 const SOLANA_ADDRESS_LENGTH_LONG = 44;
@@ -62,32 +62,36 @@ interface WalletAnalysis {
 
 export default function WalletAnalysis() {
   const { publicKey } = useWallet();
-  const [walletAddress, setWalletAddress] = useState('');
+  const [walletAddress, setWalletAddress] = useState("");
   const [analysis, setAnalysis] = useState<WalletAnalysis | null>(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   const analyzeWallet = async (address: string) => {
-    if (!address || (address.length !== SOLANA_ADDRESS_LENGTH_LONG && address.length !== SOLANA_ADDRESS_LENGTH_SHORT)) {
-      setError('Invalid Solana wallet address');
+    if (
+      !address ||
+      (address.length !== SOLANA_ADDRESS_LENGTH_LONG &&
+        address.length !== SOLANA_ADDRESS_LENGTH_SHORT)
+    ) {
+      setError("Invalid Solana wallet address");
       return;
     }
 
     setLoading(true);
-    setError('');
+    setError("");
 
     try {
       // Fetch wallet analysis data
       const response = await fetch(`/api/wallet-analysis/${address}`);
-      
+
       if (!response.ok) {
-        throw new Error('Failed to fetch wallet analysis');
+        throw new Error("Failed to fetch wallet analysis");
       }
 
       const data = await response.json();
       setAnalysis(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to analyze wallet');
+      setError(err instanceof Error ? err.message : "Failed to analyze wallet");
       setAnalysis(null);
     } finally {
       setLoading(false);
@@ -139,7 +143,7 @@ export default function WalletAnalysis() {
             className="search-input"
           />
           <button type="submit" className="btn-primary" disabled={loading}>
-            {loading ? '🔄 Analyzing...' : '🔍 Analyze'}
+            {loading ? "🔄 Analyzing..." : "🔍 Analyze"}
           </button>
         </form>
 
@@ -149,11 +153,7 @@ export default function WalletAnalysis() {
           </button>
         )}
 
-        {error && (
-          <div className="error-message">
-            ⚠️ {error}
-          </div>
-        )}
+        {error && <div className="error-message">⚠️ {error}</div>}
       </motion.div>
 
       {/* Analysis Results */}
@@ -172,12 +172,16 @@ export default function WalletAnalysis() {
                 <div className="ring ring-green neon-pulse"></div>
               </div>
               <div className="orb-content">
-                <div className="score-value gradient-text">{analysis.trust_score || 0}</div>
+                <div className="score-value gradient-text">
+                  {analysis.trust_score || 0}
+                </div>
                 <div className="score-label">Trust Score</div>
                 <div className="score-breakdown">
                   {analysis.trust_breakdown && (
                     <>
-                      <span>Risk: {analysis.trust_breakdown.inverse_risk}%</span>
+                      <span>
+                        Risk: {analysis.trust_breakdown.inverse_risk}%
+                      </span>
                       <span>Social: {analysis.trust_breakdown.farcaster}%</span>
                     </>
                   )}
@@ -201,24 +205,34 @@ export default function WalletAnalysis() {
                   {analysis.farcaster_score || 0}
                 </div>
               </div>
-              
+
               {analysis.farcaster_username ? (
                 <div className="card-content">
                   <div className="profile-info">
-                    <div className="profile-name">{analysis.farcaster_display_name}</div>
-                    <div className="profile-username">@{analysis.farcaster_username}</div>
+                    <div className="profile-name">
+                      {analysis.farcaster_display_name}
+                    </div>
+                    <div className="profile-username">
+                      @{analysis.farcaster_username}
+                    </div>
                     {analysis.farcaster_bio && (
-                      <div className="profile-bio">{analysis.farcaster_bio}</div>
+                      <div className="profile-bio">
+                        {analysis.farcaster_bio}
+                      </div>
                     )}
                   </div>
-                  
+
                   <div className="stats-grid">
                     <div className="stat-item">
-                      <div className="stat-value">{analysis.farcaster_followers || 0}</div>
+                      <div className="stat-value">
+                        {analysis.farcaster_followers || 0}
+                      </div>
                       <div className="stat-label">Followers</div>
                     </div>
                     <div className="stat-item">
-                      <div className="stat-value">{analysis.farcaster_casts || 0}</div>
+                      <div className="stat-value">
+                        {analysis.farcaster_casts || 0}
+                      </div>
                       <div className="stat-label">Casts</div>
                     </div>
                   </div>
@@ -255,23 +269,31 @@ export default function WalletAnalysis() {
                   {analysis.gm_score || 0}
                 </div>
               </div>
-              
+
               <div className="card-content">
                 <div className="stats-grid">
                   <div className="stat-item">
-                    <div className="stat-value">{analysis.gm_casts_count || 0}</div>
+                    <div className="stat-value">
+                      {analysis.gm_casts_count || 0}
+                    </div>
                     <div className="stat-label">GM Casts</div>
                   </div>
                   <div className="stat-item">
-                    <div className="stat-value">{analysis.gm_total_likes || 0}</div>
+                    <div className="stat-value">
+                      {analysis.gm_total_likes || 0}
+                    </div>
                     <div className="stat-label">Total Likes</div>
                   </div>
                   <div className="stat-item">
-                    <div className="stat-value">{analysis.gm_total_recasts || 0}</div>
+                    <div className="stat-value">
+                      {analysis.gm_total_recasts || 0}
+                    </div>
                     <div className="stat-label">Recasts</div>
                   </div>
                   <div className="stat-item">
-                    <div className="stat-value">{analysis.gm_engagement_rate || 0}%</div>
+                    <div className="stat-value">
+                      {analysis.gm_engagement_rate || 0}%
+                    </div>
                     <div className="stat-label">Engagement</div>
                   </div>
                 </div>
@@ -281,9 +303,11 @@ export default function WalletAnalysis() {
                     🔥 {analysis.gm_consistency_days || 0} Day Streak
                   </div>
                   <div className="consistency-progress">
-                    <div 
-                      className="consistency-fill" 
-                      style={{ width: `${Math.min(100, (analysis.gm_consistency_days || 0) / 30 * 100)}%` }}
+                    <div
+                      className="consistency-fill"
+                      style={{
+                        width: `${Math.min(100, ((analysis.gm_consistency_days || 0) / 30) * 100)}%`,
+                      }}
                     ></div>
                   </div>
                 </div>
@@ -306,25 +330,33 @@ export default function WalletAnalysis() {
 
             <div className="meta-card">
               <div className="meta-icon">💰</div>
-              <div className="meta-value">{analysis.current_balance_sol?.toFixed(2) || 0} SOL</div>
+              <div className="meta-value">
+                {analysis.current_balance_sol?.toFixed(2) || 0} SOL
+              </div>
               <div className="meta-label">Balance</div>
             </div>
 
             <div className="meta-card">
               <div className="meta-icon">📊</div>
-              <div className="meta-value">{analysis.total_transactions || 0}</div>
+              <div className="meta-value">
+                {analysis.total_transactions || 0}
+              </div>
               <div className="meta-label">Transactions</div>
             </div>
 
             <div className="meta-card">
               <div className="meta-icon">💎</div>
-              <div className="meta-value">{analysis.total_sol_transacted?.toFixed(2) || 0}</div>
+              <div className="meta-value">
+                {analysis.total_sol_transacted?.toFixed(2) || 0}
+              </div>
               <div className="meta-label">SOL Volume</div>
             </div>
 
             <div className="meta-card">
               <div className="meta-icon">🎯</div>
-              <div className="meta-value">{analysis.protocol_diversity || 0}</div>
+              <div className="meta-value">
+                {analysis.protocol_diversity || 0}
+              </div>
               <div className="meta-label">Protocols</div>
             </div>
 
@@ -336,13 +368,17 @@ export default function WalletAnalysis() {
 
             <div className="meta-card">
               <div className="meta-icon">💵</div>
-              <div className="meta-value">${analysis.portfolio_value_usd?.toFixed(2) || 0}</div>
+              <div className="meta-value">
+                ${analysis.portfolio_value_usd?.toFixed(2) || 0}
+              </div>
               <div className="meta-label">Portfolio</div>
             </div>
 
             <div className="meta-card">
               <div className="meta-icon">🏷️</div>
-              <div className="meta-value">{analysis.wallet_type || 'Unknown'}</div>
+              <div className="meta-value">
+                {analysis.wallet_type || "Unknown"}
+              </div>
               <div className="meta-label">Type</div>
             </div>
           </motion.div>
@@ -364,25 +400,33 @@ export default function WalletAnalysis() {
 
               <div className="activity-item">
                 <div className="activity-icon">💧</div>
-                <div className="activity-count">{analysis.lp_stake_count || 0}</div>
+                <div className="activity-count">
+                  {analysis.lp_stake_count || 0}
+                </div>
                 <div className="activity-label">LP Stakes</div>
               </div>
 
               <div className="activity-item">
                 <div className="activity-icon">🎁</div>
-                <div className="activity-count">{analysis.airdrop_count || 0}</div>
+                <div className="activity-count">
+                  {analysis.airdrop_count || 0}
+                </div>
                 <div className="activity-label">Airdrops</div>
               </div>
 
               <div className="activity-item">
                 <div className="activity-icon">🎨</div>
-                <div className="activity-count">{analysis.nft_mint_count || 0}</div>
+                <div className="activity-count">
+                  {analysis.nft_mint_count || 0}
+                </div>
                 <div className="activity-label">NFT Mints</div>
               </div>
 
               <div className="activity-item">
                 <div className="activity-icon">💸</div>
-                <div className="activity-count">{analysis.nft_sale_count || 0}</div>
+                <div className="activity-count">
+                  {analysis.nft_sale_count || 0}
+                </div>
                 <div className="activity-label">NFT Sales</div>
               </div>
             </div>
@@ -393,29 +437,45 @@ export default function WalletAnalysis() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.6 }}
-            className={`risk-assessment risk-level-${analysis.risk_level?.toLowerCase() || 'unknown'}`}
+            className={`risk-assessment risk-level-${analysis.risk_level?.toLowerCase() || "unknown"}`}
           >
             <h3 className="section-title">🛡️ Risk Assessment</h3>
             <div className="risk-content">
               <div className="risk-score-display">
-                <div className="risk-score-value">{analysis.risk_score || 0}</div>
-                <div className="risk-score-label">{analysis.risk_level || 'UNKNOWN'} RISK</div>
+                <div className="risk-score-value">
+                  {analysis.risk_score || 0}
+                </div>
+                <div className="risk-score-label">
+                  {analysis.risk_level || "UNKNOWN"} RISK
+                </div>
               </div>
 
               <div className="risk-indicators">
-                {analysis.is_honeypot && <span className="risk-badge">⚠️ Honeypot Pattern</span>}
-                {analysis.is_bot && <span className="risk-badge">🤖 Bot-like Behavior</span>}
-                {analysis.is_scam && <span className="risk-badge">🚨 Scam Indicators</span>}
+                {analysis.is_honeypot && (
+                  <span className="risk-badge">⚠️ Honeypot Pattern</span>
+                )}
+                {analysis.is_bot && (
+                  <span className="risk-badge">🤖 Bot-like Behavior</span>
+                )}
+                {analysis.is_scam && (
+                  <span className="risk-badge">🚨 Scam Indicators</span>
+                )}
                 {(analysis.social_verification_bonus ?? 0) > 0 && (
-                  <span className="risk-badge bonus">✓ Social Verified (-{analysis.social_verification_bonus})</span>
+                  <span className="risk-badge bonus">
+                    ✓ Social Verified (-{analysis.social_verification_bonus})
+                  </span>
                 )}
               </div>
 
               <div className="risk-description">
-                {analysis.risk_level === 'LOW' && '🟢 Low risk - Safe for interaction'}
-                {analysis.risk_level === 'MEDIUM' && '🟡 Medium risk - Monitor activity'}
-                {analysis.risk_level === 'HIGH' && '🔴 High risk - Exercise caution'}
-                {analysis.risk_level === 'CRITICAL' && '🔴 Critical risk - Avoid interaction'}
+                {analysis.risk_level === "LOW" &&
+                  "🟢 Low risk - Safe for interaction"}
+                {analysis.risk_level === "MEDIUM" &&
+                  "🟡 Medium risk - Monitor activity"}
+                {analysis.risk_level === "HIGH" &&
+                  "🔴 High risk - Exercise caution"}
+                {analysis.risk_level === "CRITICAL" &&
+                  "🔴 Critical risk - Avoid interaction"}
               </div>
             </div>
           </motion.div>

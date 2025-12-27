@@ -1,8 +1,8 @@
-import { Connection } from '@solana/web3.js';
+import { Connection } from "@solana/web3.js";
 
 export interface TradeRecord {
   timestamp: number;
-  type: 'flash-loan' | 'triangular' | 'hybrid';
+  type: "flash-loan" | "triangular" | "hybrid";
   profitAmount: number;
   profitToken: string;
   gasFee: number;
@@ -100,13 +100,14 @@ export class AnalyticsService {
     this.stats.totalProfit += trade.profitAmount;
     this.stats.totalGasFees += trade.gasFee;
     this.stats.netProfit = this.stats.totalProfit - this.stats.totalGasFees;
-    this.stats.avgProfitPerTrade = this.stats.totalProfit / this.stats.totalTrades;
+    this.stats.avgProfitPerTrade =
+      this.stats.totalProfit / this.stats.totalTrades;
     this.stats.totalVolume += trade.profitAmount; // Simplified volume calculation
 
     // Update profit by type
-    if (trade.type === 'flash-loan') {
+    if (trade.type === "flash-loan") {
       this.stats.profitByType.flashLoan += trade.profitAmount;
-    } else if (trade.type === 'triangular') {
+    } else if (trade.type === "triangular") {
       this.stats.profitByType.triangular += trade.profitAmount;
     } else {
       this.stats.profitByType.hybrid += trade.profitAmount;
@@ -114,14 +115,17 @@ export class AnalyticsService {
 
     // Update distribution breakdown if available
     if (trade.distributionBreakdown) {
-      this.stats.profitDistributed.reserve += trade.distributionBreakdown.reserve;
+      this.stats.profitDistributed.reserve +=
+        trade.distributionBreakdown.reserve;
       this.stats.profitDistributed.user += trade.distributionBreakdown.user;
       this.stats.profitDistributed.dao += trade.distributionBreakdown.dao;
     }
 
     this.stats.lastUpdated = Date.now();
 
-    console.log(`[Analytics] Trade recorded: ${trade.type} - Profit: ${(trade.profitAmount / 1e9).toFixed(4)} SOL`);
+    console.log(
+      `[Analytics] Trade recorded: ${trade.type} - Profit: ${(trade.profitAmount / 1e9).toFixed(4)} SOL`,
+    );
   }
 
   /**
@@ -147,12 +151,12 @@ export class AnalyticsService {
     const daysMs = days * 24 * 60 * 60 * 1000;
 
     // Filter trades within the time range
-    const recentTrades = this.trades.filter(t => now - t.timestamp <= daysMs);
+    const recentTrades = this.trades.filter((t) => now - t.timestamp <= daysMs);
 
     // Group by date
     for (const trade of recentTrades) {
-      const date = new Date(trade.timestamp).toISOString().split('T')[0];
-      
+      const date = new Date(trade.timestamp).toISOString().split("T")[0];
+
       if (!dailyMap.has(date)) {
         dailyMap.set(date, {
           date,
@@ -171,7 +175,9 @@ export class AnalyticsService {
     }
 
     // Convert to array and sort by date
-    return Array.from(dailyMap.values()).sort((a, b) => a.date.localeCompare(b.date));
+    return Array.from(dailyMap.values()).sort((a, b) =>
+      a.date.localeCompare(b.date),
+    );
   }
 
   /**
@@ -181,8 +187,11 @@ export class AnalyticsService {
     const profitByToken = new Map<string, number>();
 
     for (const trade of this.trades) {
-      const token = trade.profitToken || 'SOL';
-      profitByToken.set(token, (profitByToken.get(token) || 0) + trade.profitAmount);
+      const token = trade.profitToken || "SOL";
+      profitByToken.set(
+        token,
+        (profitByToken.get(token) || 0) + trade.profitAmount,
+      );
     }
 
     return profitByToken;
@@ -191,11 +200,13 @@ export class AnalyticsService {
   /**
    * Get most profitable token pairs
    */
-  getMostProfitablePairs(limit: number = 10): Array<{ pair: string; profit: number; count: number }> {
+  getMostProfitablePairs(
+    limit: number = 10,
+  ): Array<{ pair: string; profit: number; count: number }> {
     const pairMap = new Map<string, { profit: number; count: number }>();
 
     for (const trade of this.trades) {
-      const pair = trade.tokens.join('-');
+      const pair = trade.tokens.join("-");
       if (!pairMap.has(pair)) {
         pairMap.set(pair, { profit: 0, count: 0 });
       }
@@ -224,7 +235,7 @@ export class AnalyticsService {
     const weekMs = 7 * dayMs;
 
     const calculateMetrics = (timeRange: number) => {
-      const trades = this.trades.filter(t => now - t.timestamp <= timeRange);
+      const trades = this.trades.filter((t) => now - t.timestamp <= timeRange);
       const profit = trades.reduce((sum, t) => sum + t.profitAmount, 0);
       return { trades: trades.length, profit };
     };
@@ -240,11 +251,15 @@ export class AnalyticsService {
    * Export analytics data as JSON
    */
   exportData(): string {
-    return JSON.stringify({
-      stats: this.stats,
-      trades: this.trades,
-      exportTime: new Date().toISOString(),
-    }, null, 2);
+    return JSON.stringify(
+      {
+        stats: this.stats,
+        trades: this.trades,
+        exportTime: new Date().toISOString(),
+      },
+      null,
+      2,
+    );
   }
 
   /**
@@ -253,7 +268,7 @@ export class AnalyticsService {
   clearData(): void {
     this.trades = [];
     this.stats = this.initializeStats();
-    console.log('[Analytics] All data cleared');
+    console.log("[Analytics] All data cleared");
   }
 
   /**
@@ -262,8 +277,8 @@ export class AnalyticsService {
   getDashboardData(): {
     stats: AnalyticsStats;
     recentTrades: TradeRecord[];
-    recentPerformance: ReturnType<AnalyticsService['getRecentPerformance']>;
-    topPairs: ReturnType<AnalyticsService['getMostProfitablePairs']>;
+    recentPerformance: ReturnType<AnalyticsService["getRecentPerformance"]>;
+    topPairs: ReturnType<AnalyticsService["getMostProfitablePairs"]>;
     dailyStats: DailyStats[];
   } {
     return {
@@ -279,22 +294,40 @@ export class AnalyticsService {
    * Log current statistics to console
    */
   logStats(): void {
-    console.log('\n📊 Analytics Dashboard:');
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log("\n📊 Analytics Dashboard:");
+    console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     console.log(`Total Trades: ${this.stats.totalTrades}`);
-    console.log(`Total Profit: ${(this.stats.totalProfit / 1e9).toFixed(4)} SOL`);
-    console.log(`Total Gas Fees: ${(this.stats.totalGasFees / 1e9).toFixed(4)} SOL`);
+    console.log(
+      `Total Profit: ${(this.stats.totalProfit / 1e9).toFixed(4)} SOL`,
+    );
+    console.log(
+      `Total Gas Fees: ${(this.stats.totalGasFees / 1e9).toFixed(4)} SOL`,
+    );
     console.log(`Net Profit: ${(this.stats.netProfit / 1e9).toFixed(4)} SOL`);
-    console.log(`Avg Profit/Trade: ${(this.stats.avgProfitPerTrade / 1e9).toFixed(4)} SOL`);
+    console.log(
+      `Avg Profit/Trade: ${(this.stats.avgProfitPerTrade / 1e9).toFixed(4)} SOL`,
+    );
     console.log(`Success Rate: ${this.stats.successRate.toFixed(1)}%`);
-    console.log('\nProfit by Type:');
-    console.log(`  Flash Loan: ${(this.stats.profitByType.flashLoan / 1e9).toFixed(4)} SOL`);
-    console.log(`  Triangular: ${(this.stats.profitByType.triangular / 1e9).toFixed(4)} SOL`);
-    console.log(`  Hybrid: ${(this.stats.profitByType.hybrid / 1e9).toFixed(4)} SOL`);
-    console.log('\nProfit Distribution:');
-    console.log(`  Reserve (70%): ${(this.stats.profitDistributed.reserve / 1e9).toFixed(4)} SOL`);
-    console.log(`  User (20%): ${(this.stats.profitDistributed.user / 1e9).toFixed(4)} SOL`);
-    console.log(`  DAO (10%): ${(this.stats.profitDistributed.dao / 1e9).toFixed(4)} SOL`);
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+    console.log("\nProfit by Type:");
+    console.log(
+      `  Flash Loan: ${(this.stats.profitByType.flashLoan / 1e9).toFixed(4)} SOL`,
+    );
+    console.log(
+      `  Triangular: ${(this.stats.profitByType.triangular / 1e9).toFixed(4)} SOL`,
+    );
+    console.log(
+      `  Hybrid: ${(this.stats.profitByType.hybrid / 1e9).toFixed(4)} SOL`,
+    );
+    console.log("\nProfit Distribution:");
+    console.log(
+      `  Reserve (70%): ${(this.stats.profitDistributed.reserve / 1e9).toFixed(4)} SOL`,
+    );
+    console.log(
+      `  User (20%): ${(this.stats.profitDistributed.user / 1e9).toFixed(4)} SOL`,
+    );
+    console.log(
+      `  DAO (10%): ${(this.stats.profitDistributed.dao / 1e9).toFixed(4)} SOL`,
+    );
+    console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
   }
 }

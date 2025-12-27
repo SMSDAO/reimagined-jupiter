@@ -1,11 +1,11 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { getRPCRotator, type RPCEndpoint } from '@/lib/rpc-rotator';
+import { useState, useEffect } from "react";
+import { getRPCRotator, type RPCEndpoint } from "@/lib/rpc-rotator";
 
 /**
  * RPCHealthIndicator - Real-time RPC endpoint health monitor
- * 
+ *
  * Displays:
  * - Current RPC endpoints
  * - Health status (green/red indicator)
@@ -56,21 +56,18 @@ export default function RPCHealthIndicator() {
       </div>
       <div className="space-y-1">
         {endpoints.map((ep, i) => (
-          <div
-            key={i}
-            className="flex items-center gap-2 text-gray-300"
-          >
+          <div key={i} className="flex items-center gap-2 text-gray-300">
             <div
               className={`w-2 h-2 rounded-full ${
-                ep.healthy ? 'bg-green-400' : 'bg-red-400'
+                ep.healthy ? "bg-green-400" : "bg-red-400"
               }`}
-              title={ep.healthy ? 'Healthy' : 'Unhealthy'}
+              title={ep.healthy ? "Healthy" : "Unhealthy"}
             />
             <span className="flex-1 truncate" title={ep.url}>
               {ep.name}
             </span>
             <span className="text-gray-500">
-              {ep.latency > 0 && ep.latency < 9999 ? `${ep.latency}ms` : '---'}
+              {ep.latency > 0 && ep.latency < 9999 ? `${ep.latency}ms` : "---"}
             </span>
           </div>
         ))}

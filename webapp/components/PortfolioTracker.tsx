@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useRef } from 'react';
-import { motion } from 'framer-motion';
-import StatCard from './StatCard';
+import { useState, useEffect, useRef } from "react";
+import { motion } from "framer-motion";
+import StatCard from "./StatCard";
 
 interface PortfolioAsset {
   symbol: string;
@@ -13,10 +13,10 @@ interface PortfolioAsset {
 
 export default function PortfolioTracker() {
   const [assets, setAssets] = useState<PortfolioAsset[]>([
-    { symbol: 'SOL', amount: 10.5, value: 1034.25, change24h: 2.5 },
-    { symbol: 'USDC', amount: 500, value: 500, change24h: 0 },
-    { symbol: 'JUP', amount: 250, value: 335, change24h: 5.7 },
-    { symbol: 'BONK', amount: 1000000, value: 23, change24h: -1.2 },
+    { symbol: "SOL", amount: 10.5, value: 1034.25, change24h: 2.5 },
+    { symbol: "USDC", amount: 500, value: 500, change24h: 0 },
+    { symbol: "JUP", amount: 250, value: 335, change24h: 5.7 },
+    { symbol: "BONK", amount: 1000000, value: 23, change24h: -1.2 },
   ]);
 
   const [totalValue, setTotalValue] = useState(0);
@@ -27,55 +27,66 @@ export default function PortfolioTracker() {
     // Connect to WebSocket service for real-time portfolio updates
     const connectWebSocket = () => {
       try {
-        const ws = new WebSocket(process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:3001');
-        
+        const ws = new WebSocket(
+          process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:3001",
+        );
+
         ws.onopen = () => {
-          console.log('[PortfolioTracker] WebSocket connected');
+          console.log("[PortfolioTracker] WebSocket connected");
           // Subscribe to portfolio updates
-          ws.send(JSON.stringify({
-            type: 'subscribe',
-            channel: 'portfolio'
-          }));
+          ws.send(
+            JSON.stringify({
+              type: "subscribe",
+              channel: "portfolio",
+            }),
+          );
         };
-        
+
         ws.onmessage = (event) => {
           try {
             const data = JSON.parse(event.data);
-            if (data.type === 'portfolio_update' && data.assets) {
+            if (data.type === "portfolio_update" && data.assets) {
               setAssets(data.assets);
-            } else if (data.type === 'price_update' && data.prices) {
+            } else if (data.type === "price_update" && data.prices) {
               // Update asset values based on price updates
-              setAssets(prev => prev.map(asset => {
-                const priceUpdate = data.prices.find((p: any) => p.symbol === asset.symbol);
-                if (priceUpdate) {
-                  const newValue = asset.amount * priceUpdate.price;
-                  return {
-                    ...asset,
-                    value: newValue,
-                    change24h: priceUpdate.change24h || asset.change24h,
-                  };
-                }
-                return asset;
-              }));
+              setAssets((prev) =>
+                prev.map((asset) => {
+                  const priceUpdate = data.prices.find(
+                    (p: any) => p.symbol === asset.symbol,
+                  );
+                  if (priceUpdate) {
+                    const newValue = asset.amount * priceUpdate.price;
+                    return {
+                      ...asset,
+                      value: newValue,
+                      change24h: priceUpdate.change24h || asset.change24h,
+                    };
+                  }
+                  return asset;
+                }),
+              );
             }
           } catch (error) {
-            console.error('[PortfolioTracker] Error parsing message:', error);
+            console.error("[PortfolioTracker] Error parsing message:", error);
           }
         };
-        
+
         ws.onerror = (error) => {
-          console.error('[PortfolioTracker] WebSocket error:', error);
+          console.error("[PortfolioTracker] WebSocket error:", error);
         };
-        
+
         ws.onclose = () => {
-          console.log('[PortfolioTracker] WebSocket closed, reconnecting...');
+          console.log("[PortfolioTracker] WebSocket closed, reconnecting...");
           // Reconnect after 5 seconds
           setTimeout(connectWebSocket, 5000);
         };
-        
+
         wsRef.current = ws;
       } catch (error) {
-        console.error('[PortfolioTracker] Error connecting to WebSocket:', error);
+        console.error(
+          "[PortfolioTracker] Error connecting to WebSocket:",
+          error,
+        );
       }
     };
 
@@ -90,7 +101,8 @@ export default function PortfolioTracker() {
 
   useEffect(() => {
     const total = assets.reduce((sum, asset) => sum + asset.value, 0);
-    const avgChange = assets.reduce((sum, asset) => sum + asset.change24h, 0) / assets.length;
+    const avgChange =
+      assets.reduce((sum, asset) => sum + asset.change24h, 0) / assets.length;
     setTotalValue(total);
     setTotalChange(avgChange);
   }, [assets]);
@@ -104,8 +116,8 @@ export default function PortfolioTracker() {
           label="Total Value"
           value={`$${totalValue.toFixed(2)}`}
           color="text-green-400"
-          trend={totalChange >= 0 ? 'up' : 'down'}
-          trendValue={`${totalChange >= 0 ? '+' : ''}${totalChange.toFixed(2)}%`}
+          trend={totalChange >= 0 ? "up" : "down"}
+          trendValue={`${totalChange >= 0 ? "+" : ""}${totalChange.toFixed(2)}%`}
         />
         <StatCard
           icon="📊"
@@ -116,16 +128,22 @@ export default function PortfolioTracker() {
         <StatCard
           icon="🔥"
           label="Best Performer"
-          value={assets.reduce((max, asset) => asset.change24h > max.change24h ? asset : max).symbol}
+          value={
+            assets.reduce((max, asset) =>
+              asset.change24h > max.change24h ? asset : max,
+            ).symbol
+          }
           color="text-purple-400"
           trend="up"
-          trendValue={`${assets.reduce((max, asset) => asset.change24h > max.change24h ? asset : max).change24h.toFixed(2)}%`}
+          trendValue={`${assets.reduce((max, asset) => (asset.change24h > max.change24h ? asset : max)).change24h.toFixed(2)}%`}
         />
       </div>
 
       {/* Asset List */}
       <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 sm:p-6 border border-white/10">
-        <h3 className="text-lg sm:text-xl font-bold text-white mb-4">Your Assets</h3>
+        <h3 className="text-lg sm:text-xl font-bold text-white mb-4">
+          Your Assets
+        </h3>
         <div className="space-y-3">
           {assets.map((asset, index) => (
             <motion.div
@@ -140,16 +158,25 @@ export default function PortfolioTracker() {
                   {asset.symbol.charAt(0)}
                 </div>
                 <div>
-                  <div className="text-white font-bold text-sm sm:text-base">{asset.symbol}</div>
-                  <div className="text-gray-400 text-xs sm:text-sm">{asset.amount.toLocaleString()}</div>
+                  <div className="text-white font-bold text-sm sm:text-base">
+                    {asset.symbol}
+                  </div>
+                  <div className="text-gray-400 text-xs sm:text-sm">
+                    {asset.amount.toLocaleString()}
+                  </div>
                 </div>
               </div>
               <div className="text-right">
-                <div className="text-white font-bold text-sm sm:text-base">${asset.value.toFixed(2)}</div>
-                <div className={`text-xs sm:text-sm font-semibold ${
-                  asset.change24h >= 0 ? 'text-green-400' : 'text-red-400'
-                }`}>
-                  {asset.change24h >= 0 ? '▲' : '▼'} {Math.abs(asset.change24h).toFixed(2)}%
+                <div className="text-white font-bold text-sm sm:text-base">
+                  ${asset.value.toFixed(2)}
+                </div>
+                <div
+                  className={`text-xs sm:text-sm font-semibold ${
+                    asset.change24h >= 0 ? "text-green-400" : "text-red-400"
+                  }`}
+                >
+                  {asset.change24h >= 0 ? "▲" : "▼"}{" "}
+                  {Math.abs(asset.change24h).toFixed(2)}%
                 </div>
               </div>
             </motion.div>

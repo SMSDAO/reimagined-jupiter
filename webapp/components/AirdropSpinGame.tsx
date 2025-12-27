@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useWallet } from '@solana/wallet-adapter-react';
+import { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { useWallet } from "@solana/wallet-adapter-react";
 
 // Constants for cooldown configuration
 const BASE_COOLDOWN_MS = 12 * 60 * 60 * 1000; // 12 hours in milliseconds
@@ -21,29 +21,36 @@ interface SpinHistory {
   strikes: number;
 }
 
-export default function AirdropSpinGame({ tokenSymbol = 'GXQ', onWin }: SpinGameProps) {
+export default function AirdropSpinGame({
+  tokenSymbol = "GXQ",
+  onWin,
+}: SpinGameProps) {
   const { publicKey } = useWallet();
   const [spinning, setSpinning] = useState(false);
   const [lastSpin, setLastSpin] = useState<number | null>(null);
   const [strikes, setStrikes] = useState(0);
   const [cooldownTime, setCooldownTime] = useState(BASE_COOLDOWN_MS);
-  const [timeUntilSpin, setTimeUntilSpin] = useState<string>('');
+  const [timeUntilSpin, setTimeUntilSpin] = useState<string>("");
   const [wonAmount, setWonAmount] = useState<number | null>(null);
 
   // Load spin history from localStorage
   useEffect(() => {
     if (!publicKey) return;
-    
+
     const storageKey = `spin_history_${publicKey.toString()}`;
     const saved = localStorage.getItem(storageKey);
     if (saved) {
       const history: SpinHistory = JSON.parse(saved);
       setLastSpin(history.timestamp);
       setStrikes(history.strikes);
-      
+
       // Calculate reduced cooldown based on strikes
       if (history.strikes >= STRIKES_BEFORE_REDUCTION) {
-        const reductionFactor = Math.min(history.strikes - (STRIKES_BEFORE_REDUCTION - 1), MAX_REDUCTION_STRIKES) * REDUCTION_RATE;
+        const reductionFactor =
+          Math.min(
+            history.strikes - (STRIKES_BEFORE_REDUCTION - 1),
+            MAX_REDUCTION_STRIKES,
+          ) * REDUCTION_RATE;
         const reducedCooldown = BASE_COOLDOWN_MS * (1 - reductionFactor);
         setCooldownTime(Math.max(reducedCooldown, MIN_COOLDOWN_MS));
       }
@@ -59,10 +66,12 @@ export default function AirdropSpinGame({ tokenSymbol = 'GXQ', onWin }: SpinGame
         const remaining = cooldownTime - timeSince;
 
         if (remaining <= 0) {
-          setTimeUntilSpin('Ready to spin!');
+          setTimeUntilSpin("Ready to spin!");
         } else {
           const hours = Math.floor(remaining / (1000 * 60 * 60));
-          const minutes = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
+          const minutes = Math.floor(
+            (remaining % (1000 * 60 * 60)) / (1000 * 60),
+          );
           const seconds = Math.floor((remaining % (1000 * 60)) / 1000);
           setTimeUntilSpin(`${hours}h ${minutes}m ${seconds}s`);
         }
@@ -90,11 +99,23 @@ export default function AirdropSpinGame({ tokenSymbol = 'GXQ', onWin }: SpinGame
     setTimeout(() => {
       // Prize tiers with weighted probability
       const prizes = [
-        { amount: 10000, probability: 0.01, color: 'from-yellow-500 to-orange-500' },
-        { amount: 5000, probability: 0.05, color: 'from-purple-500 to-pink-500' },
-        { amount: 1000, probability: 0.15, color: 'from-blue-500 to-cyan-500' },
-        { amount: 500, probability: 0.29, color: 'from-green-500 to-emerald-500' },
-        { amount: 100, probability: 0.50, color: 'from-gray-500 to-gray-600' },
+        {
+          amount: 10000,
+          probability: 0.01,
+          color: "from-yellow-500 to-orange-500",
+        },
+        {
+          amount: 5000,
+          probability: 0.05,
+          color: "from-purple-500 to-pink-500",
+        },
+        { amount: 1000, probability: 0.15, color: "from-blue-500 to-cyan-500" },
+        {
+          amount: 500,
+          probability: 0.29,
+          color: "from-green-500 to-emerald-500",
+        },
+        { amount: 100, probability: 0.5, color: "from-gray-500 to-gray-600" },
       ];
 
       const random = Math.random();
@@ -155,7 +176,8 @@ export default function AirdropSpinGame({ tokenSymbol = 'GXQ', onWin }: SpinGame
             transition={{ duration: 3, ease: [0.34, 1.56, 0.64, 1] }}
             className="absolute inset-0"
             style={{
-              background: 'conic-gradient(from 0deg, #eab308, #ef4444, #9333ea, #ec4899, #3b82f6, #10b981, #eab308, #ef4444, #9333ea, #ec4899, #3b82f6, #10b981)',
+              background:
+                "conic-gradient(from 0deg, #eab308, #ef4444, #9333ea, #ec4899, #3b82f6, #10b981, #eab308, #ef4444, #9333ea, #ec4899, #3b82f6, #10b981)",
             }}
           />
         </div>
@@ -171,7 +193,11 @@ export default function AirdropSpinGame({ tokenSymbol = 'GXQ', onWin }: SpinGame
               🎁
             </motion.div>
             <div className="text-white text-2xl font-bold">
-              {spinning ? 'Spinning...' : wonAmount ? `${wonAmount} ${tokenSymbol}!` : 'Spin!'}
+              {spinning
+                ? "Spinning..."
+                : wonAmount
+                  ? `${wonAmount} ${tokenSymbol}!`
+                  : "Spin!"}
             </div>
           </div>
         </div>
@@ -209,18 +235,26 @@ export default function AirdropSpinGame({ tokenSymbol = 'GXQ', onWin }: SpinGame
           disabled={!canSpin() || spinning}
           className={`px-12 py-4 rounded-xl font-bold text-xl transition-all ${
             canSpin() && !spinning
-              ? 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white glow-purple cursor-pointer'
-              : 'bg-gray-600 text-gray-400 cursor-not-allowed'
+              ? "bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white glow-purple cursor-pointer"
+              : "bg-gray-600 text-gray-400 cursor-not-allowed"
           }`}
         >
-          {spinning ? '🎰 Spinning...' : canSpin() ? '🎰 Spin Now!' : '⏰ Cooldown Active'}
+          {spinning
+            ? "🎰 Spinning..."
+            : canSpin()
+              ? "🎰 Spin Now!"
+              : "⏰ Cooldown Active"}
         </button>
 
         {/* Cooldown Info */}
         {!canSpin() && (
           <div className="bg-purple-900/30 rounded-lg p-4">
-            <div className="text-white font-bold text-lg">Next spin in: {timeUntilSpin}</div>
-            <div className="text-gray-300 text-sm mt-2">{getCooldownInfo()}</div>
+            <div className="text-white font-bold text-lg">
+              Next spin in: {timeUntilSpin}
+            </div>
+            <div className="text-gray-300 text-sm mt-2">
+              {getCooldownInfo()}
+            </div>
           </div>
         )}
 
@@ -228,7 +262,9 @@ export default function AirdropSpinGame({ tokenSymbol = 'GXQ', onWin }: SpinGame
         <div className="bg-gradient-to-r from-blue-900/50 to-purple-900/50 rounded-lg p-4 backdrop-blur-sm">
           <div className="flex items-center justify-between">
             <span className="text-white font-semibold">Spin Strikes:</span>
-            <span className="text-2xl font-bold text-yellow-400">{strikes} 🔥</span>
+            <span className="text-2xl font-bold text-yellow-400">
+              {strikes} 🔥
+            </span>
           </div>
           {strikes >= 6 && (
             <div className="mt-2 text-green-400 text-sm">
@@ -242,11 +278,41 @@ export default function AirdropSpinGame({ tokenSymbol = 'GXQ', onWin }: SpinGame
       <div className="space-y-2">
         <h3 className="text-white font-bold text-lg mb-3">Prize Tiers:</h3>
         {[
-          { emoji: '🥇', label: 'Grand Prize', amount: 10000, probability: '1%', color: 'from-yellow-500 to-orange-500' },
-          { emoji: '🥈', label: 'Big Win', amount: 5000, probability: '5%', color: 'from-purple-500 to-pink-500' },
-          { emoji: '🥉', label: 'Good Win', amount: 1000, probability: '15%', color: 'from-blue-500 to-cyan-500' },
-          { emoji: '🎯', label: 'Nice Win', amount: 500, probability: '29%', color: 'from-green-500 to-emerald-500' },
-          { emoji: '🎁', label: 'Small Win', amount: 100, probability: '50%', color: 'from-gray-500 to-gray-600' },
+          {
+            emoji: "🥇",
+            label: "Grand Prize",
+            amount: 10000,
+            probability: "1%",
+            color: "from-yellow-500 to-orange-500",
+          },
+          {
+            emoji: "🥈",
+            label: "Big Win",
+            amount: 5000,
+            probability: "5%",
+            color: "from-purple-500 to-pink-500",
+          },
+          {
+            emoji: "🥉",
+            label: "Good Win",
+            amount: 1000,
+            probability: "15%",
+            color: "from-blue-500 to-cyan-500",
+          },
+          {
+            emoji: "🎯",
+            label: "Nice Win",
+            amount: 500,
+            probability: "29%",
+            color: "from-green-500 to-emerald-500",
+          },
+          {
+            emoji: "🎁",
+            label: "Small Win",
+            amount: 100,
+            probability: "50%",
+            color: "from-gray-500 to-gray-600",
+          },
         ].map((tier) => (
           <motion.div
             key={tier.label}
@@ -258,7 +324,9 @@ export default function AirdropSpinGame({ tokenSymbol = 'GXQ', onWin }: SpinGame
               <span className="font-semibold">{tier.label}</span>
             </div>
             <div className="text-right">
-              <div className="font-bold">{tier.amount.toLocaleString()} {tokenSymbol}</div>
+              <div className="font-bold">
+                {tier.amount.toLocaleString()} {tokenSymbol}
+              </div>
               <div className="text-xs opacity-80">{tier.probability}</div>
             </div>
           </motion.div>

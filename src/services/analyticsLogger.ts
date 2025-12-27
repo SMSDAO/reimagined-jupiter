@@ -1,9 +1,9 @@
-import { writeFileSync, appendFileSync, existsSync, mkdirSync } from 'fs';
-import { join } from 'path';
+import { writeFileSync, appendFileSync, existsSync, mkdirSync } from "fs";
+import { join } from "path";
 
 export interface TransactionLog {
   timestamp: Date;
-  type: 'arbitrage' | 'distribution' | 'airdrop' | 'other';
+  type: "arbitrage" | "distribution" | "airdrop" | "other";
   signature?: string;
   success: boolean;
   profit?: number;
@@ -45,7 +45,7 @@ export class AnalyticsLogger {
   private profitAllocations: ProfitAllocationLog[] = [];
   private arbitrageExecutions: ArbitrageExecutionLog[] = [];
 
-  constructor(logsDir: string = './logs') {
+  constructor(logsDir: string = "./logs") {
     this.logsDir = logsDir;
     this.ensureLogsDirectory();
   }
@@ -59,35 +59,39 @@ export class AnalyticsLogger {
   /**
    * Log a transaction
    */
-  logTransaction(log: Omit<TransactionLog, 'timestamp'>): void {
+  logTransaction(log: Omit<TransactionLog, "timestamp">): void {
     const entry: TransactionLog = {
       ...log,
       timestamp: new Date(),
     };
 
     this.transactions.push(entry);
-    this.appendToFile('transactions.jsonl', entry);
+    this.appendToFile("transactions.jsonl", entry);
 
-    const status = entry.success ? '✅' : '❌';
-    console.log(`${status} Transaction [${entry.type}]: ${entry.signature || 'N/A'}`);
+    const status = entry.success ? "✅" : "❌";
+    console.log(
+      `${status} Transaction [${entry.type}]: ${entry.signature || "N/A"}`,
+    );
     if (entry.profit) {
-      console.log(`   Profit: $${entry.profit.toFixed(4)} | Cost: $${entry.cost?.toFixed(4) || '0'} | Net: $${entry.netProfit?.toFixed(4) || '0'}`);
+      console.log(
+        `   Profit: $${entry.profit.toFixed(4)} | Cost: $${entry.cost?.toFixed(4) || "0"} | Net: $${entry.netProfit?.toFixed(4) || "0"}`,
+      );
     }
   }
 
   /**
    * Log profit allocation
    */
-  logProfitAllocation(log: Omit<ProfitAllocationLog, 'timestamp'>): void {
+  logProfitAllocation(log: Omit<ProfitAllocationLog, "timestamp">): void {
     const entry: ProfitAllocationLog = {
       ...log,
       timestamp: new Date(),
     };
 
     this.profitAllocations.push(entry);
-    this.appendToFile('profit-allocations.jsonl', entry);
+    this.appendToFile("profit-allocations.jsonl", entry);
 
-    const status = entry.success ? '✅' : '❌';
+    const status = entry.success ? "✅" : "❌";
     console.log(`${status} Profit Distribution:`);
     console.log(`   Total: $${entry.totalProfit.toFixed(6)}`);
     console.log(`   Reserve (70%): $${entry.reserveAmount.toFixed(6)}`);
@@ -101,18 +105,18 @@ export class AnalyticsLogger {
   /**
    * Log arbitrage execution
    */
-  logArbitrageExecution(log: Omit<ArbitrageExecutionLog, 'timestamp'>): void {
+  logArbitrageExecution(log: Omit<ArbitrageExecutionLog, "timestamp">): void {
     const entry: ArbitrageExecutionLog = {
       ...log,
       timestamp: new Date(),
     };
 
     this.arbitrageExecutions.push(entry);
-    this.appendToFile('arbitrage-executions.jsonl', entry);
+    this.appendToFile("arbitrage-executions.jsonl", entry);
 
-    const status = entry.success ? '✅' : '❌';
+    const status = entry.success ? "✅" : "❌";
     console.log(`${status} Arbitrage [${entry.strategy}]:`);
-    console.log(`   Tokens: ${entry.tokens.join(' -> ')}`);
+    console.log(`   Tokens: ${entry.tokens.join(" -> ")}`);
     console.log(`   Est. Profit: $${entry.estimatedProfit.toFixed(4)}`);
     if (entry.actualProfit !== undefined) {
       console.log(`   Actual Profit: $${entry.actualProfit.toFixed(4)}`);
@@ -135,8 +139,8 @@ export class AnalyticsLogger {
   private appendToFile(filename: string, entry: any): void {
     try {
       const filepath = join(this.logsDir, filename);
-      const line = JSON.stringify(entry) + '\n';
-      appendFileSync(filepath, line, 'utf8');
+      const line = JSON.stringify(entry) + "\n";
+      appendFileSync(filepath, line, "utf8");
     } catch (error) {
       console.error(`Failed to write to log file ${filename}:`, error);
     }
@@ -154,7 +158,7 @@ export class AnalyticsLogger {
     totalNetProfit: number;
     byType: Record<string, number>;
   } {
-    const successful = this.transactions.filter(t => t.success);
+    const successful = this.transactions.filter((t) => t.success);
     const byType: Record<string, number> = {};
 
     for (const tx of this.transactions) {
@@ -167,7 +171,10 @@ export class AnalyticsLogger {
       failed: this.transactions.length - successful.length,
       totalProfit: successful.reduce((sum, t) => sum + (t.profit || 0), 0),
       totalCost: successful.reduce((sum, t) => sum + (t.cost || 0), 0),
-      totalNetProfit: successful.reduce((sum, t) => sum + (t.netProfit || 0), 0),
+      totalNetProfit: successful.reduce(
+        (sum, t) => sum + (t.netProfit || 0),
+        0,
+      ),
       byType,
     };
   }
@@ -184,7 +191,7 @@ export class AnalyticsLogger {
     totalGas: number;
     totalDao: number;
   } {
-    const successful = this.profitAllocations.filter(p => p.success);
+    const successful = this.profitAllocations.filter((p) => p.success);
 
     return {
       total: this.profitAllocations.length,
@@ -211,7 +218,7 @@ export class AnalyticsLogger {
     averageSlippage: number;
     byStrategy: Record<string, number>;
   } {
-    const successful = this.arbitrageExecutions.filter(a => a.success);
+    const successful = this.arbitrageExecutions.filter((a) => a.success);
     const byStrategy: Record<string, number> = {};
 
     for (const arb of this.arbitrageExecutions) {
@@ -220,16 +227,17 @@ export class AnalyticsLogger {
 
     const totalEstimatedProfit = this.arbitrageExecutions.reduce(
       (sum, a) => sum + a.estimatedProfit,
-      0
+      0,
     );
     const totalActualProfit = successful.reduce(
       (sum, a) => sum + (a.actualProfit || 0),
-      0
+      0,
     );
 
     const averageSlippage =
       successful.length > 0
-        ? ((totalEstimatedProfit - totalActualProfit) / totalEstimatedProfit) * 100
+        ? ((totalEstimatedProfit - totalActualProfit) / totalEstimatedProfit) *
+          100
         : 0;
 
     return {
@@ -238,8 +246,14 @@ export class AnalyticsLogger {
       failed: this.arbitrageExecutions.length - successful.length,
       totalEstimatedProfit,
       totalActualProfit,
-      totalGasCost: this.arbitrageExecutions.reduce((sum, a) => sum + a.gasCost, 0),
-      totalNetProfit: successful.reduce((sum, a) => sum + (a.netProfit || 0), 0),
+      totalGasCost: this.arbitrageExecutions.reduce(
+        (sum, a) => sum + a.gasCost,
+        0,
+      ),
+      totalNetProfit: successful.reduce(
+        (sum, a) => sum + (a.netProfit || 0),
+        0,
+      ),
       averageSlippage,
       byStrategy,
     };
@@ -253,23 +267,23 @@ export class AnalyticsLogger {
     const profitStats = this.getProfitAllocationStats();
     const arbStats = this.getArbitrageStats();
 
-    let report = '═══════════════════════════════════════════\n';
-    report += '           ANALYTICS REPORT\n';
-    report += '═══════════════════════════════════════════\n\n';
+    let report = "═══════════════════════════════════════════\n";
+    report += "           ANALYTICS REPORT\n";
+    report += "═══════════════════════════════════════════\n\n";
 
-    report += '📊 Transaction Statistics:\n';
+    report += "📊 Transaction Statistics:\n";
     report += `   Total Transactions: ${txStats.total}\n`;
     report += `   Successful: ${txStats.successful} (${((txStats.successful / txStats.total) * 100).toFixed(1)}%)\n`;
     report += `   Failed: ${txStats.failed}\n`;
     report += `   Total Profit: $${txStats.totalProfit.toFixed(2)}\n`;
     report += `   Total Cost: $${txStats.totalCost.toFixed(2)}\n`;
     report += `   Total Net Profit: $${txStats.totalNetProfit.toFixed(2)}\n`;
-    report += '   By Type:\n';
+    report += "   By Type:\n";
     for (const [type, count] of Object.entries(txStats.byType)) {
       report += `     ${type}: ${count}\n`;
     }
 
-    report += '\n💰 Profit Distribution:\n';
+    report += "\n💰 Profit Distribution:\n";
     report += `   Total Distributions: ${profitStats.total}\n`;
     report += `   Successful: ${profitStats.successful}\n`;
     report += `   Failed: ${profitStats.failed}\n`;
@@ -278,7 +292,7 @@ export class AnalyticsLogger {
     report += `   Gas Coverage (20%): $${profitStats.totalGas.toFixed(2)}\n`;
     report += `   DAO Community (10%): $${profitStats.totalDao.toFixed(2)}\n`;
 
-    report += '\n⚡ Arbitrage Executions:\n';
+    report += "\n⚡ Arbitrage Executions:\n";
     report += `   Total Executions: ${arbStats.total}\n`;
     report += `   Successful: ${arbStats.successful} (${((arbStats.successful / arbStats.total) * 100).toFixed(1)}%)\n`;
     report += `   Failed: ${arbStats.failed}\n`;
@@ -287,12 +301,12 @@ export class AnalyticsLogger {
     report += `   Gas Cost: $${arbStats.totalGasCost.toFixed(2)}\n`;
     report += `   Net Profit: $${arbStats.totalNetProfit.toFixed(2)}\n`;
     report += `   Avg Slippage: ${arbStats.averageSlippage.toFixed(2)}%\n`;
-    report += '   By Strategy:\n';
+    report += "   By Strategy:\n";
     for (const [strategy, count] of Object.entries(arbStats.byStrategy)) {
       report += `     ${strategy}: ${count}\n`;
     }
 
-    report += '\n═══════════════════════════════════════════\n';
+    report += "\n═══════════════════════════════════════════\n";
 
     return report;
   }
@@ -313,7 +327,7 @@ export class AnalyticsLogger {
         },
       },
       null,
-      2
+      2,
     );
   }
 
@@ -322,9 +336,9 @@ export class AnalyticsLogger {
    */
   saveReport(): void {
     const report = this.generateReport();
-    const filename = `report-${new Date().toISOString().replace(/[:.]/g, '-')}.txt`;
+    const filename = `report-${new Date().toISOString().replace(/[:.]/g, "-")}.txt`;
     const filepath = join(this.logsDir, filename);
-    writeFileSync(filepath, report, 'utf8');
+    writeFileSync(filepath, report, "utf8");
     console.log(`📄 Report saved to: ${filepath}`);
   }
 
@@ -335,6 +349,6 @@ export class AnalyticsLogger {
     this.transactions = [];
     this.profitAllocations = [];
     this.arbitrageExecutions = [];
-    console.log('🗑️  All logs cleared');
+    console.log("🗑️  All logs cleared");
   }
 }

@@ -5,8 +5,11 @@ import {
   Transaction,
   SystemProgram,
   LAMPORTS_PER_SOL,
-} from '@solana/web3.js';
-import { getAssociatedTokenAddress, createTransferInstruction } from '@solana/spl-token';
+} from "@solana/web3.js";
+import {
+  getAssociatedTokenAddress,
+  createTransferInstruction,
+} from "@solana/spl-token";
 
 export interface AirdropRecipient {
   address: PublicKey;
@@ -22,8 +25,8 @@ export interface AirdropCampaign {
   tokenMint?: PublicKey; // undefined for SOL
   totalAmount: number;
   recipients: AirdropRecipient[];
-  fundingSource: 'dao_treasury' | 'profit_share';
-  status: 'pending' | 'in_progress' | 'completed' | 'failed';
+  fundingSource: "dao_treasury" | "profit_share";
+  status: "pending" | "in_progress" | "completed" | "failed";
   createdAt: Date;
   executedAt?: Date;
   signature?: string;
@@ -50,7 +53,7 @@ export class DAOAirdropService {
     name: string,
     description: string,
     recipients: AirdropRecipient[],
-    tokenMint?: PublicKey
+    tokenMint?: PublicKey,
   ): AirdropCampaign {
     const totalAmount = recipients.reduce((sum, r) => sum + r.amount, 0);
 
@@ -61,8 +64,8 @@ export class DAOAirdropService {
       tokenMint,
       totalAmount,
       recipients,
-      fundingSource: 'dao_treasury',
-      status: 'pending',
+      fundingSource: "dao_treasury",
+      status: "pending",
       createdAt: new Date(),
     };
 
@@ -70,7 +73,9 @@ export class DAOAirdropService {
 
     console.log(`🎁 Airdrop Campaign Created: ${name}`);
     console.log(`   Recipients: ${recipients.length}`);
-    console.log(`   Total Amount: ${totalAmount.toFixed(6)} ${tokenMint ? 'tokens' : 'SOL'}`);
+    console.log(
+      `   Total Amount: ${totalAmount.toFixed(6)} ${tokenMint ? "tokens" : "SOL"}`,
+    );
 
     return campaign;
   }
@@ -80,22 +85,24 @@ export class DAOAirdropService {
    */
   async executeCampaign(
     campaignId: string,
-    payerKeypair: Keypair
+    payerKeypair: Keypair,
   ): Promise<{ success: boolean; signature?: string; error?: string }> {
     const campaign = this.campaigns.get(campaignId);
     if (!campaign) {
-      return { success: false, error: 'Campaign not found' };
+      return { success: false, error: "Campaign not found" };
     }
 
-    if (campaign.status !== 'pending') {
+    if (campaign.status !== "pending") {
       return { success: false, error: `Campaign already ${campaign.status}` };
     }
 
-    campaign.status = 'in_progress';
+    campaign.status = "in_progress";
 
     try {
       console.log(`🚀 Executing Airdrop: ${campaign.name}`);
-      console.log(`   Distributing to ${campaign.recipients.length} recipients...`);
+      console.log(
+        `   Distributing to ${campaign.recipients.length} recipients...`,
+      );
 
       // Check if payer has sufficient balance
       const balance = await this.connection.getBalance(payerKeypair.publicKey);
@@ -105,7 +112,7 @@ export class DAOAirdropService {
 
       if (balance < requiredBalance) {
         throw new Error(
-          `Insufficient balance. Required: ${(requiredBalance / LAMPORTS_PER_SOL).toFixed(4)} SOL, Available: ${(balance / LAMPORTS_PER_SOL).toFixed(4)} SOL`
+          `Insufficient balance. Required: ${(requiredBalance / LAMPORTS_PER_SOL).toFixed(4)} SOL, Available: ${(balance / LAMPORTS_PER_SOL).toFixed(4)} SOL`,
         );
       }
 
@@ -116,13 +123,13 @@ export class DAOAirdropService {
         // SPL Token airdrop
         const payerTokenAccount = await getAssociatedTokenAddress(
           campaign.tokenMint,
-          payerKeypair.publicKey
+          payerKeypair.publicKey,
         );
 
         for (const recipient of campaign.recipients) {
           const recipientTokenAccount = await getAssociatedTokenAddress(
             campaign.tokenMint,
-            recipient.address
+            recipient.address,
           );
 
           transaction.add(
@@ -130,8 +137,8 @@ export class DAOAirdropService {
               payerTokenAccount,
               recipientTokenAccount,
               payerKeypair.publicKey,
-              Math.floor(recipient.amount)
-            )
+              Math.floor(recipient.amount),
+            ),
           );
         }
       } else {
@@ -142,30 +149,37 @@ export class DAOAirdropService {
               fromPubkey: payerKeypair.publicKey,
               toPubkey: recipient.address,
               lamports: Math.floor(recipient.amount * LAMPORTS_PER_SOL),
-            })
+            }),
           );
         }
       }
 
       // Send and confirm
-      const signature = await this.connection.sendTransaction(transaction, [payerKeypair], {
-        skipPreflight: false,
-        preflightCommitment: 'confirmed',
-      });
+      const signature = await this.connection.sendTransaction(
+        transaction,
+        [payerKeypair],
+        {
+          skipPreflight: false,
+          preflightCommitment: "confirmed",
+        },
+      );
 
-      await this.connection.confirmTransaction(signature, 'confirmed');
+      await this.connection.confirmTransaction(signature, "confirmed");
 
-      campaign.status = 'completed';
+      campaign.status = "completed";
       campaign.executedAt = new Date();
       campaign.signature = signature;
 
       console.log(`✅ Airdrop Complete! Signature: ${signature}`);
-      console.log(`   Distributed ${campaign.totalAmount.toFixed(6)} to ${campaign.recipients.length} recipients`);
+      console.log(
+        `   Distributed ${campaign.totalAmount.toFixed(6)} to ${campaign.recipients.length} recipients`,
+      );
 
       return { success: true, signature };
     } catch (error) {
-      campaign.status = 'failed';
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      campaign.status = "failed";
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
       console.error(`❌ Airdrop failed: ${errorMessage}`);
       return { success: false, error: errorMessage };
     }
@@ -178,13 +192,13 @@ export class DAOAirdropService {
   async createCampaignFromProfitShare(
     profitAmount: number,
     recipients: AirdropRecipient[],
-    tokenMint?: PublicKey
+    tokenMint?: PublicKey,
   ): Promise<AirdropCampaign> {
     return this.createCampaign(
       `Profit Share Airdrop - ${new Date().toLocaleDateString()}`,
       `Community airdrop funded from 10% DAO profit share ($${profitAmount.toFixed(2)})`,
       recipients,
-      tokenMint
+      tokenMint,
     );
   }
 
@@ -194,11 +208,11 @@ export class DAOAirdropService {
    */
   calculateDistribution(
     totalAmount: number,
-    walletScores: Array<{ address: PublicKey; score: number; tier: string }>
+    walletScores: Array<{ address: PublicKey; score: number; tier: string }>,
   ): AirdropRecipient[] {
     const totalScore = walletScores.reduce((sum, w) => sum + w.score, 0);
 
-    return walletScores.map(wallet => ({
+    return walletScores.map((wallet) => ({
       address: wallet.address,
       amount: (wallet.score / totalScore) * totalAmount,
       tier: wallet.tier,
@@ -223,8 +237,10 @@ export class DAOAirdropService {
   /**
    * Get campaigns by status
    */
-  getCampaignsByStatus(status: AirdropCampaign['status']): AirdropCampaign[] {
-    return Array.from(this.campaigns.values()).filter(c => c.status === status);
+  getCampaignsByStatus(status: AirdropCampaign["status"]): AirdropCampaign[] {
+    return Array.from(this.campaigns.values()).filter(
+      (c) => c.status === status,
+    );
   }
 
   /**
@@ -239,15 +255,18 @@ export class DAOAirdropService {
     totalRecipients: number;
   } {
     const campaigns = Array.from(this.campaigns.values());
-    const completed = campaigns.filter(c => c.status === 'completed');
+    const completed = campaigns.filter((c) => c.status === "completed");
 
     return {
       totalCampaigns: campaigns.length,
       completedCampaigns: completed.length,
-      failedCampaigns: campaigns.filter(c => c.status === 'failed').length,
-      pendingCampaigns: campaigns.filter(c => c.status === 'pending').length,
+      failedCampaigns: campaigns.filter((c) => c.status === "failed").length,
+      pendingCampaigns: campaigns.filter((c) => c.status === "pending").length,
       totalDistributed: completed.reduce((sum, c) => sum + c.totalAmount, 0),
-      totalRecipients: completed.reduce((sum, c) => sum + c.recipients.length, 0),
+      totalRecipients: completed.reduce(
+        (sum, c) => sum + c.recipients.length,
+        0,
+      ),
     };
   }
 
@@ -258,9 +277,12 @@ export class DAOAirdropService {
     try {
       if (tokenMint) {
         // SPL Token balance using proper parsing
-        const { getAccount } = await import('@solana/spl-token');
-        const tokenAccount = await getAssociatedTokenAddress(tokenMint, this.daoWallet);
-        
+        const { getAccount } = await import("@solana/spl-token");
+        const tokenAccount = await getAssociatedTokenAddress(
+          tokenMint,
+          this.daoWallet,
+        );
+
         try {
           const account = await getAccount(this.connection, tokenAccount);
           // Return token amount as number (may need decimal conversion based on token decimals)
@@ -276,7 +298,7 @@ export class DAOAirdropService {
         return balance / LAMPORTS_PER_SOL;
       }
     } catch (error) {
-      console.error('Failed to get DAO balance:', error);
+      console.error("Failed to get DAO balance:", error);
       return 0;
     }
   }
@@ -284,10 +306,13 @@ export class DAOAirdropService {
   /**
    * Validate campaign before execution
    */
-  async validateCampaign(campaignId: string, payerKeypair: Keypair): Promise<boolean> {
+  async validateCampaign(
+    campaignId: string,
+    payerKeypair: Keypair,
+  ): Promise<boolean> {
     const campaign = this.campaigns.get(campaignId);
     if (!campaign) {
-      console.error('Campaign not found');
+      console.error("Campaign not found");
       return false;
     }
 
@@ -299,7 +324,7 @@ export class DAOAirdropService {
 
     if (balance < requiredBalance) {
       console.error(
-        `Insufficient balance for campaign. Required: ${(requiredBalance / LAMPORTS_PER_SOL).toFixed(4)} SOL`
+        `Insufficient balance for campaign. Required: ${(requiredBalance / LAMPORTS_PER_SOL).toFixed(4)} SOL`,
       );
       return false;
     }
@@ -307,7 +332,9 @@ export class DAOAirdropService {
     // Validate all recipient addresses
     for (const recipient of campaign.recipients) {
       if (recipient.amount <= 0) {
-        console.error(`Invalid amount for recipient ${recipient.address.toBase58()}`);
+        console.error(
+          `Invalid amount for recipient ${recipient.address.toBase58()}`,
+        );
         return false;
       }
     }
@@ -324,7 +351,7 @@ export class DAOAirdropService {
       return false;
     }
 
-    if (campaign.status !== 'pending') {
+    if (campaign.status !== "pending") {
       console.error(`Cannot cancel campaign with status: ${campaign.status}`);
       return false;
     }
@@ -341,11 +368,11 @@ export class DAOAirdropService {
     const stats = this.getStats();
     const campaigns = this.getAllCampaigns();
 
-    let report = '═══════════════════════════════════════════\n';
-    report += '         DAO AIRDROP REPORT\n';
-    report += '═══════════════════════════════════════════\n\n';
+    let report = "═══════════════════════════════════════════\n";
+    report += "         DAO AIRDROP REPORT\n";
+    report += "═══════════════════════════════════════════\n\n";
 
-    report += '📊 Overall Statistics:\n';
+    report += "📊 Overall Statistics:\n";
     report += `   Total Campaigns: ${stats.totalCampaigns}\n`;
     report += `   Completed: ${stats.completedCampaigns}\n`;
     report += `   Failed: ${stats.failedCampaigns}\n`;
@@ -353,18 +380,18 @@ export class DAOAirdropService {
     report += `   Total Distributed: ${stats.totalDistributed.toFixed(6)}\n`;
     report += `   Total Recipients: ${stats.totalRecipients}\n\n`;
 
-    report += '🎁 Recent Campaigns:\n';
-    campaigns.slice(-5).forEach(campaign => {
+    report += "🎁 Recent Campaigns:\n";
+    campaigns.slice(-5).forEach((campaign) => {
       report += `   [${campaign.status.toUpperCase()}] ${campaign.name}\n`;
       report += `     Amount: ${campaign.totalAmount.toFixed(6)}\n`;
       report += `     Recipients: ${campaign.recipients.length}\n`;
       if (campaign.signature) {
         report += `     Signature: ${campaign.signature}\n`;
       }
-      report += '\n';
+      report += "\n";
     });
 
-    report += '═══════════════════════════════════════════\n';
+    report += "═══════════════════════════════════════════\n";
 
     return report;
   }

@@ -1,10 +1,10 @@
-import { Connection } from '@solana/web3.js';
+import { Connection } from "@solana/web3.js";
 
 export interface APIProvider {
   id: string;
   name: string;
   url: string;
-  type: 'rpc' | 'pyth' | 'dex';
+  type: "rpc" | "pyth" | "dex";
   enabled: boolean;
 }
 
@@ -15,8 +15,12 @@ export class APIRotationService {
   private rotationEnabled: boolean;
   private intervalId: NodeJS.Timeout | null = null;
 
-  constructor(providers: APIProvider[], rotationInterval: number = 300, rotationEnabled: boolean = true) {
-    this.providers = providers.filter(p => p.enabled);
+  constructor(
+    providers: APIProvider[],
+    rotationInterval: number = 300,
+    rotationEnabled: boolean = true,
+  ) {
+    this.providers = providers.filter((p) => p.enabled);
     this.rotationInterval = rotationInterval;
     this.rotationEnabled = rotationEnabled;
   }
@@ -30,7 +34,7 @@ export class APIRotationService {
       this.currentIndex = (this.currentIndex + 1) % this.providers.length;
       const currentProvider = this.providers[this.currentIndex];
       console.log(`🔄 Rotated to provider: ${currentProvider.name}`);
-      
+
       if (callback) {
         callback(currentProvider);
       }
@@ -51,31 +55,33 @@ export class APIRotationService {
     return this.providers[this.currentIndex];
   }
 
-  getProvidersByType(type: 'rpc' | 'pyth' | 'dex'): APIProvider[] {
-    return this.providers.filter(p => p.type === type);
+  getProvidersByType(type: "rpc" | "pyth" | "dex"): APIProvider[] {
+    return this.providers.filter((p) => p.type === type);
   }
 
   getConnection(): Connection | null {
-    const rpcProviders = this.getProvidersByType('rpc');
+    const rpcProviders = this.getProvidersByType("rpc");
     if (rpcProviders.length === 0) {
       return null;
     }
-    
+
     const provider = rpcProviders[this.currentIndex % rpcProviders.length];
-    return new Connection(provider.url, 'confirmed');
+    return new Connection(provider.url, "confirmed");
   }
 
   async testProvider(provider: APIProvider): Promise<boolean> {
     try {
-      if (provider.type === 'rpc') {
-        const connection = new Connection(provider.url, 'confirmed');
+      if (provider.type === "rpc") {
+        const connection = new Connection(provider.url, "confirmed");
         const slot = await connection.getSlot();
         return slot > 0;
-      } else if (provider.type === 'pyth') {
-        const response = await fetch(`${provider.url}/api/latest_price_feeds?ids[]=H6ARHf6YXhGYeQfUzQNGk6rDNnLBQKrenN712K4AQJEG`);
+      } else if (provider.type === "pyth") {
+        const response = await fetch(
+          `${provider.url}/api/latest_price_feeds?ids[]=H6ARHf6YXhGYeQfUzQNGk6rDNnLBQKrenN712K4AQJEG`,
+        );
         return response.ok;
-      } else if (provider.type === 'dex') {
-        const response = await fetch(provider.url, { method: 'HEAD' });
+      } else if (provider.type === "dex") {
+        const response = await fetch(provider.url, { method: "HEAD" });
         return response.ok;
       }
       return false;
@@ -87,18 +93,18 @@ export class APIRotationService {
 
   async testAllProviders(): Promise<Record<string, boolean>> {
     const results: Record<string, boolean> = {};
-    
+
     await Promise.all(
       this.providers.map(async (provider) => {
         results[provider.id] = await this.testProvider(provider);
-      })
+      }),
     );
 
     return results;
   }
 
   updateProviders(providers: APIProvider[]) {
-    this.providers = providers.filter(p => p.enabled);
+    this.providers = providers.filter((p) => p.enabled);
     this.currentIndex = 0;
   }
 
@@ -115,13 +121,17 @@ export class APIRotationService {
 }
 
 // Load settings from localStorage
-export function loadSettings(): { providers: APIProvider[]; rotationEnabled: boolean; rotationInterval: number } | null {
-  if (typeof window === 'undefined') {
+export function loadSettings(): {
+  providers: APIProvider[];
+  rotationEnabled: boolean;
+  rotationInterval: number;
+} | null {
+  if (typeof window === "undefined") {
     return null;
   }
 
   try {
-    const saved = localStorage.getItem('gxq-settings');
+    const saved = localStorage.getItem("gxq-settings");
     if (saved) {
       const parsed = JSON.parse(saved);
       return {
@@ -131,7 +141,7 @@ export function loadSettings(): { providers: APIProvider[]; rotationEnabled: boo
       };
     }
   } catch (err) {
-    console.error('Failed to load settings:', err);
+    console.error("Failed to load settings:", err);
   }
 
   return null;
@@ -141,7 +151,7 @@ export function loadSettings(): { providers: APIProvider[]; rotationEnabled: boo
 let rotationServiceInstance: APIRotationService | null = null;
 
 export function getAPIRotationService(): APIRotationService | null {
-  if (typeof window === 'undefined') {
+  if (typeof window === "undefined") {
     return null;
   }
 
@@ -151,7 +161,7 @@ export function getAPIRotationService(): APIRotationService | null {
       rotationServiceInstance = new APIRotationService(
         settings.providers,
         settings.rotationInterval,
-        settings.rotationEnabled
+        settings.rotationEnabled,
       );
     }
   }
@@ -159,11 +169,19 @@ export function getAPIRotationService(): APIRotationService | null {
   return rotationServiceInstance;
 }
 
-export function updateAPIRotationService(providers: APIProvider[], interval: number, enabled: boolean) {
+export function updateAPIRotationService(
+  providers: APIProvider[],
+  interval: number,
+  enabled: boolean,
+) {
   if (rotationServiceInstance) {
     rotationServiceInstance.updateProviders(providers);
     rotationServiceInstance.updateRotationSettings(interval, enabled);
   } else {
-    rotationServiceInstance = new APIRotationService(providers, interval, enabled);
+    rotationServiceInstance = new APIRotationService(
+      providers,
+      interval,
+      enabled,
+    );
   }
 }

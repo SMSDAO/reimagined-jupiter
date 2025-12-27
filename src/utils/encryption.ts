@@ -1,11 +1,11 @@
-import crypto from 'crypto';
+import crypto from "crypto";
 
 /**
  * Encryption utility for securing sensitive variables
  * Uses AES-256-GCM for encryption with authentication
  */
 export class EncryptionService {
-  private algorithm = 'aes-256-gcm';
+  private algorithm = "aes-256-gcm";
   private keyLength = 32; // 256 bits
   private ivLength = 16; // 128 bits
   private saltLength = 64;
@@ -30,15 +30,19 @@ export class EncryptionService {
         salt,
         this.iterations,
         this.keyLength,
-        'sha512'
+        "sha512",
       );
 
       // Create cipher
-      const cipher = crypto.createCipheriv(this.algorithm, key, iv) as crypto.CipherGCM;
+      const cipher = crypto.createCipheriv(
+        this.algorithm,
+        key,
+        iv,
+      ) as crypto.CipherGCM;
 
       // Encrypt
       const encrypted = Buffer.concat([
-        cipher.update(plaintext, 'utf8'),
+        cipher.update(plaintext, "utf8"),
         cipher.final(),
       ]);
 
@@ -46,16 +50,15 @@ export class EncryptionService {
       const tag = cipher.getAuthTag();
 
       // Combine salt + iv + tag + encrypted data
-      const result = Buffer.concat([
-        salt,
-        iv,
-        tag,
-        encrypted,
-      ]).toString('base64');
+      const result = Buffer.concat([salt, iv, tag, encrypted]).toString(
+        "base64",
+      );
 
       return result;
     } catch (error) {
-      throw new Error(`Encryption failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Encryption failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
     }
   }
 
@@ -68,16 +71,21 @@ export class EncryptionService {
   decrypt(encryptedData: string, password: string): string {
     try {
       // Decode from base64
-      const data = Buffer.from(encryptedData, 'base64');
+      const data = Buffer.from(encryptedData, "base64");
 
       // Extract components
       const salt = data.subarray(0, this.saltLength);
-      const iv = data.subarray(this.saltLength, this.saltLength + this.ivLength);
+      const iv = data.subarray(
+        this.saltLength,
+        this.saltLength + this.ivLength,
+      );
       const tag = data.subarray(
         this.saltLength + this.ivLength,
-        this.saltLength + this.ivLength + this.tagLength
+        this.saltLength + this.ivLength + this.tagLength,
       );
-      const encrypted = data.subarray(this.saltLength + this.ivLength + this.tagLength);
+      const encrypted = data.subarray(
+        this.saltLength + this.ivLength + this.tagLength,
+      );
 
       // Derive key from password
       const key = crypto.pbkdf2Sync(
@@ -85,22 +93,28 @@ export class EncryptionService {
         salt,
         this.iterations,
         this.keyLength,
-        'sha512'
+        "sha512",
       );
 
       // Create decipher
-      const decipher = crypto.createDecipheriv(this.algorithm, key, iv) as crypto.DecipherGCM;
+      const decipher = crypto.createDecipheriv(
+        this.algorithm,
+        key,
+        iv,
+      ) as crypto.DecipherGCM;
       decipher.setAuthTag(tag);
 
       // Decrypt
       const decrypted = Buffer.concat([
         decipher.update(encrypted),
         decipher.final(),
-      ]).toString('utf8');
+      ]).toString("utf8");
 
       return decrypted;
     } catch (error) {
-      throw new Error(`Decryption failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Decryption failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
     }
   }
 
@@ -109,7 +123,7 @@ export class EncryptionService {
    * Useful for verification without storing plaintext
    */
   hash(data: string): string {
-    return crypto.createHash('sha256').update(data).digest('hex');
+    return crypto.createHash("sha256").update(data).digest("hex");
   }
 
   /**
@@ -118,7 +132,7 @@ export class EncryptionService {
    * @returns Random password string
    */
   generateSecurePassword(length: number = 32): string {
-    return crypto.randomBytes(length).toString('base64').slice(0, length);
+    return crypto.randomBytes(length).toString("base64").slice(0, length);
   }
 
   /**
@@ -129,7 +143,7 @@ export class EncryptionService {
    */
   encryptPrivateKey(privateKey: string, password: string): string {
     if (!privateKey || !password) {
-      throw new Error('Private key and password are required');
+      throw new Error("Private key and password are required");
     }
     return this.encrypt(privateKey, password);
   }
@@ -142,7 +156,7 @@ export class EncryptionService {
    */
   decryptPrivateKey(encryptedKey: string, password: string): string {
     if (!encryptedKey || !password) {
-      throw new Error('Encrypted key and password are required');
+      throw new Error("Encrypted key and password are required");
     }
     return this.decrypt(encryptedKey, password);
   }
@@ -162,17 +176,24 @@ export class EncryptionService {
    * This should be stored in a secure environment variable
    */
   static generateMasterKey(): string {
-    const key = crypto.randomBytes(32).toString('base64');
-    console.log('🔐 Generated Master Encryption Key (store in ENCRYPTION_KEY env var):');
+    const key = crypto.randomBytes(32).toString("base64");
+    console.log(
+      "🔐 Generated Master Encryption Key (store in ENCRYPTION_KEY env var):",
+    );
     console.log(key);
-    console.log('\n⚠️ IMPORTANT: Store this securely and never commit to version control!');
+    console.log(
+      "\n⚠️ IMPORTANT: Store this securely and never commit to version control!",
+    );
     return key;
   }
 
   /**
    * Encrypt environment variables for storage
    */
-  encryptEnvVars(vars: Record<string, string>, password: string): Record<string, string> {
+  encryptEnvVars(
+    vars: Record<string, string>,
+    password: string,
+  ): Record<string, string> {
     const encrypted: Record<string, string> = {};
     for (const [key, value] of Object.entries(vars)) {
       encrypted[key] = this.encrypt(value, password);
@@ -183,14 +204,17 @@ export class EncryptionService {
   /**
    * Decrypt environment variables
    */
-  decryptEnvVars(vars: Record<string, string>, password: string): Record<string, string> {
+  decryptEnvVars(
+    vars: Record<string, string>,
+    password: string,
+  ): Record<string, string> {
     const decrypted: Record<string, string> = {};
     for (const [key, value] of Object.entries(vars)) {
       try {
         decrypted[key] = this.decrypt(value, password);
       } catch (error) {
         console.error(`Failed to decrypt ${key}:`, error);
-        decrypted[key] = ''; // Set empty on failure
+        decrypted[key] = ""; // Set empty on failure
       }
     }
     return decrypted;
@@ -211,9 +235,9 @@ export function loadSecureEnv(encryptionKey: string): Record<string, string> {
 
   // List of variables that should be encrypted
   const sensitiveVars = [
-    'WALLET_PRIVATE_KEY',
-    'QUICKNODE_API_KEY',
-    'ENCRYPTION_KEY',
+    "WALLET_PRIVATE_KEY",
+    "QUICKNODE_API_KEY",
+    "ENCRYPTION_KEY",
   ];
 
   for (const varName of sensitiveVars) {
@@ -226,7 +250,7 @@ export function loadSecureEnv(encryptionKey: string): Record<string, string> {
       }
     } else {
       // Fall back to unencrypted value (for backwards compatibility)
-      secureVars[varName] = process.env[varName] || '';
+      secureVars[varName] = process.env[varName] || "";
     }
   }
 

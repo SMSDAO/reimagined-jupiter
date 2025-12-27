@@ -1,6 +1,17 @@
-import { Connection, PublicKey, Transaction, SystemProgram, Keypair, sendAndConfirmTransaction } from '@solana/web3.js';
-import { getAssociatedTokenAddress, createTransferInstruction, TOKEN_PROGRAM_ID } from '@solana/spl-token';
-import { SNSDomainResolver } from './snsResolver.js';
+import {
+  Connection,
+  PublicKey,
+  Transaction,
+  SystemProgram,
+  Keypair,
+  sendAndConfirmTransaction,
+} from "@solana/web3.js";
+import {
+  getAssociatedTokenAddress,
+  createTransferInstruction,
+  TOKEN_PROGRAM_ID,
+} from "@solana/spl-token";
+import { SNSDomainResolver } from "./snsResolver.js";
 
 export interface ProfitDistributionConfig {
   reserveWalletDomain: string; // SNS domain like "monads.skr"
@@ -39,11 +50,16 @@ export class ProfitDistributionService {
     this.connection = connection;
     this.config = config;
     this.snsResolver = new SNSDomainResolver(connection);
-    
+
     // Validate percentages
-    const total = config.userWalletPercentage + config.reserveWalletPercentage + config.daoWalletPercentage;
+    const total =
+      config.userWalletPercentage +
+      config.reserveWalletPercentage +
+      config.daoWalletPercentage;
     if (Math.abs(total - 1.0) > 0.001) {
-      throw new Error(`Profit distribution percentages must sum to 1.0 (100%), got ${total}`);
+      throw new Error(
+        `Profit distribution percentages must sum to 1.0 (100%), got ${total}`,
+      );
     }
   }
 
@@ -57,15 +73,23 @@ export class ProfitDistributionService {
     }
 
     try {
-      console.log(`[ProfitDistribution] Resolving SNS domain: ${this.config.reserveWalletDomain}`);
-      const resolvedAddress = await this.snsResolver.resolve(this.config.reserveWalletDomain);
-      
+      console.log(
+        `[ProfitDistribution] Resolving SNS domain: ${this.config.reserveWalletDomain}`,
+      );
+      const resolvedAddress = await this.snsResolver.resolve(
+        this.config.reserveWalletDomain,
+      );
+
       if (!resolvedAddress) {
-        throw new Error(`Failed to resolve SNS domain: ${this.config.reserveWalletDomain}`);
+        throw new Error(
+          `Failed to resolve SNS domain: ${this.config.reserveWalletDomain}`,
+        );
       }
 
       this.reserveWalletCache = resolvedAddress;
-      console.log(`[ProfitDistribution] Resolved ${this.config.reserveWalletDomain} to ${resolvedAddress.toBase58()}`);
+      console.log(
+        `[ProfitDistribution] Resolved ${this.config.reserveWalletDomain} to ${resolvedAddress.toBase58()}`,
+      );
       return resolvedAddress;
     } catch (error) {
       console.error(`[ProfitDistribution] Error resolving SNS domain:`, error);
@@ -84,7 +108,7 @@ export class ProfitDistributionService {
     profitAmount: number,
     userWallet: PublicKey,
     sourceWallet: Keypair,
-    tokenMint?: PublicKey
+    tokenMint?: PublicKey,
   ): Promise<DistributionResult> {
     const result: DistributionResult = {
       success: false,
@@ -96,19 +120,33 @@ export class ProfitDistributionService {
 
     try {
       if (profitAmount <= 0) {
-        result.error = 'Profit amount must be greater than 0';
+        result.error = "Profit amount must be greater than 0";
         return result;
       }
 
       // Calculate distribution amounts
-      result.userAmount = Math.floor(profitAmount * this.config.userWalletPercentage);
-      result.reserveAmount = Math.floor(profitAmount * this.config.reserveWalletPercentage);
-      result.daoAmount = Math.floor(profitAmount * this.config.daoWalletPercentage);
+      result.userAmount = Math.floor(
+        profitAmount * this.config.userWalletPercentage,
+      );
+      result.reserveAmount = Math.floor(
+        profitAmount * this.config.reserveWalletPercentage,
+      );
+      result.daoAmount = Math.floor(
+        profitAmount * this.config.daoWalletPercentage,
+      );
 
-      console.log(`\n💰 Distributing ${profitAmount} ${tokenMint ? 'tokens' : 'lamports'} profit:`);
-      console.log(`   User (${(this.config.userWalletPercentage * 100).toFixed(1)}%): ${result.userAmount}`);
-      console.log(`   Reserve (${(this.config.reserveWalletPercentage * 100).toFixed(1)}%): ${result.reserveAmount}`);
-      console.log(`   DAO (${(this.config.daoWalletPercentage * 100).toFixed(1)}%): ${result.daoAmount}`);
+      console.log(
+        `\n💰 Distributing ${profitAmount} ${tokenMint ? "tokens" : "lamports"} profit:`,
+      );
+      console.log(
+        `   User (${(this.config.userWalletPercentage * 100).toFixed(1)}%): ${result.userAmount}`,
+      );
+      console.log(
+        `   Reserve (${(this.config.reserveWalletPercentage * 100).toFixed(1)}%): ${result.reserveAmount}`,
+      );
+      console.log(
+        `   DAO (${(this.config.daoWalletPercentage * 100).toFixed(1)}%): ${result.daoAmount}`,
+      );
 
       // Resolve reserve wallet
       const reserveWallet = await this.getReserveWallet();
@@ -120,7 +158,7 @@ export class ProfitDistributionService {
           userWallet,
           reserveWallet,
           sourceWallet,
-          tokenMint
+          tokenMint,
         );
       } else {
         // SOL profit distribution
@@ -128,7 +166,7 @@ export class ProfitDistributionService {
           result,
           userWallet,
           reserveWallet,
-          sourceWallet
+          sourceWallet,
         );
       }
 
@@ -137,7 +175,9 @@ export class ProfitDistributionService {
       this.distributionCount++;
 
       console.log(`✅ Profit distribution completed successfully`);
-      console.log(`   Total distributed to date: ${this.totalProfitsDistributed}`);
+      console.log(
+        `   Total distributed to date: ${this.totalProfitsDistributed}`,
+      );
       console.log(`   Distribution count: ${this.distributionCount}`);
 
       return result;
@@ -155,7 +195,7 @@ export class ProfitDistributionService {
     result: DistributionResult,
     userWallet: PublicKey,
     reserveWallet: PublicKey,
-    sourceWallet: Keypair
+    sourceWallet: Keypair,
   ): Promise<void> {
     const transaction = new Transaction();
 
@@ -166,7 +206,7 @@ export class ProfitDistributionService {
           fromPubkey: sourceWallet.publicKey,
           toPubkey: reserveWallet,
           lamports: result.reserveAmount,
-        })
+        }),
       );
     }
 
@@ -177,7 +217,7 @@ export class ProfitDistributionService {
           fromPubkey: sourceWallet.publicKey,
           toPubkey: userWallet,
           lamports: result.userAmount,
-        })
+        }),
       );
     }
 
@@ -187,12 +227,15 @@ export class ProfitDistributionService {
           fromPubkey: sourceWallet.publicKey,
           toPubkey: this.config.daoWalletAddress,
           lamports: result.daoAmount,
-        })
+        }),
       );
     }
 
     // Send transaction with retry logic
-    const signature = await this.sendTransactionWithRetry(transaction, sourceWallet);
+    const signature = await this.sendTransactionWithRetry(
+      transaction,
+      sourceWallet,
+    );
     result.signatures.reserve = signature;
     result.signatures.user = signature;
     result.signatures.dao = signature;
@@ -208,29 +251,29 @@ export class ProfitDistributionService {
     userWallet: PublicKey,
     reserveWallet: PublicKey,
     sourceWallet: Keypair,
-    tokenMint: PublicKey
+    tokenMint: PublicKey,
   ): Promise<void> {
     const transaction = new Transaction();
 
     // Get associated token accounts
     const sourceTokenAccount = await getAssociatedTokenAddress(
       tokenMint,
-      sourceWallet.publicKey
+      sourceWallet.publicKey,
     );
 
     const reserveTokenAccount = await getAssociatedTokenAddress(
       tokenMint,
-      reserveWallet
+      reserveWallet,
     );
 
     const userTokenAccount = await getAssociatedTokenAddress(
       tokenMint,
-      userWallet
+      userWallet,
     );
 
     const daoTokenAccount = await getAssociatedTokenAddress(
       tokenMint,
-      this.config.daoWalletAddress
+      this.config.daoWalletAddress,
     );
 
     // Add token transfer instructions
@@ -242,8 +285,8 @@ export class ProfitDistributionService {
           sourceWallet.publicKey,
           result.reserveAmount,
           [],
-          TOKEN_PROGRAM_ID
-        )
+          TOKEN_PROGRAM_ID,
+        ),
       );
     }
 
@@ -255,8 +298,8 @@ export class ProfitDistributionService {
           sourceWallet.publicKey,
           result.userAmount,
           [],
-          TOKEN_PROGRAM_ID
-        )
+          TOKEN_PROGRAM_ID,
+        ),
       );
     }
 
@@ -268,13 +311,16 @@ export class ProfitDistributionService {
           sourceWallet.publicKey,
           result.daoAmount,
           [],
-          TOKEN_PROGRAM_ID
-        )
+          TOKEN_PROGRAM_ID,
+        ),
       );
     }
 
     // Send transaction with retry logic
-    const signature = await this.sendTransactionWithRetry(transaction, sourceWallet);
+    const signature = await this.sendTransactionWithRetry(
+      transaction,
+      sourceWallet,
+    );
     result.signatures.reserve = signature;
     result.signatures.user = signature;
     result.signatures.dao = signature;
@@ -288,14 +334,15 @@ export class ProfitDistributionService {
   private async sendTransactionWithRetry(
     transaction: Transaction,
     signer: Keypair,
-    maxRetries: number = 3
+    maxRetries: number = 3,
   ): Promise<string> {
     let lastError: Error | null = null;
 
     for (let attempt = 0; attempt < maxRetries; attempt++) {
       try {
         // Get recent blockhash
-        const { blockhash } = await this.connection.getLatestBlockhash('confirmed');
+        const { blockhash } =
+          await this.connection.getLatestBlockhash("confirmed");
         transaction.recentBlockhash = blockhash;
         transaction.feePayer = signer.publicKey;
 
@@ -305,36 +352,48 @@ export class ProfitDistributionService {
           transaction,
           [signer],
           {
-            commitment: 'confirmed',
+            commitment: "confirmed",
             maxRetries: 3,
-          }
+          },
         );
 
         return signature;
       } catch (error) {
         lastError = error instanceof Error ? error : new Error(String(error));
-        console.warn(`[ProfitDistribution] Transaction attempt ${attempt + 1} failed:`, lastError.message);
+        console.warn(
+          `[ProfitDistribution] Transaction attempt ${attempt + 1} failed:`,
+          lastError.message,
+        );
 
         if (attempt < maxRetries - 1) {
           // Exponential backoff: 1s, 2s, 4s
           const delayMs = Math.pow(2, attempt) * 1000;
           console.log(`   Retrying in ${delayMs}ms...`);
-          await new Promise(resolve => setTimeout(resolve, delayMs));
+          await new Promise((resolve) => setTimeout(resolve, delayMs));
         }
       }
     }
 
-    throw new Error(`Failed to send transaction after ${maxRetries} attempts: ${lastError?.message}`);
+    throw new Error(
+      `Failed to send transaction after ${maxRetries} attempts: ${lastError?.message}`,
+    );
   }
 
   /**
    * Get distribution statistics
    */
-  getStats(): { totalDistributed: number; distributionCount: number; avgDistribution: number } {
+  getStats(): {
+    totalDistributed: number;
+    distributionCount: number;
+    avgDistribution: number;
+  } {
     return {
       totalDistributed: this.totalProfitsDistributed,
       distributionCount: this.distributionCount,
-      avgDistribution: this.distributionCount > 0 ? this.totalProfitsDistributed / this.distributionCount : 0,
+      avgDistribution:
+        this.distributionCount > 0
+          ? this.totalProfitsDistributed / this.distributionCount
+          : 0,
     };
   }
 
@@ -343,11 +402,16 @@ export class ProfitDistributionService {
    */
   updateConfig(newConfig: Partial<ProfitDistributionConfig>): void {
     this.config = { ...this.config, ...newConfig };
-    
+
     // Validate percentages again
-    const total = this.config.userWalletPercentage + this.config.reserveWalletPercentage + this.config.daoWalletPercentage;
+    const total =
+      this.config.userWalletPercentage +
+      this.config.reserveWalletPercentage +
+      this.config.daoWalletPercentage;
     if (Math.abs(total - 1.0) > 0.001) {
-      throw new Error(`Profit distribution percentages must sum to 1.0 (100%), got ${total}`);
+      throw new Error(
+        `Profit distribution percentages must sum to 1.0 (100%), got ${total}`,
+      );
     }
 
     // Clear cache if reserve wallet domain changed

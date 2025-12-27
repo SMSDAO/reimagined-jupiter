@@ -1,6 +1,6 @@
 /**
  * Enhanced Jupiter V6 Integration with Multi-hop Support
- * 
+ *
  * Features:
  * - Support for 3-7 leg arbitrage routes
  * - Direct DEX routing fallback if Jupiter API fails or is too slow
@@ -9,9 +9,14 @@
  * - Route optimization
  */
 
-import { Connection, PublicKey, VersionedTransaction, TransactionInstruction } from '@solana/web3.js';
-import axios from 'axios';
-import { config } from '../config/index.js';
+import {
+  Connection,
+  PublicKey,
+  VersionedTransaction,
+  TransactionInstruction,
+} from "@solana/web3.js";
+import axios from "axios";
+import { config } from "../config/index.js";
 
 export interface JupiterMultiHopRoute {
   inputMint: string;
@@ -62,19 +67,36 @@ export class JupiterEnhancedIntegration {
 
   constructor(
     connection: Connection,
-    multiHopConfig?: Partial<MultiHopConfig>
+    multiHopConfig?: Partial<MultiHopConfig>,
   ) {
     this.connection = connection;
     this.apiUrl = config.jupiter.apiUrl;
     this.multiHopConfig = {
-      minLegs: Math.max(3, multiHopConfig?.minLegs ?? parseInt(process.env.JUPITER_MIN_LEGS || '3')),
-      maxLegs: Math.min(7, multiHopConfig?.maxLegs ?? parseInt(process.env.JUPITER_MAX_LEGS || '7')),
-      apiTimeout: multiHopConfig?.apiTimeout ?? parseInt(process.env.JUPITER_API_TIMEOUT || '5000'),
-      enableFallback: multiHopConfig?.enableFallback ?? (process.env.JUPITER_ENABLE_FALLBACK !== 'false'),
-      routeDepth: multiHopConfig?.routeDepth ?? parseInt(process.env.JUPITER_ROUTE_DEPTH || '5'),
+      minLegs: Math.max(
+        3,
+        multiHopConfig?.minLegs ??
+          parseInt(process.env.JUPITER_MIN_LEGS || "3"),
+      ),
+      maxLegs: Math.min(
+        7,
+        multiHopConfig?.maxLegs ??
+          parseInt(process.env.JUPITER_MAX_LEGS || "7"),
+      ),
+      apiTimeout:
+        multiHopConfig?.apiTimeout ??
+        parseInt(process.env.JUPITER_API_TIMEOUT || "5000"),
+      enableFallback:
+        multiHopConfig?.enableFallback ??
+        process.env.JUPITER_ENABLE_FALLBACK !== "false",
+      routeDepth:
+        multiHopConfig?.routeDepth ??
+        parseInt(process.env.JUPITER_ROUTE_DEPTH || "5"),
     };
 
-    console.log('[JupiterEnhanced] Initialized with config:', this.multiHopConfig);
+    console.log(
+      "[JupiterEnhanced] Initialized with config:",
+      this.multiHopConfig,
+    );
   }
 
   /**
@@ -84,22 +106,30 @@ export class JupiterEnhancedIntegration {
   async getMultiHopQuote(
     route: string[],
     amount: number,
-    slippageBps: number = 50
+    slippageBps: number = 50,
   ): Promise<JupiterMultiHopRoute | null> {
     // Validate route legs
     if (route.length < this.multiHopConfig.minLegs) {
-      console.error(`[JupiterEnhanced] Route must have at least ${this.multiHopConfig.minLegs} legs, got ${route.length}`);
+      console.error(
+        `[JupiterEnhanced] Route must have at least ${this.multiHopConfig.minLegs} legs, got ${route.length}`,
+      );
       return null;
     }
 
     if (route.length > this.multiHopConfig.maxLegs + 1) {
-      console.error(`[JupiterEnhanced] Route cannot exceed ${this.multiHopConfig.maxLegs + 1} tokens (${this.multiHopConfig.maxLegs} legs), got ${route.length}`);
+      console.error(
+        `[JupiterEnhanced] Route cannot exceed ${this.multiHopConfig.maxLegs + 1} tokens (${this.multiHopConfig.maxLegs} legs), got ${route.length}`,
+      );
       return null;
     }
 
     try {
-      console.log(`[JupiterEnhanced] Getting ${route.length - 1}-leg route quote...`);
-      console.log(`[JupiterEnhanced] Route: ${route.map(r => r.slice(0, 8)).join(' → ')}...`);
+      console.log(
+        `[JupiterEnhanced] Getting ${route.length - 1}-leg route quote...`,
+      );
+      console.log(
+        `[JupiterEnhanced] Route: ${route.map((r) => r.slice(0, 8)).join(" → ")}...`,
+      );
 
       const startTime = Date.now();
 
@@ -107,17 +137,19 @@ export class JupiterEnhancedIntegration {
       const quotePromise = this.getJupiterQuoteWithTimeout(
         route,
         amount,
-        slippageBps
+        slippageBps,
       );
 
       const quote = await quotePromise;
 
       if (!quote) {
-        console.log('[JupiterEnhanced] Jupiter API failed or timed out');
+        console.log("[JupiterEnhanced] Jupiter API failed or timed out");
 
         // Fallback to direct DEX routing if enabled
         if (this.multiHopConfig.enableFallback) {
-          console.log('[JupiterEnhanced] Attempting direct DEX routing fallback...');
+          console.log(
+            "[JupiterEnhanced] Attempting direct DEX routing fallback...",
+          );
           return await this.getDirectDEXRoute(route, amount, slippageBps);
         }
 
@@ -137,11 +169,13 @@ export class JupiterEnhancedIntegration {
         estimatedTimeMs,
       };
     } catch (error) {
-      console.error('[JupiterEnhanced] Error getting multi-hop quote:', error);
+      console.error("[JupiterEnhanced] Error getting multi-hop quote:", error);
 
       // Fallback to direct DEX routing if enabled
       if (this.multiHopConfig.enableFallback) {
-        console.log('[JupiterEnhanced] Attempting direct DEX routing fallback...');
+        console.log(
+          "[JupiterEnhanced] Attempting direct DEX routing fallback...",
+        );
         return await this.getDirectDEXRoute(route, amount, slippageBps);
       }
 
@@ -155,12 +189,15 @@ export class JupiterEnhancedIntegration {
   private async getJupiterQuoteWithTimeout(
     route: string[],
     amount: number,
-    slippageBps: number
+    slippageBps: number,
   ): Promise<any> {
     try {
       // Build the quote request by chaining swaps
       const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Jupiter API timeout')), this.multiHopConfig.apiTimeout)
+        setTimeout(
+          () => reject(new Error("Jupiter API timeout")),
+          this.multiHopConfig.apiTimeout,
+        ),
       );
 
       // For multi-hop, we need to get quotes for each leg and chain them
@@ -185,8 +222,12 @@ export class JupiterEnhancedIntegration {
 
         const response = await Promise.race([quotePromise, timeoutPromise]);
 
-        if (!response || typeof response !== 'object' || !('data' in response)) {
-          throw new Error('Invalid response from Jupiter API');
+        if (
+          !response ||
+          typeof response !== "object" ||
+          !("data" in response)
+        ) {
+          throw new Error("Invalid response from Jupiter API");
         }
 
         const quote = (response as { data: any }).data;
@@ -209,14 +250,16 @@ export class JupiterEnhancedIntegration {
         inAmount: amount.toString(),
         outAmount: currentAmount.toString(),
         slippageBps,
-        priceImpactPct: '0', // Calculated below
+        priceImpactPct: "0", // Calculated below
         routePlan: routePlans,
       };
     } catch (error) {
-      if (error instanceof Error && error.message === 'Jupiter API timeout') {
-        console.warn(`[JupiterEnhanced] API timeout after ${this.multiHopConfig.apiTimeout}ms`);
+      if (error instanceof Error && error.message === "Jupiter API timeout") {
+        console.warn(
+          `[JupiterEnhanced] API timeout after ${this.multiHopConfig.apiTimeout}ms`,
+        );
       } else {
-        console.error('[JupiterEnhanced] Error in Jupiter API call:', error);
+        console.error("[JupiterEnhanced] Error in Jupiter API call:", error);
       }
       return null;
     }
@@ -229,10 +272,10 @@ export class JupiterEnhancedIntegration {
   private async getDirectDEXRoute(
     route: string[],
     amount: number,
-    slippageBps: number
+    slippageBps: number,
   ): Promise<JupiterMultiHopRoute | null> {
     try {
-      console.log('[JupiterEnhanced] Building direct DEX route...');
+      console.log("[JupiterEnhanced] Building direct DEX route...");
 
       // This is a simplified implementation
       // In production, you would query each DEX's pools directly
@@ -248,8 +291,8 @@ export class JupiterEnhancedIntegration {
 
         routePlans.push({
           swapInfo: {
-            ammKey: 'DirectDEXFallback',
-            label: 'Direct DEX',
+            ammKey: "DirectDEXFallback",
+            label: "Direct DEX",
             inputMint,
             outputMint,
             inAmount: currentAmount.toString(),
@@ -274,7 +317,7 @@ export class JupiterEnhancedIntegration {
         estimatedTimeMs: 0,
       };
     } catch (error) {
-      console.error('[JupiterEnhanced] Error in direct DEX routing:', error);
+      console.error("[JupiterEnhanced] Error in direct DEX routing:", error);
       return null;
     }
   }
@@ -287,12 +330,16 @@ export class JupiterEnhancedIntegration {
     inputMint: string,
     outputMint: string,
     amount: number,
-    intermediateTokens: string[]
+    intermediateTokens: string[],
   ): Promise<JupiterMultiHopRoute[]> {
     const routes: JupiterMultiHopRoute[] = [];
 
-    console.log(`[JupiterEnhanced] Finding optimal routes from ${inputMint.slice(0, 8)}... to ${outputMint.slice(0, 8)}...`);
-    console.log(`[JupiterEnhanced] Exploring ${this.multiHopConfig.routeDepth} route variations...`);
+    console.log(
+      `[JupiterEnhanced] Finding optimal routes from ${inputMint.slice(0, 8)}... to ${outputMint.slice(0, 8)}...`,
+    );
+    console.log(
+      `[JupiterEnhanced] Exploring ${this.multiHopConfig.routeDepth} route variations...`,
+    );
 
     try {
       // Generate route permutations
@@ -301,35 +348,42 @@ export class JupiterEnhancedIntegration {
         outputMint,
         intermediateTokens,
         this.multiHopConfig.minLegs,
-        this.multiHopConfig.maxLegs
+        this.multiHopConfig.maxLegs,
       );
 
-      console.log(`[JupiterEnhanced] Generated ${routePermutations.length} route permutations`);
+      console.log(
+        `[JupiterEnhanced] Generated ${routePermutations.length} route permutations`,
+      );
 
       // Limit to routeDepth for performance
-      const selectedRoutes = routePermutations.slice(0, this.multiHopConfig.routeDepth);
+      const selectedRoutes = routePermutations.slice(
+        0,
+        this.multiHopConfig.routeDepth,
+      );
 
       // Get quotes for each route
-      const quotePromises = selectedRoutes.map(route =>
-        this.getMultiHopQuote(route, amount)
+      const quotePromises = selectedRoutes.map((route) =>
+        this.getMultiHopQuote(route, amount),
       );
 
       const quotes = await Promise.allSettled(quotePromises);
 
       for (const result of quotes) {
-        if (result.status === 'fulfilled' && result.value) {
+        if (result.status === "fulfilled" && result.value) {
           routes.push(result.value);
         }
       }
 
       // Sort by estimated output (descending)
-      routes.sort((a, b) => parseInt(b.estimatedOutput) - parseInt(a.estimatedOutput));
+      routes.sort(
+        (a, b) => parseInt(b.estimatedOutput) - parseInt(a.estimatedOutput),
+      );
 
       console.log(`[JupiterEnhanced] Found ${routes.length} valid routes`);
 
       return routes;
     } catch (error) {
-      console.error('[JupiterEnhanced] Error finding optimal routes:', error);
+      console.error("[JupiterEnhanced] Error finding optimal routes:", error);
       return [];
     }
   }
@@ -342,7 +396,7 @@ export class JupiterEnhancedIntegration {
     end: string,
     intermediates: string[],
     minLegs: number,
-    maxLegs: number
+    maxLegs: number,
   ): string[][] {
     const routes: string[][] = [];
 
@@ -353,7 +407,11 @@ export class JupiterEnhancedIntegration {
       // Simple permutation: take first N intermediates
       // In production, use more sophisticated route generation
       if (intermediateCount <= intermediates.length) {
-        const route = [start, ...intermediates.slice(0, intermediateCount), end];
+        const route = [
+          start,
+          ...intermediates.slice(0, intermediateCount),
+          end,
+        ];
         routes.push(route);
       }
     }
@@ -379,6 +437,9 @@ export class JupiterEnhancedIntegration {
       maxLegs: Math.min(7, config.maxLegs ?? this.multiHopConfig.maxLegs),
     };
 
-    console.log('[JupiterEnhanced] Configuration updated:', this.multiHopConfig);
+    console.log(
+      "[JupiterEnhanced] Configuration updated:",
+      this.multiHopConfig,
+    );
   }
 }

@@ -1,53 +1,72 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { motion } from 'framer-motion';
-import { useWallet } from '@solana/wallet-adapter-react';
-import { loadUserSettings, saveUserSettings, getDefaultSettings, clearTradeHistory } from '@/lib/storage';
-import { notifySuccess, requestNotificationPermission } from '@/lib/notifications';
-import { isAdmin } from '@/lib/auth';
+import { useState } from "react";
+import { motion } from "framer-motion";
+import { useWallet } from "@solana/wallet-adapter-react";
+import {
+  loadUserSettings,
+  saveUserSettings,
+  getDefaultSettings,
+  clearTradeHistory,
+} from "@/lib/storage";
+import {
+  notifySuccess,
+  requestNotificationPermission,
+} from "@/lib/notifications";
+import { isAdmin } from "@/lib/auth";
 
 export default function AdminPanel() {
   const { publicKey } = useWallet();
   const [isOpen, setIsOpen] = useState(false);
   // Use lazy initialization to avoid useState in useEffect
-  const [settings, setSettings] = useState(() => loadUserSettings() || getDefaultSettings());
-  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>(() => 
-    typeof window !== 'undefined' && 'Notification' in window ? Notification.permission : 'default'
+  const [settings, setSettings] = useState(
+    () => loadUserSettings() || getDefaultSettings(),
   );
+  const [notificationPermission, setNotificationPermission] =
+    useState<NotificationPermission>(() =>
+      typeof window !== "undefined" && "Notification" in window
+        ? Notification.permission
+        : "default",
+    );
 
   // Check if current user is admin
   const userIsAdmin = isAdmin(publicKey?.toBase58());
 
   const handleSave = () => {
     saveUserSettings(settings);
-    notifySuccess('Settings Saved', 'Your settings have been updated successfully');
+    notifySuccess(
+      "Settings Saved",
+      "Your settings have been updated successfully",
+    );
     setIsOpen(false);
   };
 
   const handleReset = () => {
-    if (confirm('Reset all settings to defaults?')) {
+    if (confirm("Reset all settings to defaults?")) {
       const defaults = getDefaultSettings();
       setSettings(defaults);
       saveUserSettings(defaults);
-      notifySuccess('Settings Reset', 'Settings have been reset to defaults');
+      notifySuccess("Settings Reset", "Settings have been reset to defaults");
     }
   };
 
   const handleClearHistory = () => {
-    if (confirm('Clear all trade history? This action cannot be undone.')) {
+    if (confirm("Clear all trade history? This action cannot be undone.")) {
       clearTradeHistory();
-      notifySuccess('History Cleared', 'Trade history has been cleared');
+      notifySuccess("History Cleared", "Trade history has been cleared");
     }
   };
 
   const handleEnableNotifications = async () => {
     const granted = await requestNotificationPermission();
     if (granted) {
-      setNotificationPermission('granted');
-      notifySuccess('Notifications Enabled', 'You will now receive browser notifications');
+      setNotificationPermission("granted");
+      notifySuccess(
+        "Notifications Enabled",
+        "You will now receive browser notifications",
+      );
     } else {
-      setNotificationPermission('denied');
+      setNotificationPermission("denied");
     }
   };
 
@@ -77,7 +96,9 @@ export default function AdminPanel() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-3xl font-bold text-white">⚙️ Admin Settings</h2>
+              <h2 className="text-3xl font-bold text-white">
+                ⚙️ Admin Settings
+              </h2>
               <button
                 onClick={() => setIsOpen(false)}
                 className="text-white/70 hover:text-white text-2xl"
@@ -89,8 +110,10 @@ export default function AdminPanel() {
             <div className="space-y-6">
               {/* Trading Settings */}
               <div className="bg-white/10 backdrop-blur-md rounded-xl p-4">
-                <h3 className="text-xl font-bold text-white mb-4">Trading Settings</h3>
-                
+                <h3 className="text-xl font-bold text-white mb-4">
+                  Trading Settings
+                </h3>
+
                 <div className="space-y-4">
                   <div>
                     <label className="text-white text-sm mb-2 block">
@@ -99,7 +122,12 @@ export default function AdminPanel() {
                     <input
                       type="range"
                       value={settings.minProfit}
-                      onChange={(e) => setSettings({ ...settings, minProfit: parseFloat(e.target.value) })}
+                      onChange={(e) =>
+                        setSettings({
+                          ...settings,
+                          minProfit: parseFloat(e.target.value),
+                        })
+                      }
                       min="0.1"
                       max="5"
                       step="0.1"
@@ -114,7 +142,12 @@ export default function AdminPanel() {
                     <input
                       type="range"
                       value={settings.slippage}
-                      onChange={(e) => setSettings({ ...settings, slippage: parseFloat(e.target.value) })}
+                      onChange={(e) =>
+                        setSettings({
+                          ...settings,
+                          slippage: parseFloat(e.target.value),
+                        })
+                      }
                       min="0.1"
                       max="5"
                       step="0.1"
@@ -125,14 +158,19 @@ export default function AdminPanel() {
                   <div className="flex items-center justify-between">
                     <span className="text-white">Auto-Execute Trades</span>
                     <button
-                      onClick={() => setSettings({ ...settings, autoExecute: !settings.autoExecute })}
+                      onClick={() =>
+                        setSettings({
+                          ...settings,
+                          autoExecute: !settings.autoExecute,
+                        })
+                      }
                       className={`px-4 py-2 rounded-lg font-bold transition ${
-                        settings.autoExecute 
-                          ? 'bg-green-600 hover:bg-green-700 text-white' 
-                          : 'bg-gray-600 hover:bg-gray-700 text-white'
+                        settings.autoExecute
+                          ? "bg-green-600 hover:bg-green-700 text-white"
+                          : "bg-gray-600 hover:bg-gray-700 text-white"
                       }`}
                     >
-                      {settings.autoExecute ? 'ON' : 'OFF'}
+                      {settings.autoExecute ? "ON" : "OFF"}
                     </button>
                   </div>
                 </div>
@@ -140,31 +178,45 @@ export default function AdminPanel() {
 
               {/* Notification Settings */}
               <div className="bg-white/10 backdrop-blur-md rounded-xl p-4">
-                <h3 className="text-xl font-bold text-white mb-4">Notifications</h3>
-                
+                <h3 className="text-xl font-bold text-white mb-4">
+                  Notifications
+                </h3>
+
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <span className="text-white">In-App Notifications</span>
                     <button
-                      onClick={() => setSettings({ ...settings, notifications: !settings.notifications })}
+                      onClick={() =>
+                        setSettings({
+                          ...settings,
+                          notifications: !settings.notifications,
+                        })
+                      }
                       className={`px-4 py-2 rounded-lg font-bold transition ${
-                        settings.notifications 
-                          ? 'bg-green-600 hover:bg-green-700 text-white' 
-                          : 'bg-gray-600 hover:bg-gray-700 text-white'
+                        settings.notifications
+                          ? "bg-green-600 hover:bg-green-700 text-white"
+                          : "bg-gray-600 hover:bg-gray-700 text-white"
                       }`}
                     >
-                      {settings.notifications ? 'ON' : 'OFF'}
+                      {settings.notifications ? "ON" : "OFF"}
                     </button>
                   </div>
 
                   <div className="flex items-center justify-between">
                     <div>
-                      <div className="text-white font-semibold">Browser Notifications</div>
+                      <div className="text-white font-semibold">
+                        Browser Notifications
+                      </div>
                       <div className="text-sm text-gray-300">
-                        Status: {notificationPermission === 'granted' ? '✅ Enabled' : notificationPermission === 'denied' ? '❌ Blocked' : '⚠️ Not Set'}
+                        Status:{" "}
+                        {notificationPermission === "granted"
+                          ? "✅ Enabled"
+                          : notificationPermission === "denied"
+                            ? "❌ Blocked"
+                            : "⚠️ Not Set"}
                       </div>
                     </div>
-                    {notificationPermission !== 'granted' && (
+                    {notificationPermission !== "granted" && (
                       <button
                         onClick={handleEnableNotifications}
                         className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-bold transition"
@@ -181,9 +233,11 @@ export default function AdminPanel() {
                 <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-purple-500/30">
                   <div className="flex items-center gap-2 mb-4">
                     <span className="text-xl">🔐</span>
-                    <h3 className="text-xl font-bold text-white">Admin Controls</h3>
+                    <h3 className="text-xl font-bold text-white">
+                      Admin Controls
+                    </h3>
                   </div>
-                  
+
                   <div className="space-y-3">
                     <button
                       onClick={handleClearHistory}

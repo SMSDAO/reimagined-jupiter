@@ -1,10 +1,10 @@
 /**
  * Gemini Backend Provider
- * 
+ *
  * Provides LLM-based reasoning capabilities using Gemini AI.
  */
 
-import axios, { AxiosInstance } from 'axios';
+import axios, { AxiosInstance } from "axios";
 
 export interface GeminiConfig {
   apiKey: string;
@@ -38,11 +38,11 @@ export interface GeminiResponse {
 export class GeminiBackend {
   private config: GeminiConfig;
   private client: AxiosInstance;
-  private readonly baseUrl = 'https://generativelanguage.googleapis.com/v1beta';
+  private readonly baseUrl = "https://generativelanguage.googleapis.com/v1beta";
 
   constructor(config: GeminiConfig) {
     this.config = {
-      model: 'gemini-pro',
+      model: "gemini-pro",
       temperature: 0.7,
       maxTokens: 2048,
       topP: 0.95,
@@ -53,7 +53,7 @@ export class GeminiBackend {
       baseURL: this.baseUrl,
       timeout: 30000, // 30 seconds
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
     });
   }
@@ -82,18 +82,19 @@ export class GeminiBackend {
             maxOutputTokens: request.maxTokens ?? this.config.maxTokens,
             topP: this.config.topP,
           },
-        }
+        },
       );
 
       const candidate = response.data.candidates?.[0];
       const content = candidate?.content;
-      const text = content?.parts?.[0]?.text || '';
+      const text = content?.parts?.[0]?.text || "";
 
       // Extract usage metadata if available
       const usage = response.data.usageMetadata
         ? {
             promptTokens: response.data.usageMetadata.promptTokenCount || 0,
-            completionTokens: response.data.usageMetadata.candidatesTokenCount || 0,
+            completionTokens:
+              response.data.usageMetadata.candidatesTokenCount || 0,
             totalTokens: response.data.usageMetadata.totalTokenCount || 0,
           }
         : undefined;
@@ -106,20 +107,22 @@ export class GeminiBackend {
     } catch (error) {
       if (axios.isAxiosError(error)) {
         const errorMsg =
-          error.response?.data?.error?.message || error.message || 'Unknown error';
-        console.error('❌ Gemini API error:', errorMsg);
+          error.response?.data?.error?.message ||
+          error.message ||
+          "Unknown error";
+        console.error("❌ Gemini API error:", errorMsg);
         return {
           success: false,
-          text: '',
+          text: "",
           error: errorMsg,
         };
       }
 
-      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-      console.error('❌ Gemini backend error:', errorMsg);
+      const errorMsg = error instanceof Error ? error.message : "Unknown error";
+      console.error("❌ Gemini backend error:", errorMsg);
       return {
         success: false,
-        text: '',
+        text: "",
         error: errorMsg,
       };
     }
@@ -133,9 +136,9 @@ export class GeminiBackend {
     marketData: any;
     riskParams: any;
   }): Promise<{
-    recommendation: 'PROCEED' | 'ABORT' | 'ADJUST';
+    recommendation: "PROCEED" | "ABORT" | "ADJUST";
     reasoning: string;
-    confidence: 'HIGH' | 'MEDIUM' | 'LOW';
+    confidence: "HIGH" | "MEDIUM" | "LOW";
     adjustments?: Record<string, any>;
   }> {
     const prompt = `You are an expert DeFi arbitrage analyst. Analyze the following arbitrage opportunity and provide a recommendation.
@@ -168,15 +171,15 @@ Provide your response in the following JSON format:
     const response = await this.generateCompletion({
       prompt,
       systemPrompt:
-        'You are a professional DeFi analyst with expertise in arbitrage strategies on Solana. Provide precise, actionable recommendations based on data.',
+        "You are a professional DeFi analyst with expertise in arbitrage strategies on Solana. Provide precise, actionable recommendations based on data.",
       temperature: 0.3, // Lower temperature for more deterministic output
     });
 
     if (!response.success || !response.text) {
       return {
-        recommendation: 'ABORT',
-        reasoning: `LLM analysis failed: ${response.error || 'No response'}`,
-        confidence: 'LOW',
+        recommendation: "ABORT",
+        reasoning: `LLM analysis failed: ${response.error || "No response"}`,
+        confidence: "LOW",
       };
     }
 
@@ -186,25 +189,25 @@ Provide your response in the following JSON format:
       if (jsonMatch) {
         const parsed = JSON.parse(jsonMatch[0]);
         return {
-          recommendation: parsed.recommendation || 'ABORT',
+          recommendation: parsed.recommendation || "ABORT",
           reasoning: parsed.reasoning || response.text,
-          confidence: parsed.confidence || 'LOW',
+          confidence: parsed.confidence || "LOW",
           adjustments: parsed.adjustments,
         };
       }
 
       // If no JSON, return text-based analysis
       return {
-        recommendation: 'ABORT',
+        recommendation: "ABORT",
         reasoning: response.text,
-        confidence: 'LOW',
+        confidence: "LOW",
       };
     } catch (error) {
-      console.error('❌ Failed to parse LLM response:', error);
+      console.error("❌ Failed to parse LLM response:", error);
       return {
-        recommendation: 'ABORT',
+        recommendation: "ABORT",
         reasoning: `Failed to parse LLM response: ${response.text}`,
-        confidence: 'LOW',
+        confidence: "LOW",
       };
     }
   }
@@ -215,7 +218,7 @@ Provide your response in the following JSON format:
   async healthCheck(): Promise<{ healthy: boolean; error?: string }> {
     try {
       const response = await this.generateCompletion({
-        prompt: 'Health check',
+        prompt: "Health check",
         maxTokens: 10,
       });
 
@@ -224,7 +227,7 @@ Provide your response in the following JSON format:
         error: response.error,
       };
     } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      const errorMsg = error instanceof Error ? error.message : "Unknown error";
       return {
         healthy: false,
         error: errorMsg,

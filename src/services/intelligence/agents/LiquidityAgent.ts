@@ -1,6 +1,6 @@
 /**
  * Liquidity Agent
- * 
+ *
  * Analyzes real-time pool depth and volatility using Pyth/Jupiter data
  * to recommend optimal trade sizes.
  */
@@ -11,7 +11,7 @@ import {
   AgentStatus,
   AnalysisContext,
   AnalysisResult,
-} from '../types.js';
+} from "../types.js";
 
 export interface LiquidityAgentConfig {
   minLiquidityThreshold: number; // Minimum pool liquidity in SOL
@@ -22,7 +22,7 @@ export interface LiquidityAgentConfig {
 
 export class LiquidityAgent implements IntelligenceAgent {
   readonly metadata: AgentMetadata;
-  status: AgentStatus = 'INACTIVE';
+  status: AgentStatus = "INACTIVE";
   private config: LiquidityAgentConfig;
 
   constructor(config?: Partial<LiquidityAgentConfig>) {
@@ -34,26 +34,26 @@ export class LiquidityAgent implements IntelligenceAgent {
     };
 
     this.metadata = {
-      id: 'liquidity-agent-v1',
-      name: 'Liquidity Analysis Agent',
-      version: '1.0.0',
-      type: 'LIQUIDITY',
-      author: 'GXQ STUDIO',
+      id: "liquidity-agent-v1",
+      name: "Liquidity Analysis Agent",
+      version: "1.0.0",
+      type: "LIQUIDITY",
+      author: "GXQ STUDIO",
       description:
-        'Analyzes real-time pool depth and volatility to recommend optimal trade sizes',
+        "Analyzes real-time pool depth and volatility to recommend optimal trade sizes",
       createdAt: new Date(),
       updatedAt: new Date(),
     };
   }
 
   async initialize(): Promise<void> {
-    this.status = 'ACTIVE';
-    console.log('✅ Liquidity Agent initialized with config:', this.config);
+    this.status = "ACTIVE";
+    console.log("✅ Liquidity Agent initialized with config:", this.config);
   }
 
   async cleanup(): Promise<void> {
-    this.status = 'INACTIVE';
-    console.log('🗑️ Liquidity Agent cleaned up');
+    this.status = "INACTIVE";
+    console.log("🗑️ Liquidity Agent cleaned up");
   }
 
   async healthCheck(): Promise<{ healthy: boolean; error?: string }> {
@@ -73,7 +73,7 @@ export class LiquidityAgent implements IntelligenceAgent {
       // 1. Check minimum liquidity threshold
       if (liquidity < this.config.minLiquidityThreshold) {
         issues.push(
-          `Insufficient liquidity: ${liquidity.toFixed(2)} SOL (minimum: ${this.config.minLiquidityThreshold} SOL)`
+          `Insufficient liquidity: ${liquidity.toFixed(2)} SOL (minimum: ${this.config.minLiquidityThreshold} SOL)`,
         );
       }
 
@@ -83,16 +83,17 @@ export class LiquidityAgent implements IntelligenceAgent {
         issues.push(
           `Trade size ${(tradeToLiquidityRatio * 100).toFixed(2)}% of liquidity exceeds maximum ${(
             this.config.maxTradeToLiquidityRatio * 100
-          ).toFixed(2)}%`
+          ).toFixed(2)}%`,
         );
 
         // Suggest optimal trade size
-        const optimalTradeSize = liquidity * this.config.maxTradeToLiquidityRatio;
+        const optimalTradeSize =
+          liquidity * this.config.maxTradeToLiquidityRatio;
         adjustments.suggestedTradeSize = optimalTradeSize;
         recommendations.push(
           `Reduce trade size to ${optimalTradeSize.toFixed(4)} SOL (${(
             this.config.maxTradeToLiquidityRatio * 100
-          ).toFixed(2)}% of pool)`
+          ).toFixed(2)}% of pool)`,
         );
       }
 
@@ -101,10 +102,10 @@ export class LiquidityAgent implements IntelligenceAgent {
         issues.push(
           `High volatility detected: ${(volatility * 100).toFixed(2)}% (threshold: ${(
             this.config.volatilityThreshold * 100
-          ).toFixed(2)}%)`
+          ).toFixed(2)}%)`,
         );
         recommendations.push(
-          'Consider waiting for market conditions to stabilize or reducing trade size'
+          "Consider waiting for market conditions to stabilize or reducing trade size",
         );
       }
 
@@ -112,8 +113,12 @@ export class LiquidityAgent implements IntelligenceAgent {
       if (context.pools && Array.isArray(context.pools)) {
         const poolAnalysis = this.analyzePoolDepth(context.pools);
         if (poolAnalysis.imbalanced) {
-          issues.push('Pool depth imbalance detected - may result in higher slippage');
-          recommendations.push(poolAnalysis.recommendation || 'Consider alternative routes');
+          issues.push(
+            "Pool depth imbalance detected - may result in higher slippage",
+          );
+          recommendations.push(
+            poolAnalysis.recommendation || "Consider alternative routes",
+          );
         }
       }
 
@@ -121,32 +126,41 @@ export class LiquidityAgent implements IntelligenceAgent {
       const priceConfidence = context.marketData?.priceConfidence ?? 0;
       if (priceConfidence > this.config.confidenceInterval) {
         issues.push(
-          `Price confidence interval too wide: ${(priceConfidence * 100).toFixed(2)}%`
+          `Price confidence interval too wide: ${(priceConfidence * 100).toFixed(2)}%`,
         );
-        recommendations.push('Wait for more stable price data or reduce position size');
+        recommendations.push(
+          "Wait for more stable price data or reduce position size",
+        );
       }
 
       // 6. Calculate optimal execution strategy
       if (tradeAmount > 0 && liquidity > 0) {
-        const executionStrategy = this.calculateOptimalExecution(tradeAmount, liquidity);
+        const executionStrategy = this.calculateOptimalExecution(
+          tradeAmount,
+          liquidity,
+        );
         if (executionStrategy.splitTrade) {
           adjustments.executionStrategy = executionStrategy;
           recommendations.push(
-            `Consider splitting trade into ${executionStrategy.numSplits} smaller executions`
+            `Consider splitting trade into ${executionStrategy.numSplits} smaller executions`,
           );
         }
       }
 
       // Determine recommendation
       const hasIssues = issues.length > 0;
-      const recommendation = hasIssues ? 'ADJUST' : 'PROCEED';
-      const confidence = hasIssues ? 'MEDIUM' : 'HIGH';
+      const recommendation = hasIssues ? "ADJUST" : "PROCEED";
+      const confidence = hasIssues ? "MEDIUM" : "HIGH";
 
       const reasoning = [
-        hasIssues ? 'Liquidity analysis identified issues:' : 'Liquidity conditions are favorable.',
+        hasIssues
+          ? "Liquidity analysis identified issues:"
+          : "Liquidity conditions are favorable.",
         ...issues,
-        ...(recommendations.length > 0 ? ['Recommendations:', ...recommendations] : []),
-      ].join('\n- ');
+        ...(recommendations.length > 0
+          ? ["Recommendations:", ...recommendations]
+          : []),
+      ].join("\n- ");
 
       return {
         agentId: this.metadata.id,
@@ -155,7 +169,8 @@ export class LiquidityAgent implements IntelligenceAgent {
         confidence,
         recommendation,
         reasoning,
-        adjustments: Object.keys(adjustments).length > 0 ? adjustments : undefined,
+        adjustments:
+          Object.keys(adjustments).length > 0 ? adjustments : undefined,
         metadata: {
           liquidityAnalysis: {
             totalLiquidity: liquidity,
@@ -169,15 +184,15 @@ export class LiquidityAgent implements IntelligenceAgent {
         timestamp: new Date(),
       };
     } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-      console.error('❌ Liquidity Agent analysis failed:', error);
+      const errorMsg = error instanceof Error ? error.message : "Unknown error";
+      console.error("❌ Liquidity Agent analysis failed:", error);
 
       return {
         agentId: this.metadata.id,
         agentType: this.metadata.type,
         success: false,
-        confidence: 'LOW',
-        recommendation: 'ABORT',
+        confidence: "LOW",
+        recommendation: "ABORT",
         reasoning: `Liquidity analysis failed: ${errorMsg}`,
         timestamp: new Date(),
       };
@@ -187,9 +202,10 @@ export class LiquidityAgent implements IntelligenceAgent {
   /**
    * Analyze pool depth distribution
    */
-  private analyzePoolDepth(
-    pools: any[]
-  ): { imbalanced: boolean; recommendation?: string } {
+  private analyzePoolDepth(pools: any[]): {
+    imbalanced: boolean;
+    recommendation?: string;
+  } {
     if (pools.length === 0) {
       return { imbalanced: false };
     }
@@ -198,7 +214,8 @@ export class LiquidityAgent implements IntelligenceAgent {
     const poolSizes = pools.map((p) => p.liquidity || 0);
     const mean = poolSizes.reduce((a, b) => a + b, 0) / poolSizes.length;
     const variance =
-      poolSizes.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / poolSizes.length;
+      poolSizes.reduce((a, b) => a + Math.pow(b - mean, 2), 0) /
+      poolSizes.length;
     const stdDev = Math.sqrt(variance);
     const cv = mean > 0 ? stdDev / mean : 0;
 
@@ -206,7 +223,7 @@ export class LiquidityAgent implements IntelligenceAgent {
     if (cv > 0.5) {
       return {
         imbalanced: true,
-        recommendation: 'Route through more balanced liquidity pools',
+        recommendation: "Route through more balanced liquidity pools",
       };
     }
 
@@ -218,7 +235,7 @@ export class LiquidityAgent implements IntelligenceAgent {
    */
   private calculateOptimalExecution(
     tradeAmount: number,
-    liquidity: number
+    liquidity: number,
   ): { splitTrade: boolean; numSplits?: number; splitSize?: number } {
     const ratio = tradeAmount / liquidity;
 
@@ -242,7 +259,7 @@ export class LiquidityAgent implements IntelligenceAgent {
    */
   updateConfig(config: Partial<LiquidityAgentConfig>): void {
     this.config = { ...this.config, ...config };
-    console.log('✅ Liquidity Agent configuration updated:', config);
+    console.log("✅ Liquidity Agent configuration updated:", config);
   }
 
   /**

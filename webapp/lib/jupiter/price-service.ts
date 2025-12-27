@@ -4,7 +4,7 @@
  * Includes caching, WebSocket support, and portfolio valuation
  */
 
-import { API } from '../config';
+import { API } from "../config";
 
 export interface JupiterPriceData {
   id: string;
@@ -60,7 +60,7 @@ export class JupiterPriceService {
    */
   async getTokenPrice(
     tokenId: string,
-    vsToken: string = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'
+    vsToken: string = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
   ): Promise<JupiterPriceData | null> {
     // Check cache first
     const cached = this.getCachedPrice(tokenId);
@@ -70,16 +70,18 @@ export class JupiterPriceService {
 
     try {
       const response = await fetch(
-        `${this.baseUrl}/price?ids=${tokenId}&vsToken=${vsToken}`
+        `${this.baseUrl}/price?ids=${tokenId}&vsToken=${vsToken}`,
       );
 
       if (!response.ok) {
-        console.error(`[JupiterPrice] Failed to fetch price for ${tokenId}: ${response.statusText}`);
+        console.error(
+          `[JupiterPrice] Failed to fetch price for ${tokenId}: ${response.statusText}`,
+        );
         return null;
       }
 
       const data = await response.json();
-      
+
       if (!data.data || !data.data[tokenId]) {
         console.warn(`[JupiterPrice] No price data available for ${tokenId}`);
         return null;
@@ -87,9 +89,9 @@ export class JupiterPriceService {
 
       const priceData: JupiterPriceData = {
         id: data.data[tokenId].id,
-        mintSymbol: data.data[tokenId].mintSymbol || 'UNKNOWN',
+        mintSymbol: data.data[tokenId].mintSymbol || "UNKNOWN",
         vsToken: data.data[tokenId].vsToken || vsToken,
-        vsTokenSymbol: data.data[tokenId].vsTokenSymbol || 'USDC',
+        vsTokenSymbol: data.data[tokenId].vsTokenSymbol || "USDC",
         price: data.data[tokenId].price,
         timeTaken: data.timeTaken || 0,
       };
@@ -99,7 +101,10 @@ export class JupiterPriceService {
 
       return priceData;
     } catch (error) {
-      console.error(`[JupiterPrice] Error fetching price for ${tokenId}:`, error);
+      console.error(
+        `[JupiterPrice] Error fetching price for ${tokenId}:`,
+        error,
+      );
       return null;
     }
   }
@@ -112,7 +117,7 @@ export class JupiterPriceService {
    */
   async getBulkPrices(
     tokenIds: string[],
-    vsToken: string = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'
+    vsToken: string = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
   ): Promise<Map<string, JupiterPriceData>> {
     const result = new Map<string, JupiterPriceData>();
     const tokensToFetch: string[] = [];
@@ -133,20 +138,22 @@ export class JupiterPriceService {
     }
 
     try {
-      const idsParam = tokensToFetch.join(',');
+      const idsParam = tokensToFetch.join(",");
       const response = await fetch(
-        `${this.baseUrl}/price?ids=${idsParam}&vsToken=${vsToken}`
+        `${this.baseUrl}/price?ids=${idsParam}&vsToken=${vsToken}`,
       );
 
       if (!response.ok) {
-        console.error(`[JupiterPrice] Failed to fetch bulk prices: ${response.statusText}`);
+        console.error(
+          `[JupiterPrice] Failed to fetch bulk prices: ${response.statusText}`,
+        );
         return result;
       }
 
       const data = await response.json();
 
       if (!data.data) {
-        console.warn('[JupiterPrice] No price data in bulk response');
+        console.warn("[JupiterPrice] No price data in bulk response");
         return result;
       }
 
@@ -155,9 +162,9 @@ export class JupiterPriceService {
         if (data.data[tokenId]) {
           const priceData: JupiterPriceData = {
             id: data.data[tokenId].id,
-            mintSymbol: data.data[tokenId].mintSymbol || 'UNKNOWN',
+            mintSymbol: data.data[tokenId].mintSymbol || "UNKNOWN",
             vsToken: data.data[tokenId].vsToken || vsToken,
-            vsTokenSymbol: data.data[tokenId].vsTokenSymbol || 'USDC',
+            vsTokenSymbol: data.data[tokenId].vsTokenSymbol || "USDC",
             price: data.data[tokenId].price,
             timeTaken: data.timeTaken || 0,
           };
@@ -169,7 +176,7 @@ export class JupiterPriceService {
 
       return result;
     } catch (error) {
-      console.error('[JupiterPrice] Error fetching bulk prices:', error);
+      console.error("[JupiterPrice] Error fetching bulk prices:", error);
       return result;
     }
   }
@@ -182,7 +189,7 @@ export class JupiterPriceService {
    */
   subscribeToPrice(
     tokenId: string,
-    callback: (price: JupiterPriceData) => void
+    callback: (price: JupiterPriceData) => void,
   ): () => void {
     // Add subscription
     if (!this.subscriptions.has(tokenId)) {
@@ -211,7 +218,7 @@ export class JupiterPriceService {
         if (subs.length === 0) {
           this.activeSubscriptionTokens.delete(tokenId);
           this.subscriptions.delete(tokenId);
-          
+
           // Stop polling if no more subscriptions
           if (this.activeSubscriptionTokens.size === 0) {
             this.stopGlobalPolling();
@@ -227,12 +234,12 @@ export class JupiterPriceService {
    * @returns Portfolio value breakdown
    */
   async calculatePortfolioValue(
-    tokens: PortfolioToken[]
+    tokens: PortfolioToken[],
   ): Promise<PortfolioValue> {
-    const mints = tokens.map(t => t.mint);
+    const mints = tokens.map((t) => t.mint);
     const prices = await this.getBulkPrices(mints);
 
-    const tokenValues = tokens.map(token => {
+    const tokenValues = tokens.map((token) => {
       const priceData = prices.get(token.mint);
       const price = priceData?.price || 0;
       const value = token.amount * price;
@@ -301,7 +308,7 @@ export class JupiterPriceService {
     // This implementation uses bulk polling as an efficient fallback
     this.globalPollingInterval = setInterval(async () => {
       const subscribedTokens = Array.from(this.subscriptions.keys());
-      
+
       if (subscribedTokens.length === 0) {
         this.stopGlobalPolling();
         return;
@@ -310,22 +317,25 @@ export class JupiterPriceService {
       try {
         // Fetch all subscribed tokens in a single bulk request
         const pricesMap = await this.getBulkPrices(subscribedTokens);
-        
+
         // Notify all subscribers
         pricesMap.forEach((priceData, tokenId) => {
           const subs = this.subscriptions.get(tokenId);
           if (subs) {
-            subs.forEach(sub => {
+            subs.forEach((sub) => {
               try {
                 sub.callback(priceData);
               } catch (error) {
-                console.error('[JupiterPrice] Error in subscription callback:', error);
+                console.error(
+                  "[JupiterPrice] Error in subscription callback:",
+                  error,
+                );
               }
             });
           }
         });
       } catch (error) {
-        console.error('[JupiterPrice] Error in global polling:', error);
+        console.error("[JupiterPrice] Error in global polling:", error);
       }
     }, this.pollingIntervalMs);
   }
@@ -336,7 +346,6 @@ export class JupiterPriceService {
       this.globalPollingInterval = null;
     }
   }
-
 }
 
 // Singleton instance
@@ -355,7 +364,10 @@ export function getJupiterPriceService(): JupiterPriceService {
 /**
  * Helper function to get a single token price
  */
-export async function getTokenPrice(tokenId: string, vsToken?: string): Promise<number | null> {
+export async function getTokenPrice(
+  tokenId: string,
+  vsToken?: string,
+): Promise<number | null> {
   const service = getJupiterPriceService();
   const priceData = await service.getTokenPrice(tokenId, vsToken);
   return priceData ? priceData.price : null;
@@ -366,15 +378,15 @@ export async function getTokenPrice(tokenId: string, vsToken?: string): Promise<
  */
 export async function getBulkTokenPrices(
   tokenIds: string[],
-  vsToken?: string
+  vsToken?: string,
 ): Promise<Record<string, number>> {
   const service = getJupiterPriceService();
   const prices = await service.getBulkPrices(tokenIds, vsToken);
-  
+
   const result: Record<string, number> = {};
   prices.forEach((priceData, tokenId) => {
     result[tokenId] = priceData.price;
   });
-  
+
   return result;
 }

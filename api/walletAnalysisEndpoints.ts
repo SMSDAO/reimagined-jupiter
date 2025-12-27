@@ -1,32 +1,32 @@
 /**
  * Wallet Analysis API Endpoints
- * 
+ *
  * This file provides API endpoint implementations for wallet analysis
  * with social intelligence integration.
- * 
+ *
  * Usage:
  * - Can be integrated with Express.js, Fastify, or Next.js API routes
  * - All endpoints require proper authentication in production
  * - Rate limiting should be applied
  */
 
-import { Connection, PublicKey } from '@solana/web3.js';
-import { WalletScoring } from '../src/services/walletScoring.js';
-import { FarcasterScoring } from '../src/services/farcasterScoring.js';
-import database from '../db/database.js';
-import { config } from '../src/config/index.js';
+import { Connection, PublicKey } from "@solana/web3.js";
+import { WalletScoring } from "../src/services/walletScoring.js";
+import { FarcasterScoring } from "../src/services/farcasterScoring.js";
+import database from "../db/database.js";
+import { config } from "../src/config/index.js";
 
 // Initialize services
 const connection = new Connection(config.solana.rpcUrl);
 const walletScoring = new WalletScoring(connection, config.neynar.apiKey);
-const farcasterScoring = config.neynar.apiKey 
-  ? new FarcasterScoring(config.neynar.apiKey) 
+const farcasterScoring = config.neynar.apiKey
+  ? new FarcasterScoring(config.neynar.apiKey)
   : null;
 
 /**
  * POST /api/wallet/analyze
  * Analyze wallet with optional social intelligence
- * 
+ *
  * Body:
  * {
  *   walletAddress: string,
@@ -36,21 +36,28 @@ const farcasterScoring = config.neynar.apiKey
  */
 export async function analyzeWallet(req: any, res: any) {
   try {
-    const { walletAddress, includeSocial = true, saveToDatabase = false } = req.body;
+    const {
+      walletAddress,
+      includeSocial = true,
+      saveToDatabase = false,
+    } = req.body;
 
     if (!walletAddress) {
-      return res.status(400).json({ error: 'Wallet address is required' });
+      return res.status(400).json({ error: "Wallet address is required" });
     }
 
     let publicKey: PublicKey;
     try {
       publicKey = new PublicKey(walletAddress);
     } catch (error) {
-      return res.status(400).json({ error: 'Invalid wallet address' });
+      return res.status(400).json({ error: "Invalid wallet address" });
     }
 
     // Analyze wallet
-    const analysis = await walletScoring.analyzeWallet(publicKey, includeSocial);
+    const analysis = await walletScoring.analyzeWallet(
+      publicKey,
+      includeSocial,
+    );
 
     // Save to database if requested
     if (saveToDatabase && analysis) {
@@ -111,10 +118,10 @@ export async function analyzeWallet(req: any, res: any) {
       data: analysis,
     });
   } catch (error) {
-    console.error('Error analyzing wallet:', error);
-    return res.status(500).json({ 
-      error: 'Internal server error',
-      message: error instanceof Error ? error.message : 'Unknown error',
+    console.error("Error analyzing wallet:", error);
+    return res.status(500).json({
+      error: "Internal server error",
+      message: error instanceof Error ? error.message : "Unknown error",
     });
   }
 }
@@ -128,7 +135,9 @@ export async function getTrustScore(req: any, res: any) {
     const { address } = req.params;
 
     if (!farcasterScoring) {
-      return res.status(503).json({ error: 'Farcaster integration not configured' });
+      return res
+        .status(503)
+        .json({ error: "Farcaster integration not configured" });
     }
 
     // Get from database first
@@ -156,8 +165,8 @@ export async function getTrustScore(req: any, res: any) {
       cached: false,
     });
   } catch (error) {
-    console.error('Error getting trust score:', error);
-    return res.status(500).json({ error: 'Internal server error' });
+    console.error("Error getting trust score:", error);
+    return res.status(500).json({ error: "Internal server error" });
   }
 }
 
@@ -170,7 +179,9 @@ export async function getFarcasterProfile(req: any, res: any) {
     const { address } = req.params;
 
     if (!farcasterScoring) {
-      return res.status(503).json({ error: 'Farcaster integration not configured' });
+      return res
+        .status(503)
+        .json({ error: "Farcaster integration not configured" });
     }
 
     // Check database first
@@ -210,8 +221,8 @@ export async function getFarcasterProfile(req: any, res: any) {
       cached: false,
     });
   } catch (error) {
-    console.error('Error getting Farcaster profile:', error);
-    return res.status(500).json({ error: 'Internal server error' });
+    console.error("Error getting Farcaster profile:", error);
+    return res.status(500).json({ error: "Internal server error" });
   }
 }
 
@@ -224,7 +235,9 @@ export async function getGMScore(req: any, res: any) {
     const { address } = req.params;
 
     if (!farcasterScoring) {
-      return res.status(503).json({ error: 'Farcaster integration not configured' });
+      return res
+        .status(503)
+        .json({ error: "Farcaster integration not configured" });
     }
 
     const gmScore = await farcasterScoring.calculateGMScore(address);
@@ -234,8 +247,8 @@ export async function getGMScore(req: any, res: any) {
       data: gmScore,
     });
   } catch (error) {
-    console.error('Error getting GM score:', error);
-    return res.status(500).json({ error: 'Internal server error' });
+    console.error("Error getting GM score:", error);
+    return res.status(500).json({ error: "Internal server error" });
   }
 }
 
@@ -254,8 +267,8 @@ export async function getHighValueWallets(req: any, res: any) {
       count: wallets.length,
     });
   } catch (error) {
-    console.error('Error getting high-value wallets:', error);
-    return res.status(500).json({ error: 'Internal server error' });
+    console.error("Error getting high-value wallets:", error);
+    return res.status(500).json({ error: "Internal server error" });
   }
 }
 
@@ -267,8 +280,11 @@ export async function getAirdropPriorityWallets(req: any, res: any) {
   try {
     const minPriority = parseInt(req.query.minPriority) || 4;
     const limit = parseInt(req.query.limit) || 100;
-    
-    const wallets = await database.getAirdropPriorityWallets(minPriority, limit);
+
+    const wallets = await database.getAirdropPriorityWallets(
+      minPriority,
+      limit,
+    );
 
     return res.status(200).json({
       success: true,
@@ -276,19 +292,19 @@ export async function getAirdropPriorityWallets(req: any, res: any) {
       count: wallets.length,
     });
   } catch (error) {
-    console.error('Error getting airdrop priority wallets:', error);
-    return res.status(500).json({ error: 'Internal server error' });
+    console.error("Error getting airdrop priority wallets:", error);
+    return res.status(500).json({ error: "Internal server error" });
   }
 }
 
 // Express.js example integration
 export function setupExpressRoutes(app: any) {
-  app.post('/api/wallet/analyze', analyzeWallet);
-  app.get('/api/wallet/:address/trust', getTrustScore);
-  app.get('/api/wallet/:address/farcaster', getFarcasterProfile);
-  app.get('/api/wallet/:address/gm', getGMScore);
-  app.get('/api/wallets/high-value', getHighValueWallets);
-  app.get('/api/wallets/airdrop-priority', getAirdropPriorityWallets);
+  app.post("/api/wallet/analyze", analyzeWallet);
+  app.get("/api/wallet/:address/trust", getTrustScore);
+  app.get("/api/wallet/:address/farcaster", getFarcasterProfile);
+  app.get("/api/wallet/:address/gm", getGMScore);
+  app.get("/api/wallets/high-value", getHighValueWallets);
+  app.get("/api/wallets/airdrop-priority", getAirdropPriorityWallets);
 }
 
 export default {

@@ -1,5 +1,5 @@
-import { Connection, PublicKey } from '@solana/web3.js';
-import { config } from '../config/index.js';
+import { Connection, PublicKey } from "@solana/web3.js";
+import { config } from "../config/index.js";
 
 /**
  * Pyth Network Price Feed Integration
@@ -13,7 +13,7 @@ export interface PythPriceData {
   confidence: number;
   timestamp: number;
   expo: number;
-  status: 'trading' | 'halted' | 'auction' | 'unknown';
+  status: "trading" | "halted" | "auction" | "unknown";
 }
 
 export interface PriceUpdateCallback {
@@ -22,16 +22,16 @@ export interface PriceUpdateCallback {
 
 // Pyth price account mappings for common tokens
 const PYTH_PRICE_FEEDS: Record<string, string> = {
-  'SOL': 'H6ARHf6YXhGYeQfUzQNGk6rDNnLBQKrenN712K4AQJEG',
-  'BTC': 'GVXRSBjFk6e6J3NbVPXohDJetcTjaeeuykUpbQF8UoMU',
-  'ETH': 'JBu1AL4obBcCMqKBBxhpWCNUt136ijcuMZLFvTP7iWdB',
-  'USDC': 'Gnt27xtC473ZT2Mw5u8wZ68Z3gULkSTb5DuxJy7eJotD',
-  'USDT': '3vxLXJqLqF3JG5TCbYycbKWRBbCJQLxQmBGCkyqEEefL',
-  'RAY': 'AnLf8tVYCM816gmBjiy8n53eXKKEDydT5piYjjQDPgTB',
-  'ORCA': '4ivThkX8uRxBpHsdWSqyXYihzKF3zpRGAUCqyuagnLoV',
-  'MNGO': '79wm3jjcPr6RaNQ4DGvP5KxG1mNd3gEBsg6FsNVFezK4',
-  'JUP': 'g6eRCbboSwK4tSWngn773RCMexr1APQr4uA9bGZBYfo',
-  'BONK': '8ihFLu5FimgTQ1Unh4dVyEHUGodJ5gJQCrQf4KUVB9bN',
+  SOL: "H6ARHf6YXhGYeQfUzQNGk6rDNnLBQKrenN712K4AQJEG",
+  BTC: "GVXRSBjFk6e6J3NbVPXohDJetcTjaeeuykUpbQF8UoMU",
+  ETH: "JBu1AL4obBcCMqKBBxhpWCNUt136ijcuMZLFvTP7iWdB",
+  USDC: "Gnt27xtC473ZT2Mw5u8wZ68Z3gULkSTb5DuxJy7eJotD",
+  USDT: "3vxLXJqLqF3JG5TCbYycbKWRBbCJQLxQmBGCkyqEEefL",
+  RAY: "AnLf8tVYCM816gmBjiy8n53eXKKEDydT5piYjjQDPgTB",
+  ORCA: "4ivThkX8uRxBpHsdWSqyXYihzKF3zpRGAUCqyuagnLoV",
+  MNGO: "79wm3jjcPr6RaNQ4DGvP5KxG1mNd3gEBsg6FsNVFezK4",
+  JUP: "g6eRCbboSwK4tSWngn773RCMexr1APQr4uA9bGZBYfo",
+  BONK: "8ihFLu5FimgTQ1Unh4dVyEHUGodJ5gJQCrQf4KUVB9bN",
 };
 
 export class PythPriceFeed {
@@ -63,43 +63,46 @@ export class PythPriceFeed {
   /**
    * Parse Pyth price account data
    */
-  private parsePriceData(accountData: Buffer, symbol: string): PythPriceData | null {
+  private parsePriceData(
+    accountData: Buffer,
+    symbol: string,
+  ): PythPriceData | null {
     try {
       // Pyth account structure (simplified)
       // Full structure: https://github.com/pyth-network/pyth-client/blob/main/program/rust/src/processor.rs
-      
+
       // Magic number check (0xa1b2c3d4)
       const magic = accountData.readUInt32LE(0);
       if (magic !== 0xa1b2c3d4) {
-        console.error('[PythPriceFeed] Invalid Pyth account magic number');
+        console.error("[PythPriceFeed] Invalid Pyth account magic number");
         return null;
       }
 
       // Skip version field (offset 4)
-      
+
       // Account type (should be 3 for price account)
       const accountType = accountData.readUInt32LE(8);
       if (accountType !== 3) {
-        console.error('[PythPriceFeed] Not a price account');
+        console.error("[PythPriceFeed] Not a price account");
         return null;
       }
 
       // Price data starts at offset 208
       const priceOffset = 208;
-      
+
       // Read price components
       const priceRaw = accountData.readBigInt64LE(priceOffset); // price
       const conf = accountData.readBigUInt64LE(priceOffset + 8); // confidence
       const expo = accountData.readInt32LE(priceOffset + 16); // exponent
       const publishTime = accountData.readBigInt64LE(priceOffset + 20); // publish time
-      
+
       // Price status
       const status = accountData.readUInt32LE(priceOffset + 28);
-      const statusMap: Record<number, PythPriceData['status']> = {
-        0: 'unknown',
-        1: 'trading',
-        2: 'halted',
-        3: 'auction',
+      const statusMap: Record<number, PythPriceData["status"]> = {
+        0: "unknown",
+        1: "trading",
+        2: "halted",
+        3: "auction",
       };
 
       // Convert price to human-readable format
@@ -108,15 +111,15 @@ export class PythPriceFeed {
 
       return {
         symbol,
-        mint: '', // Not stored in Pyth account
+        mint: "", // Not stored in Pyth account
         price,
         confidence,
         timestamp: Number(publishTime),
         expo,
-        status: statusMap[status] || 'unknown',
+        status: statusMap[status] || "unknown",
       };
     } catch (error) {
-      console.error('[PythPriceFeed] Error parsing price data:', error);
+      console.error("[PythPriceFeed] Error parsing price data:", error);
       return null;
     }
   }
@@ -137,7 +140,8 @@ export class PythPriceFeed {
     }
 
     try {
-      const accountInfo = await this.connection.getAccountInfo(priceFeedAccount);
+      const accountInfo =
+        await this.connection.getAccountInfo(priceFeedAccount);
       if (!accountInfo || !accountInfo.data) {
         console.error(`[PythPriceFeed] No account data found for ${symbol}`);
         return null;
@@ -147,10 +151,13 @@ export class PythPriceFeed {
       if (priceData) {
         this.priceCache.set(symbol, priceData);
       }
-      
+
       return priceData;
     } catch (error) {
-      console.error(`[PythPriceFeed] Error fetching price for ${symbol}:`, error);
+      console.error(
+        `[PythPriceFeed] Error fetching price for ${symbol}:`,
+        error,
+      );
       return null;
     }
   }
@@ -175,7 +182,7 @@ export class PythPriceFeed {
       const callbacks = this.callbacks.get(symbol);
       if (callbacks) {
         callbacks.delete(callback);
-        
+
         // Stop subscription if no more callbacks
         if (callbacks.size === 0) {
           this.stopSubscription(symbol);
@@ -194,11 +201,11 @@ export class PythPriceFeed {
         // Notify all callbacks
         const callbacks = this.callbacks.get(symbol);
         if (callbacks) {
-          callbacks.forEach(callback => {
+          callbacks.forEach((callback) => {
             try {
               callback(priceData);
             } catch (error) {
-              console.error('[PythPriceFeed] Callback error:', error);
+              console.error("[PythPriceFeed] Callback error:", error);
             }
           });
         }
@@ -227,41 +234,44 @@ export class PythPriceFeed {
    */
   async getPrices(symbols: string[]): Promise<Map<string, PythPriceData>> {
     const results = new Map<string, PythPriceData>();
-    
+
     await Promise.all(
       symbols.map(async (symbol) => {
         const price = await this.getPrice(symbol);
         if (price) {
           results.set(symbol, price);
         }
-      })
+      }),
     );
-    
+
     return results;
   }
 
   /**
    * Subscribe to multiple price feeds
    */
-  subscribeMultiple(symbols: string[], callback: (prices: Map<string, PythPriceData>) => void): () => void {
+  subscribeMultiple(
+    symbols: string[],
+    callback: (prices: Map<string, PythPriceData>) => void,
+  ): () => void {
     const unsubscribers: Array<() => void> = [];
 
     const aggregatedPrices = new Map<string, PythPriceData>();
 
-    symbols.forEach(symbol => {
+    symbols.forEach((symbol) => {
       const unsubscribe = this.subscribe(symbol, (priceData) => {
         aggregatedPrices.set(symbol, priceData);
-        
+
         // Call callback with all current prices
         callback(new Map(aggregatedPrices));
       });
-      
+
       unsubscribers.push(unsubscribe);
     });
 
     // Return function to unsubscribe from all
     return () => {
-      unsubscribers.forEach(unsub => unsub());
+      unsubscribers.forEach((unsub) => unsub());
     };
   }
 
@@ -270,7 +280,9 @@ export class PythPriceFeed {
    */
   setUpdateInterval(intervalMs: number): void {
     if (intervalMs < 500) {
-      console.warn('[PythPriceFeed] Update interval too low, setting to 500ms minimum');
+      console.warn(
+        "[PythPriceFeed] Update interval too low, setting to 500ms minimum",
+      );
       intervalMs = 500;
     }
     this.updateInterval = intervalMs;
@@ -286,12 +298,12 @@ export class PythPriceFeed {
       clearInterval(interval);
       console.log(`[PythPriceFeed] Cleaned up subscription for ${symbol}`);
     });
-    
+
     this.subscriptions.clear();
     this.callbacks.clear();
     this.priceCache.clear();
-    
-    console.log('[PythPriceFeed] Cleanup complete');
+
+    console.log("[PythPriceFeed] Cleanup complete");
   }
 
   /**

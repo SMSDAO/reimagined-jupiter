@@ -1,19 +1,19 @@
 /**
  * Intelligence Agent Framework Types
- * 
+ *
  * Defines the core interfaces and types for the Oracle-driven intelligence layer.
  */
 
-export type AgentType = 
-  | 'STRATEGY' 
-  | 'RISK' 
-  | 'LIQUIDITY' 
-  | 'EXECUTION' 
-  | 'PROFIT_OPTIMIZATION';
+export type AgentType =
+  | "STRATEGY"
+  | "RISK"
+  | "LIQUIDITY"
+  | "EXECUTION"
+  | "PROFIT_OPTIMIZATION";
 
-export type AgentStatus = 'ACTIVE' | 'INACTIVE' | 'PENDING_APPROVAL' | 'ERROR';
+export type AgentStatus = "ACTIVE" | "INACTIVE" | "PENDING_APPROVAL" | "ERROR";
 
-export type AnalysisConfidence = 'HIGH' | 'MEDIUM' | 'LOW';
+export type AnalysisConfidence = "HIGH" | "MEDIUM" | "LOW";
 
 /**
  * Agent metadata for identification and management
@@ -37,7 +37,7 @@ export interface AnalysisResult {
   agentType: AgentType;
   success: boolean;
   confidence: AnalysisConfidence;
-  recommendation: 'PROCEED' | 'ABORT' | 'ADJUST';
+  recommendation: "PROCEED" | "ABORT" | "ADJUST";
   reasoning: string;
   adjustments?: Record<string, any>;
   metadata?: Record<string, any>;
@@ -53,17 +53,17 @@ export interface AnalysisContext {
   userId: string;
   executionId: string;
   botType: string;
-  
+
   // Transaction details
   inputToken?: string;
   outputToken?: string;
   amountIn?: number;
   expectedAmountOut?: number;
-  
+
   // Route information
   route?: any;
   pools?: any[];
-  
+
   // Market conditions
   marketData?: {
     volatility?: number;
@@ -71,7 +71,7 @@ export interface AnalysisContext {
     priceImpact?: number;
     slippage?: number;
   };
-  
+
   // Risk parameters
   riskParams?: {
     maxSlippage: number;
@@ -79,7 +79,7 @@ export interface AnalysisContext {
     maxLoss: number;
     minProfit: number;
   };
-  
+
   // Execution parameters
   executionParams?: {
     priorityFee?: number;
@@ -87,7 +87,7 @@ export interface AnalysisContext {
     jitoTipLamports?: number;
     rpcEndpoint?: string;
   };
-  
+
   // Additional context
   [key: string]: any;
 }
@@ -100,27 +100,27 @@ export interface IntelligenceAgent {
    * Agent metadata
    */
   readonly metadata: AgentMetadata;
-  
+
   /**
    * Current status of the agent
    */
   status: AgentStatus;
-  
+
   /**
    * Analyze the given context and return recommendations
    */
   analyze(context: AnalysisContext): Promise<AnalysisResult>;
-  
+
   /**
    * Initialize the agent (setup connections, load models, etc.)
    */
   initialize(): Promise<void>;
-  
+
   /**
    * Cleanup resources when agent is disabled
    */
   cleanup(): Promise<void>;
-  
+
   /**
    * Health check for the agent
    */

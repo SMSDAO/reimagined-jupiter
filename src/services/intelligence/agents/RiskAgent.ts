@@ -1,6 +1,6 @@
 /**
  * Risk Agent
- * 
+ *
  * Implements DAO-safe heuristics to validate that any proposed execution
  * follows strict safety bounds (max loss, slippage, program safety).
  */
@@ -11,7 +11,7 @@ import {
   AgentStatus,
   AnalysisContext,
   AnalysisResult,
-} from '../types.js';
+} from "../types.js";
 
 export interface RiskAgentConfig {
   maxSlippage: number; // Maximum allowed slippage (e.g., 0.01 = 1%)
@@ -24,7 +24,7 @@ export interface RiskAgentConfig {
 
 export class RiskAgent implements IntelligenceAgent {
   readonly metadata: AgentMetadata;
-  status: AgentStatus = 'INACTIVE';
+  status: AgentStatus = "INACTIVE";
   private config: RiskAgentConfig;
 
   constructor(config?: Partial<RiskAgentConfig>) {
@@ -35,33 +35,34 @@ export class RiskAgent implements IntelligenceAgent {
       minProfit: config?.minProfit ?? 0.005, // 0.005 SOL default
       trustedPrograms: config?.trustedPrograms ?? [
         // Add known trusted program IDs
-        'JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4', // Jupiter v6
-        'whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc', // Orca Whirlpool
-        '675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8', // Raydium AMM
+        "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4", // Jupiter v6
+        "whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc", // Orca Whirlpool
+        "675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8", // Raydium AMM
       ],
       blacklistedPrograms: config?.blacklistedPrograms ?? [],
     };
 
     this.metadata = {
-      id: 'risk-agent-v1',
-      name: 'Risk Management Agent',
-      version: '1.0.0',
-      type: 'RISK',
-      author: 'GXQ STUDIO',
-      description: 'DAO-safe risk validation with strict safety bounds for arbitrage execution',
+      id: "risk-agent-v1",
+      name: "Risk Management Agent",
+      version: "1.0.0",
+      type: "RISK",
+      author: "GXQ STUDIO",
+      description:
+        "DAO-safe risk validation with strict safety bounds for arbitrage execution",
       createdAt: new Date(),
       updatedAt: new Date(),
     };
   }
 
   async initialize(): Promise<void> {
-    this.status = 'ACTIVE';
-    console.log('✅ Risk Agent initialized with config:', this.config);
+    this.status = "ACTIVE";
+    console.log("✅ Risk Agent initialized with config:", this.config);
   }
 
   async cleanup(): Promise<void> {
-    this.status = 'INACTIVE';
-    console.log('🗑️ Risk Agent cleaned up');
+    this.status = "INACTIVE";
+    console.log("🗑️ Risk Agent cleaned up");
   }
 
   async healthCheck(): Promise<{ healthy: boolean; error?: string }> {
@@ -71,15 +72,16 @@ export class RiskAgent implements IntelligenceAgent {
   async analyze(context: AnalysisContext): Promise<AnalysisResult> {
     const violations: string[] = [];
     const warnings: string[] = [];
-    
+
     try {
       // 1. Check slippage
-      const slippage = context.marketData?.slippage ?? context.riskParams?.maxSlippage ?? 0;
+      const slippage =
+        context.marketData?.slippage ?? context.riskParams?.maxSlippage ?? 0;
       if (slippage > this.config.maxSlippage) {
         violations.push(
           `Slippage ${(slippage * 100).toFixed(2)}% exceeds maximum ${(
             this.config.maxSlippage * 100
-          ).toFixed(2)}%`
+          ).toFixed(2)}%`,
         );
       }
 
@@ -89,25 +91,25 @@ export class RiskAgent implements IntelligenceAgent {
         violations.push(
           `Price impact ${(priceImpact * 100).toFixed(2)}% exceeds maximum ${(
             this.config.maxPriceImpact * 100
-          ).toFixed(2)}%`
+          ).toFixed(2)}%`,
         );
       }
 
       // 3. Check potential loss
       const expectedProfit = context.expectedAmountOut
-        ? (context.expectedAmountOut - (context.amountIn ?? 0))
+        ? context.expectedAmountOut - (context.amountIn ?? 0)
         : 0;
-      
+
       if (expectedProfit < -this.config.maxLoss) {
         violations.push(
-          `Potential loss ${Math.abs(expectedProfit).toFixed(4)} SOL exceeds maximum ${this.config.maxLoss} SOL`
+          `Potential loss ${Math.abs(expectedProfit).toFixed(4)} SOL exceeds maximum ${this.config.maxLoss} SOL`,
         );
       }
 
       // 4. Check minimum profit threshold
       if (expectedProfit < this.config.minProfit) {
         violations.push(
-          `Expected profit ${expectedProfit.toFixed(6)} SOL is below minimum ${this.config.minProfit} SOL`
+          `Expected profit ${expectedProfit.toFixed(6)} SOL is below minimum ${this.config.minProfit} SOL`,
         );
       }
 
@@ -118,11 +120,14 @@ export class RiskAgent implements IntelligenceAgent {
           : [context.route.programIds];
 
         for (const programId of programIds) {
-          const programIdStr = typeof programId === 'string' ? programId : programId.toString();
-          
+          const programIdStr =
+            typeof programId === "string" ? programId : programId.toString();
+
           // Check blacklist
           if (this.config.blacklistedPrograms.includes(programIdStr)) {
-            violations.push(`Route includes blacklisted program: ${programIdStr}`);
+            violations.push(
+              `Route includes blacklisted program: ${programIdStr}`,
+            );
           }
 
           // Warn if not in trusted list
@@ -136,31 +141,41 @@ export class RiskAgent implements IntelligenceAgent {
       const liquidity = context.marketData?.liquidity ?? 0;
       if (liquidity > 0 && context.amountIn) {
         const liquidityRatio = context.amountIn / liquidity;
-        if (liquidityRatio > 0.1) { // 10% of pool
+        if (liquidityRatio > 0.1) {
+          // 10% of pool
           warnings.push(
-            `Trade size is ${(liquidityRatio * 100).toFixed(2)}% of pool liquidity - high impact expected`
+            `Trade size is ${(liquidityRatio * 100).toFixed(2)}% of pool liquidity - high impact expected`,
           );
         }
       }
 
       // 7. Check volatility
       const volatility = context.marketData?.volatility ?? 0;
-      if (volatility > 0.05) { // 5% volatility threshold
+      if (volatility > 0.05) {
+        // 5% volatility threshold
         warnings.push(
-          `High market volatility detected: ${(volatility * 100).toFixed(2)}%`
+          `High market volatility detected: ${(volatility * 100).toFixed(2)}%`,
         );
       }
 
       // Determine recommendation
       const hasViolations = violations.length > 0;
-      const recommendation = hasViolations ? 'ABORT' : warnings.length > 0 ? 'PROCEED' : 'PROCEED';
-      const confidence = hasViolations ? 'HIGH' : warnings.length > 0 ? 'MEDIUM' : 'HIGH';
+      const recommendation = hasViolations
+        ? "ABORT"
+        : warnings.length > 0
+          ? "PROCEED"
+          : "PROCEED";
+      const confidence = hasViolations
+        ? "HIGH"
+        : warnings.length > 0
+          ? "MEDIUM"
+          : "HIGH";
 
       const reasoning = [
-        hasViolations ? 'Risk violations detected:' : 'Risk assessment passed.',
+        hasViolations ? "Risk violations detected:" : "Risk assessment passed.",
         ...violations,
-        ...(warnings.length > 0 ? ['Warnings:', ...warnings] : []),
-      ].join('\n- ');
+        ...(warnings.length > 0 ? ["Warnings:", ...warnings] : []),
+      ].join("\n- ");
 
       return {
         agentId: this.metadata.id,
@@ -178,15 +193,15 @@ export class RiskAgent implements IntelligenceAgent {
         timestamp: new Date(),
       };
     } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-      console.error('❌ Risk Agent analysis failed:', error);
+      const errorMsg = error instanceof Error ? error.message : "Unknown error";
+      console.error("❌ Risk Agent analysis failed:", error);
 
       return {
         agentId: this.metadata.id,
         agentType: this.metadata.type,
         success: false,
-        confidence: 'HIGH',
-        recommendation: 'ABORT',
+        confidence: "HIGH",
+        recommendation: "ABORT",
         reasoning: `Risk analysis failed: ${errorMsg}`,
         timestamp: new Date(),
       };
@@ -198,7 +213,7 @@ export class RiskAgent implements IntelligenceAgent {
    */
   updateConfig(config: Partial<RiskAgentConfig>): void {
     this.config = { ...this.config, ...config };
-    console.log('✅ Risk Agent configuration updated:', config);
+    console.log("✅ Risk Agent configuration updated:", config);
   }
 
   /**

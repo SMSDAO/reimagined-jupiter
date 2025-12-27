@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef } from "react";
 
 export interface TokenPrice {
   symbol: string;
@@ -60,12 +60,12 @@ export function useTicker(options: UseTickerOptions = {}): UseTickerReturn {
     try {
       const params = new URLSearchParams();
       if (symbols && symbols.length > 0) {
-        params.set('symbols', symbols.join(','));
+        params.set("symbols", symbols.join(","));
       }
 
-      const url = `/api/tickers${params.toString() ? `?${params.toString()}` : ''}`;
+      const url = `/api/tickers${params.toString() ? `?${params.toString()}` : ""}`;
       const response = await fetch(url);
-      
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -77,16 +77,16 @@ export function useTicker(options: UseTickerOptions = {}): UseTickerReturn {
         setStatus(result.status);
         setError(null);
       } else {
-        throw new Error(result.error || 'Failed to fetch ticker data');
+        throw new Error(result.error || "Failed to fetch ticker data");
       }
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      const errorMessage = err instanceof Error ? err.message : "Unknown error";
       setError(errorMessage);
       setStatus({
         connected: false,
         providerStatus: {},
       });
-      console.error('[useTicker] Error fetching ticker data:', err);
+      console.error("[useTicker] Error fetching ticker data:", err);
     } finally {
       setLoading(false);
     }
@@ -138,7 +138,7 @@ export function useTokenPrice(symbol: string, refreshInterval?: number) {
   });
 
   const tokenPrice = data?.prices.find(
-    p => p.symbol.toUpperCase() === symbol.toUpperCase()
+    (p) => p.symbol.toUpperCase() === symbol.toUpperCase(),
   );
 
   return {

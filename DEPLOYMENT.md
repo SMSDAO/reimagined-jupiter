@@ -2,6 +2,30 @@
 
 This comprehensive guide covers deployment across all major platforms including Vercel, Railway, AWS, Azure, Alibaba Cloud, Coolify, aaPanel, VPS, and localhost environments.
 
+> **🧠 Smart Brain Integration**: This project includes the [GXQ Smart Brain Operator](docs/SMART_BRAIN_OPERATOR.md) for automated orchestration and deployment. See also [CI/CD Guide](docs/CI_CD_GUIDE.md).
+
+## Quick Deploy with Smart Brain
+
+For the fastest deployment experience using automated orchestration:
+
+```bash
+# 1. Validate and prepare system
+npm run master
+
+# 2. Deploy to Vercel (webapp)
+npm run deploy:vercel
+
+# 3. Deploy to Railway (backend)
+npm run deploy:railway
+
+# 4. Verify health
+npm run health
+```
+
+For detailed manual deployment procedures, see sections below.
+
+---
+
 ## Table of Contents
 
 1. [Prerequisites](#prerequisites)

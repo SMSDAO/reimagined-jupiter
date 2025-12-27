@@ -1,4 +1,4 @@
-import { PublicKey } from '@solana/web3.js';
+import { PublicKey } from "@solana/web3.js";
 
 /**
  * Flashloan Provider Interface
@@ -18,32 +18,32 @@ export interface FlashloanProvider {
  */
 export const FLASHLOAN_PROVIDERS: FlashloanProvider[] = [
   {
-    name: 'Marginfi',
-    programId: new PublicKey('MFv2hWf31Z9kbCa1snEPYctwafyhdvnV7FZnsebVacA'),
+    name: "Marginfi",
+    programId: new PublicKey("MFv2hWf31Z9kbCa1snEPYctwafyhdvnV7FZnsebVacA"),
     maxLoan: 1000000,
     fee: 9, // 0.09%
   },
   {
-    name: 'Solend',
-    programId: new PublicKey('So1endDq2YkqhipRh3WViPa8hdiSpxWy6z3Z6tMCpAo'),
+    name: "Solend",
+    programId: new PublicKey("So1endDq2YkqhipRh3WViPa8hdiSpxWy6z3Z6tMCpAo"),
     maxLoan: 800000,
     fee: 9, // 0.09%
   },
   {
-    name: 'Kamino',
-    programId: new PublicKey('KLend2g3cP87fffoy8q1mQqGKjrxjC8boSyAYavgmjD'),
+    name: "Kamino",
+    programId: new PublicKey("KLend2g3cP87fffoy8q1mQqGKjrxjC8boSyAYavgmjD"),
     maxLoan: 900000,
     fee: 10, // 0.10%
   },
   {
-    name: 'Mango Markets',
-    programId: new PublicKey('mv3ekLzLbnVPNxjSKvqBpU3ZeZXPQdEC3bp5MDEBG68'),
+    name: "Mango Markets",
+    programId: new PublicKey("mv3ekLzLbnVPNxjSKvqBpU3ZeZXPQdEC3bp5MDEBG68"),
     maxLoan: 1200000,
     fee: 15, // 0.15%
   },
   {
-    name: 'Port Finance',
-    programId: new PublicKey('Port7uDYB3wk6GJAw4KT1WpTeMtSu9bTcChBHkX2LfR'),
+    name: "Port Finance",
+    programId: new PublicKey("Port7uDYB3wk6GJAw4KT1WpTeMtSu9bTcChBHkX2LfR"),
     maxLoan: 700000,
     fee: 20, // 0.20%
   },
@@ -55,7 +55,9 @@ export const FLASHLOAN_PROVIDERS: FlashloanProvider[] = [
  * @returns FlashloanProvider or undefined if not found
  */
 export function getProviderByName(name: string): FlashloanProvider | undefined {
-  return FLASHLOAN_PROVIDERS.find(p => p.name.toLowerCase() === name.toLowerCase());
+  return FLASHLOAN_PROVIDERS.find(
+    (p) => p.name.toLowerCase() === name.toLowerCase(),
+  );
 }
 
 /**
@@ -72,7 +74,7 @@ export function getProvidersSortedByFee(): FlashloanProvider[] {
  * @returns Array of providers that can handle the loan amount
  */
 export function getProvidersForAmount(amount: number): FlashloanProvider[] {
-  return FLASHLOAN_PROVIDERS.filter(p => p.maxLoan >= amount);
+  return FLASHLOAN_PROVIDERS.filter((p) => p.maxLoan >= amount);
 }
 
 /**
@@ -81,12 +83,14 @@ export function getProvidersForAmount(amount: number): FlashloanProvider[] {
  * @param amount Loan amount required
  * @returns Best provider or undefined if none can handle the amount
  */
-export function selectBestProvider(amount: number): FlashloanProvider | undefined {
+export function selectBestProvider(
+  amount: number,
+): FlashloanProvider | undefined {
   const viableProviders = getProvidersForAmount(amount);
   if (viableProviders.length === 0) {
     return undefined;
   }
-  
+
   // Return provider with lowest fee
   return viableProviders.sort((a, b) => a.fee - b.fee)[0];
 }

@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from "next/server";
 
 /**
  * POST /api/admin/approvals/approve
@@ -14,9 +14,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          error: 'Missing required fields',
+          error: "Missing required fields",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -31,23 +31,25 @@ export async function POST(request: NextRequest) {
     // 8. Send notification to requester
 
     // Mock implementation
-    console.log(`${approved ? 'Approving' : 'Rejecting'} approval request: ${approvalId}`);
+    console.log(
+      `${approved ? "Approving" : "Rejecting"} approval request: ${approvalId}`,
+    );
     console.log(`Reason: ${reason}`);
 
     return NextResponse.json({
       success: true,
       approvalId,
-      status: approved ? 'APPROVED' : 'REJECTED',
-      message: `Transaction ${approved ? 'approved' : 'rejected'} successfully`,
+      status: approved ? "APPROVED" : "REJECTED",
+      message: `Transaction ${approved ? "approved" : "rejected"} successfully`,
     });
   } catch (error) {
-    console.error('Error processing approval:', error);
+    console.error("Error processing approval:", error);
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: error instanceof Error ? error.message : "Unknown error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

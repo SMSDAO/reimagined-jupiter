@@ -1,6 +1,6 @@
 /**
  * Approval Service - Manages dual-approval workflow for critical operations
- * 
+ *
  * Features:
  * - Create pending approval requests for critical transactions
  * - Enforce SUPER_ADMIN approval requirement
@@ -9,14 +9,19 @@
  * - Automatic expiration of old pending approvals
  */
 
-import crypto from 'crypto';
-import { rbacService, RBACService } from './rbac.js';
+import crypto from "crypto";
+import { rbacService, RBACService } from "./rbac.js";
 
 export interface PendingApproval {
   id: string;
   transactionHash: string;
   serializedTransaction: string;
-  transactionType: 'PROGRAM_DEPLOYMENT' | 'PROGRAM_UPGRADE' | 'AUTHORITY_TRANSFER' | 'CONFIG_UPDATE' | 'CRITICAL_OPERATION';
+  transactionType:
+    | "PROGRAM_DEPLOYMENT"
+    | "PROGRAM_UPGRADE"
+    | "AUTHORITY_TRANSFER"
+    | "CONFIG_UPDATE"
+    | "CRITICAL_OPERATION";
   valueAtRisk: number;
   targetProgramId?: string;
   description?: string;
@@ -28,7 +33,13 @@ export interface PendingApproval {
   approvedByUsername?: string;
   approvalSignature?: string;
   approvalReason?: string;
-  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'EXECUTED' | 'FAILED' | 'EXPIRED';
+  status:
+    | "PENDING"
+    | "APPROVED"
+    | "REJECTED"
+    | "EXECUTED"
+    | "FAILED"
+    | "EXPIRED";
   executed: boolean;
   executionSignature?: string;
   executionError?: string;
@@ -40,7 +51,7 @@ export interface PendingApproval {
 
 export interface CreateApprovalRequest {
   serializedTransaction: string;
-  transactionType: PendingApproval['transactionType'];
+  transactionType: PendingApproval["transactionType"];
   valueAtRisk: number;
   targetProgramId?: string;
   description?: string;
@@ -74,17 +85,21 @@ export class ApprovalService {
    * Create a new pending approval request
    * This should be called before any critical transaction is executed
    */
-  async createApprovalRequest(request: CreateApprovalRequest): Promise<PendingApproval> {
+  async createApprovalRequest(
+    request: CreateApprovalRequest,
+  ): Promise<PendingApproval> {
     // Generate transaction hash for deduplication
     const transactionHash = crypto
-      .createHash('sha256')
+      .createHash("sha256")
       .update(request.serializedTransaction)
-      .digest('hex');
+      .digest("hex");
 
     // Check for duplicate request
     const existing = await this.getApprovalByTransactionHash(transactionHash);
-    if (existing && existing.status === 'PENDING') {
-      console.log(`⚠️  Duplicate approval request detected: ${transactionHash}`);
+    if (existing && existing.status === "PENDING") {
+      console.log(
+        `⚠️  Duplicate approval request detected: ${transactionHash}`,
+      );
       return existing;
     }
 
@@ -105,7 +120,7 @@ export class ApprovalService {
       requestedBy: request.requestedBy,
       requestedByUsername: request.requestedByUsername,
       requestReason: request.requestReason,
-      status: 'PENDING',
+      status: "PENDING",
       executed: false,
       createdAt: new Date(),
       expiresAt,
@@ -113,7 +128,7 @@ export class ApprovalService {
 
     // In production, insert into database
     // INSERT INTO pending_approvals (...) VALUES (...)
-    
+
     console.log(`📝 Approval request created: ${approval.id}`);
     console.log(`   Transaction Type: ${approval.transactionType}`);
     console.log(`   Value at Risk: ${approval.valueAtRisk.toFixed(4)} SOL`);
@@ -124,8 +139,8 @@ export class ApprovalService {
     await this.rbac.auditAction(
       request.requestedBy,
       request.requestedByUsername,
-      'APPROVAL_REQUEST_CREATED',
-      'PENDING_APPROVAL',
+      "APPROVAL_REQUEST_CREATED",
+      "PENDING_APPROVAL",
       {
         resourceId: approval.id,
         newValue: {
@@ -134,7 +149,7 @@ export class ApprovalService {
           targetProgramId: approval.targetProgramId,
         },
         success: true,
-      }
+      },
     );
 
     return approval;
@@ -148,12 +163,14 @@ export class ApprovalService {
     // Verify approver has SUPER_ADMIN role
     const hasPermission = await this.rbac.hasPermission(
       decision.approvedBy,
-      'ADMIN',
-      'APPROVE'
+      "ADMIN",
+      "APPROVE",
     );
 
     if (!hasPermission) {
-      throw new Error('Permission denied: SUPER_ADMIN role required to approve transactions');
+      throw new Error(
+        "Permission denied: SUPER_ADMIN role required to approve transactions",
+      );
     }
 
     // Get pending approval
@@ -163,20 +180,20 @@ export class ApprovalService {
     }
 
     // Validate status
-    if (approval.status !== 'PENDING') {
+    if (approval.status !== "PENDING") {
       throw new Error(`Approval request is not pending: ${approval.status}`);
     }
 
     // Check expiration
     if (approval.expiresAt < new Date()) {
-      approval.status = 'EXPIRED';
+      approval.status = "EXPIRED";
       await this.updateApproval(approval);
-      throw new Error('Approval request has expired');
+      throw new Error("Approval request has expired");
     }
 
     // Prevent self-approval
     if (approval.requestedBy === decision.approvedBy) {
-      throw new Error('Cannot approve your own request');
+      throw new Error("Cannot approve your own request");
     }
 
     // Update approval
@@ -184,14 +201,16 @@ export class ApprovalService {
     approval.approvedByUsername = decision.approvedByUsername;
     approval.approvalReason = decision.reason;
     approval.approvalSignature = decision.signature;
-    approval.status = decision.approved ? 'APPROVED' : 'REJECTED';
+    approval.status = decision.approved ? "APPROVED" : "REJECTED";
     approval.approvedAt = new Date();
 
     // In production, update database
     // UPDATE pending_approvals SET ... WHERE id = $1
     await this.updateApproval(approval);
 
-    console.log(`${decision.approved ? '✅' : '❌'} Approval ${decision.approved ? 'granted' : 'rejected'}: ${approval.id}`);
+    console.log(
+      `${decision.approved ? "✅" : "❌"} Approval ${decision.approved ? "granted" : "rejected"}: ${approval.id}`,
+    );
     console.log(`   Approved By: ${approval.approvedByUsername}`);
     console.log(`   Transaction Type: ${approval.transactionType}`);
     console.log(`   Value at Risk: ${approval.valueAtRisk.toFixed(4)} SOL`);
@@ -200,18 +219,18 @@ export class ApprovalService {
     await this.rbac.auditAction(
       decision.approvedBy,
       decision.approvedByUsername,
-      decision.approved ? 'APPROVAL_GRANTED' : 'APPROVAL_REJECTED',
-      'PENDING_APPROVAL',
+      decision.approved ? "APPROVAL_GRANTED" : "APPROVAL_REJECTED",
+      "PENDING_APPROVAL",
       {
         resourceId: approval.id,
-        oldValue: { status: 'PENDING' },
+        oldValue: { status: "PENDING" },
         newValue: {
           status: approval.status,
           approvedBy: approval.approvedByUsername,
           reason: decision.reason,
         },
         success: true,
-      }
+      },
     );
 
     return approval;
@@ -224,27 +243,29 @@ export class ApprovalService {
   async markAsExecuted(
     approvalId: string,
     signature: string,
-    error?: string
+    error?: string,
   ): Promise<PendingApproval> {
     const approval = await this.getApprovalById(approvalId);
     if (!approval) {
       throw new Error(`Approval request not found: ${approvalId}`);
     }
 
-    if (approval.status !== 'APPROVED') {
-      throw new Error(`Cannot execute non-approved request: ${approval.status}`);
+    if (approval.status !== "APPROVED") {
+      throw new Error(
+        `Cannot execute non-approved request: ${approval.status}`,
+      );
     }
 
     approval.executed = true;
     approval.executionSignature = signature;
     approval.executedAt = new Date();
-    approval.status = error ? 'FAILED' : 'EXECUTED';
+    approval.status = error ? "FAILED" : "EXECUTED";
     approval.executionError = error;
 
     // In production, update database
     await this.updateApproval(approval);
 
-    console.log(`${error ? '❌' : '✅'} Approval executed: ${approval.id}`);
+    console.log(`${error ? "❌" : "✅"} Approval executed: ${approval.id}`);
     console.log(`   Signature: ${signature}`);
     if (error) {
       console.log(`   Error: ${error}`);
@@ -254,8 +275,8 @@ export class ApprovalService {
     await this.rbac.auditAction(
       approval.requestedBy,
       approval.requestedByUsername,
-      'APPROVAL_EXECUTED',
-      'PENDING_APPROVAL',
+      "APPROVAL_EXECUTED",
+      "PENDING_APPROVAL",
       {
         resourceId: approval.id,
         newValue: {
@@ -265,7 +286,7 @@ export class ApprovalService {
         },
         success: !error,
         errorMessage: error,
-      }
+      },
     );
 
     return approval;
@@ -277,7 +298,7 @@ export class ApprovalService {
   async getApprovalById(id: string): Promise<PendingApproval | null> {
     // In production, query database
     // SELECT * FROM pending_approvals WHERE id = $1
-    
+
     // Placeholder for now
     return null;
   }
@@ -285,10 +306,12 @@ export class ApprovalService {
   /**
    * Get pending approval by transaction hash
    */
-  async getApprovalByTransactionHash(transactionHash: string): Promise<PendingApproval | null> {
+  async getApprovalByTransactionHash(
+    transactionHash: string,
+  ): Promise<PendingApproval | null> {
     // In production, query database
     // SELECT * FROM pending_approvals WHERE transaction_hash = $1
-    
+
     // Placeholder for now
     return null;
   }
@@ -299,7 +322,7 @@ export class ApprovalService {
   async getPendingApprovals(limit: number = 50): Promise<PendingApproval[]> {
     // In production, query database
     // SELECT * FROM pending_approvals WHERE status = 'PENDING' ORDER BY created_at DESC LIMIT $1
-    
+
     // Placeholder for now
     return [];
   }
@@ -307,10 +330,13 @@ export class ApprovalService {
   /**
    * Get approvals for a specific user
    */
-  async getApprovalsForUser(userId: string, statuses?: PendingApproval['status'][]): Promise<PendingApproval[]> {
+  async getApprovalsForUser(
+    userId: string,
+    statuses?: PendingApproval["status"][],
+  ): Promise<PendingApproval[]> {
     // In production, query database with status filter
     // SELECT * FROM pending_approvals WHERE requested_by = $1 AND status = ANY($2) ORDER BY created_at DESC
-    
+
     // Placeholder for now
     return [];
   }
@@ -331,8 +357,8 @@ export class ApprovalService {
   async expireOldApprovals(): Promise<number> {
     // In production, update database
     // UPDATE pending_approvals SET status = 'EXPIRED' WHERE status = 'PENDING' AND expires_at < NOW()
-    
-    console.log('🧹 Expired old pending approvals');
+
+    console.log("🧹 Expired old pending approvals");
     return 0; // Return count of expired approvals
   }
 
@@ -340,13 +366,16 @@ export class ApprovalService {
    * Check if a transaction requires approval
    * Based on transaction type and risk level
    */
-  requiresApproval(transactionType: PendingApproval['transactionType'], valueAtRisk: number): boolean {
+  requiresApproval(
+    transactionType: PendingApproval["transactionType"],
+    valueAtRisk: number,
+  ): boolean {
     // Critical operations always require approval
-    const criticalTypes: PendingApproval['transactionType'][] = [
-      'PROGRAM_DEPLOYMENT',
-      'PROGRAM_UPGRADE',
-      'AUTHORITY_TRANSFER',
-      'CRITICAL_OPERATION',
+    const criticalTypes: PendingApproval["transactionType"][] = [
+      "PROGRAM_DEPLOYMENT",
+      "PROGRAM_UPGRADE",
+      "AUTHORITY_TRANSFER",
+      "CRITICAL_OPERATION",
     ];
 
     if (criticalTypes.includes(transactionType)) {

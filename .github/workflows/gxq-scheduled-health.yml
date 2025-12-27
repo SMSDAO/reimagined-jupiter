@@ -1,0 +1,193 @@
+name: GXQ Scheduled Health Check
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'  # Every 6 hours
+  workflow_dispatch:  # Allow manual trigger
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  health-check:
+    name: Production Health Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+      
+      - name: Check Vercel (Webapp)
+        id: vercel_check
+        run: |
+          VERCEL_URL="${{ secrets.VERCEL_PRODUCTION_URL || 'https://your-app.vercel.app' }}"
+          echo "Checking: $VERCEL_URL"
+          
+          if curl -f -s -o /tmp/vercel-response "$VERCEL_URL" 2>&1; then
+            echo "status=healthy" >> $GITHUB_OUTPUT
+            echo "✅ Vercel is healthy"
+          else
+            echo "status=unhealthy" >> $GITHUB_OUTPUT
+            echo "❌ Vercel is unhealthy"
+          fi
+        continue-on-error: true
+      
+      - name: Check Railway (Backend)
+        id: railway_check
+        run: |
+          RAILWAY_URL="${{ secrets.RAILWAY_PRODUCTION_URL || 'https://your-app.railway.app' }}"
+          echo "Checking: $RAILWAY_URL/health"
+          
+          if curl -f -s -o /tmp/railway-response "$RAILWAY_URL/health" 2>&1; then
+            echo "status=healthy" >> $GITHUB_OUTPUT
+            echo "✅ Railway is healthy"
+            cat /tmp/railway-response
+          else
+            echo "status=unhealthy" >> $GITHUB_OUTPUT
+            echo "❌ Railway is unhealthy"
+          fi
+        continue-on-error: true
+      
+      - name: Check Solana RPC
+        id: rpc_check
+        run: |
+          RPC_URL="${{ secrets.SOLANA_RPC_URL || 'https://api.mainnet-beta.solana.com' }}"
+          echo "Checking: $RPC_URL"
+          
+          RESPONSE=$(curl -s -X POST "$RPC_URL" \
+            -H "Content-Type: application/json" \
+            -d '{"jsonrpc":"2.0","id":1,"method":"getHealth"}' 2>&1)
+          
+          if echo "$RESPONSE" | grep -q "ok\|result"; then
+            echo "status=healthy" >> $GITHUB_OUTPUT
+            echo "✅ Solana RPC is healthy"
+          else
+            echo "status=unhealthy" >> $GITHUB_OUTPUT
+            echo "❌ Solana RPC is unhealthy"
+          fi
+        continue-on-error: true
+      
+      - name: Generate health report
+        id: report
+        run: |
+          echo "# GXQ Studio Health Report" > /tmp/health-report.md
+          echo "" >> /tmp/health-report.md
+          echo "**Timestamp:** $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> /tmp/health-report.md
+          echo "" >> /tmp/health-report.md
+          echo "## Service Status" >> /tmp/health-report.md
+          echo "" >> /tmp/health-report.md
+          echo "| Service | Status |" >> /tmp/health-report.md
+          echo "|---------|--------|" >> /tmp/health-report.md
+          
+          VERCEL_STATUS="${{ steps.vercel_check.outputs.status }}"
+          RAILWAY_STATUS="${{ steps.railway_check.outputs.status }}"
+          RPC_STATUS="${{ steps.rpc_check.outputs.status }}"
+          
+          if [ "$VERCEL_STATUS" == "healthy" ]; then
+            echo "| Vercel (Webapp) | ✅ Healthy |" >> /tmp/health-report.md
+          else
+            echo "| Vercel (Webapp) | ❌ Unhealthy |" >> /tmp/health-report.md
+          fi
+          
+          if [ "$RAILWAY_STATUS" == "healthy" ]; then
+            echo "| Railway (Backend) | ✅ Healthy |" >> /tmp/health-report.md
+          else
+            echo "| Railway (Backend) | ❌ Unhealthy |" >> /tmp/health-report.md
+          fi
+          
+          if [ "$RPC_STATUS" == "healthy" ]; then
+            echo "| Solana RPC | ✅ Healthy |" >> /tmp/health-report.md
+          else
+            echo "| Solana RPC | ❌ Unhealthy |" >> /tmp/health-report.md
+          fi
+          
+          echo "" >> /tmp/health-report.md
+          
+          # Check if any service is unhealthy
+          if [ "$VERCEL_STATUS" == "unhealthy" ] || [ "$RAILWAY_STATUS" == "unhealthy" ] || [ "$RPC_STATUS" == "unhealthy" ]; then
+            echo "has_issues=true" >> $GITHUB_OUTPUT
+            echo "## ⚠️ Action Required" >> /tmp/health-report.md
+            echo "" >> /tmp/health-report.md
+            echo "One or more services are unhealthy. Please investigate immediately." >> /tmp/health-report.md
+          else
+            echo "has_issues=false" >> $GITHUB_OUTPUT
+            echo "## ✅ All Systems Operational" >> /tmp/health-report.md
+            echo "" >> /tmp/health-report.md
+            echo "All services are functioning normally." >> /tmp/health-report.md
+          fi
+          
+          cat /tmp/health-report.md
+          cat /tmp/health-report.md >> $GITHUB_STEP_SUMMARY
+      
+      - name: Create issue if services are down
+        if: steps.report.outputs.has_issues == 'true'
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const fs = require('fs');
+            const report = fs.readFileSync('/tmp/health-report.md', 'utf8');
+            
+            const title = '🚨 Health Check Failed - Services Down';
+            const body = `${report}\n\n---\n\n**Automated health check detected issues.**\n\nPlease investigate and resolve as soon as possible.\n\n- Check service logs\n- Verify deployments\n- Check for resource issues\n\nWorkflow run: ${context.payload.repository.html_url}/actions/runs/${context.runId}`;
+            
+            // Check if there's already an open issue
+            const issues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'health-check,automated'
+            });
+            
+            if (issues.data.length === 0) {
+              // Create new issue
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: title,
+                body: body,
+                labels: ['health-check', 'automated', 'priority-high']
+              });
+              console.log('Created new health check issue');
+            } else {
+              // Comment on existing issue
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issues.data[0].number,
+                body: `## Updated Health Check Report\n\n${report}\n\n**Still experiencing issues.** Workflow run: ${context.payload.repository.html_url}/actions/runs/${context.runId}`
+              });
+              console.log('Updated existing health check issue');
+            }
+      
+      - name: Close health check issues if all healthy
+        if: steps.report.outputs.has_issues == 'false'
+        uses: actions/github-script@v8
+        with:
+          script: |
+            // Find and close open health check issues
+            const issues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'health-check,automated'
+            });
+            
+            for (const issue of issues.data) {
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                state: 'closed'
+              });
+              
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                body: '✅ All services are now healthy. Closing this issue.\n\nWorkflow run: ' + context.payload.repository.html_url + '/actions/runs/' + context.runId
+              });
+              
+              console.log(`Closed issue #${issue.number}`);
+            }

@@ -1,7 +1,7 @@
 /**
  * Role-Based Access Control (RBAC) Service
  * Provides granular permission management for admin panel and API endpoints
- * 
+ *
  * Features:
  * - User authentication and authorization
  * - Role and permission management
@@ -9,8 +9,8 @@
  * - Audit logging for all access attempts
  */
 
-import crypto from 'crypto';
-import { verifyToken } from '../lib/auth.js';
+import crypto from "crypto";
+import { verifyToken } from "../lib/auth.js";
 
 export interface User {
   id: string;
@@ -73,26 +73,26 @@ export interface AdminAuditEntry {
   createdAt: Date;
 }
 
-export type Resource = 
-  | 'WALLET' 
-  | 'BOT' 
-  | 'ADMIN' 
-  | 'AIRDROP' 
-  | 'TOKEN_LAUNCHER' 
-  | 'SNIPER' 
-  | 'RPC_CONFIG' 
-  | 'FEE_MANAGEMENT' 
-  | 'ANALYTICS' 
-  | 'AUDIT_LOG';
+export type Resource =
+  | "WALLET"
+  | "BOT"
+  | "ADMIN"
+  | "AIRDROP"
+  | "TOKEN_LAUNCHER"
+  | "SNIPER"
+  | "RPC_CONFIG"
+  | "FEE_MANAGEMENT"
+  | "ANALYTICS"
+  | "AUDIT_LOG";
 
-export type Action = 
-  | 'CREATE' 
-  | 'READ' 
-  | 'UPDATE' 
-  | 'DELETE' 
-  | 'EXECUTE' 
-  | 'CONFIGURE' 
-  | 'APPROVE';
+export type Action =
+  | "CREATE"
+  | "READ"
+  | "UPDATE"
+  | "DELETE"
+  | "EXECUTE"
+  | "CONFIGURE"
+  | "APPROVE";
 
 /**
  * RBAC Service Class
@@ -106,7 +106,7 @@ export class RBACService {
    * Hash sensitive data for audit logging
    */
   private hashData(data: string): string {
-    return crypto.createHash('sha256').update(data).digest('hex');
+    return crypto.createHash("sha256").update(data).digest("hex");
   }
 
   /**
@@ -122,21 +122,21 @@ export class RBACService {
   async hasPermission(
     userId: string,
     resource: Resource,
-    action: Action
+    action: Action,
   ): Promise<boolean> {
     const permissionName = RBACService.generatePermissionName(resource, action);
-    
+
     // Check cache first
     const cached = this.userPermissionsCache.get(userId);
     if (cached) {
-      return cached.has(permissionName) || cached.has('*');
+      return cached.has(permissionName) || cached.has("*");
     }
 
     // In production, this would query the database:
     // 1. Get user's roles from user_roles table
     // 2. Get permissions for those roles from role_permissions table
     // 3. Check if permission exists
-    
+
     // For now, return false (implement database queries in production)
     return false;
   }
@@ -146,7 +146,7 @@ export class RBACService {
    */
   async hasAnyPermission(
     userId: string,
-    permissions: Array<{ resource: Resource; action: Action }>
+    permissions: Array<{ resource: Resource; action: Action }>,
   ): Promise<boolean> {
     for (const perm of permissions) {
       if (await this.hasPermission(userId, perm.resource, perm.action)) {
@@ -161,7 +161,7 @@ export class RBACService {
    */
   async hasAllPermissions(
     userId: string,
-    permissions: Array<{ resource: Resource; action: Action }>
+    permissions: Array<{ resource: Resource; action: Action }>,
   ): Promise<boolean> {
     for (const perm of permissions) {
       if (!(await this.hasPermission(userId, perm.resource, perm.action))) {
@@ -180,7 +180,7 @@ export class RBACService {
     // JOIN user_roles ur ON r.id = ur.role_id
     // WHERE ur.user_id = $1
     // AND (ur.expires_at IS NULL OR ur.expires_at > NOW())
-    
+
     return [];
   }
 
@@ -194,7 +194,7 @@ export class RBACService {
     // JOIN user_roles ur ON rp.role_id = ur.role_id
     // WHERE ur.user_id = $1
     // AND (ur.expires_at IS NULL OR ur.expires_at > NOW())
-    
+
     return [];
   }
 
@@ -205,15 +205,15 @@ export class RBACService {
     userId: string,
     roleId: string,
     grantedBy: string,
-    expiresAt?: Date
+    expiresAt?: Date,
   ): Promise<UserRole> {
     // In production, insert into database
     // INSERT INTO user_roles (user_id, role_id, granted_by, expires_at)
     // VALUES ($1, $2, $3, $4)
-    
+
     // Clear cache
     this.userPermissionsCache.delete(userId);
-    
+
     return {
       userId,
       roleId,
@@ -229,7 +229,7 @@ export class RBACService {
   async removeRole(userId: string, roleId: string): Promise<void> {
     // In production, delete from database
     // DELETE FROM user_roles WHERE user_id = $1 AND role_id = $2
-    
+
     // Clear cache
     this.userPermissionsCache.delete(userId);
   }
@@ -238,7 +238,7 @@ export class RBACService {
    * Create audit log entry
    */
   async createAuditEntry(
-    entry: Omit<AdminAuditEntry, 'id' | 'createdAt'>
+    entry: Omit<AdminAuditEntry, "id" | "createdAt">,
   ): Promise<AdminAuditEntry> {
     const auditEntry: AdminAuditEntry = {
       id: crypto.randomUUID(),
@@ -249,9 +249,11 @@ export class RBACService {
     // In production, insert into database
     // INSERT INTO admin_audit_log (...)
     // VALUES (...)
-    
-    console.log(`📝 Audit: ${entry.username} ${entry.action} ${entry.resourceType}${entry.resourceId ? ` (${entry.resourceId})` : ''} - ${entry.success ? 'SUCCESS' : 'FAILED'}`);
-    
+
+    console.log(
+      `📝 Audit: ${entry.username} ${entry.action} ${entry.resourceType}${entry.resourceId ? ` (${entry.resourceId})` : ""} - ${entry.success ? "SUCCESS" : "FAILED"}`,
+    );
+
     return auditEntry;
   }
 
@@ -272,7 +274,7 @@ export class RBACService {
       requestId?: string;
       success?: boolean;
       errorMessage?: string;
-    } = {}
+    } = {},
   ): Promise<AdminAuditEntry> {
     return this.createAuditEntry({
       userId,
@@ -282,7 +284,9 @@ export class RBACService {
       resourceId: options.resourceId,
       oldValue: options.oldValue,
       newValue: options.newValue,
-      ipAddressHash: options.ipAddress ? this.hashData(options.ipAddress) : undefined,
+      ipAddressHash: options.ipAddress
+        ? this.hashData(options.ipAddress)
+        : undefined,
       userAgent: options.userAgent,
       requestId: options.requestId,
       success: options.success ?? true,
@@ -293,33 +297,42 @@ export class RBACService {
   /**
    * Validate input for server-side operations
    */
-  validateInput(input: any, schema: Record<string, any>): { valid: boolean; errors: string[] } {
+  validateInput(
+    input: any,
+    schema: Record<string, any>,
+  ): { valid: boolean; errors: string[] } {
     const errors: string[] = [];
 
     for (const [key, rules] of Object.entries(schema)) {
       const value = input[key];
 
       // Required check
-      if (rules.required && (value === undefined || value === null || value === '')) {
+      if (
+        rules.required &&
+        (value === undefined || value === null || value === "")
+      ) {
         errors.push(`${key} is required`);
         continue;
       }
 
       // Skip further validation if not required and empty
-      if (!rules.required && (value === undefined || value === null || value === '')) {
+      if (
+        !rules.required &&
+        (value === undefined || value === null || value === "")
+      ) {
         continue;
       }
 
       // Type check
       if (rules.type) {
-        const actualType = Array.isArray(value) ? 'array' : typeof value;
+        const actualType = Array.isArray(value) ? "array" : typeof value;
         if (actualType !== rules.type) {
           errors.push(`${key} must be of type ${rules.type}`);
         }
       }
 
       // String validations
-      if (rules.type === 'string' && typeof value === 'string') {
+      if (rules.type === "string" && typeof value === "string") {
         if (rules.minLength && value.length < rules.minLength) {
           errors.push(`${key} must be at least ${rules.minLength} characters`);
         }
@@ -330,12 +343,12 @@ export class RBACService {
           errors.push(`${key} format is invalid`);
         }
         if (rules.enum && !rules.enum.includes(value)) {
-          errors.push(`${key} must be one of: ${rules.enum.join(', ')}`);
+          errors.push(`${key} must be one of: ${rules.enum.join(", ")}`);
         }
       }
 
       // Number validations
-      if (rules.type === 'number' && typeof value === 'number') {
+      if (rules.type === "number" && typeof value === "number") {
         if (rules.min !== undefined && value < rules.min) {
           errors.push(`${key} must be at least ${rules.min}`);
         }
@@ -345,7 +358,7 @@ export class RBACService {
       }
 
       // Array validations
-      if (rules.type === 'array' && Array.isArray(value)) {
+      if (rules.type === "array" && Array.isArray(value)) {
         if (rules.minItems && value.length < rules.minItems) {
           errors.push(`${key} must have at least ${rules.minItems} items`);
         }
@@ -355,7 +368,7 @@ export class RBACService {
       }
 
       // Custom validation
-      if (rules.validate && typeof rules.validate === 'function') {
+      if (rules.validate && typeof rules.validate === "function") {
         const customError = rules.validate(value);
         if (customError) {
           errors.push(customError);
@@ -372,20 +385,20 @@ export class RBACService {
   /**
    * Extract user from JWT token
    */
-  extractUserFromToken(authHeader: string | undefined): { 
-    valid: boolean; 
-    user?: { id: string; username: string; role: string }; 
+  extractUserFromToken(authHeader: string | undefined): {
+    valid: boolean;
+    user?: { id: string; username: string; role: string };
     error?: string;
   } {
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return { valid: false, error: 'Authorization header missing or invalid' };
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return { valid: false, error: "Authorization header missing or invalid" };
     }
 
     const token = authHeader.substring(7);
     const verification = verifyToken(token);
 
     if (!verification.valid) {
-      return { valid: false, error: verification.error || 'Invalid token' };
+      return { valid: false, error: verification.error || "Invalid token" };
     }
 
     return {
@@ -397,13 +410,13 @@ export class RBACService {
   /**
    * Require authentication middleware
    */
-  requireAuth(authHeader: string | undefined): { 
-    authenticated: boolean; 
-    user?: { id: string; username: string; role: string }; 
+  requireAuth(authHeader: string | undefined): {
+    authenticated: boolean;
+    user?: { id: string; username: string; role: string };
     error?: string;
   } {
     const result = this.extractUserFromToken(authHeader);
-    
+
     if (!result.valid) {
       return { authenticated: false, error: result.error };
     }
@@ -417,26 +430,30 @@ export class RBACService {
   async requirePermission(
     authHeader: string | undefined,
     resource: Resource,
-    action: Action
+    action: Action,
   ): Promise<{
     authorized: boolean;
     user?: { id: string; username: string; role: string };
     error?: string;
   }> {
     const auth = this.requireAuth(authHeader);
-    
+
     if (!auth.authenticated) {
       return { authorized: false, error: auth.error };
     }
 
     // Check permission
-    const hasPermission = await this.hasPermission(auth.user!.id, resource, action);
-    
+    const hasPermission = await this.hasPermission(
+      auth.user!.id,
+      resource,
+      action,
+    );
+
     if (!hasPermission) {
-      return { 
-        authorized: false, 
+      return {
+        authorized: false,
         user: auth.user,
-        error: `Permission denied: ${resource}.${action}` 
+        error: `Permission denied: ${resource}.${action}`,
       };
     }
 
@@ -454,48 +471,61 @@ export const rbacService = new RBACService();
  */
 export const validationSchemas = {
   rpcConfig: {
-    name: { required: true, type: 'string', minLength: 1, maxLength: 100 },
-    rpcUrl: { required: true, type: 'string', pattern: '^https?://' },
-    provider: { 
-      required: true, 
-      type: 'string', 
-      enum: ['QUICKNODE', 'HELIUS', 'TRITON', 'ALCHEMY', 'SOLANA_MAINNET', 'CUSTOM'] 
+    name: { required: true, type: "string", minLength: 1, maxLength: 100 },
+    rpcUrl: { required: true, type: "string", pattern: "^https?://" },
+    provider: {
+      required: true,
+      type: "string",
+      enum: [
+        "QUICKNODE",
+        "HELIUS",
+        "TRITON",
+        "ALCHEMY",
+        "SOLANA_MAINNET",
+        "CUSTOM",
+      ],
     },
-    rateLimit: { required: false, type: 'number', min: 1, max: 10000 },
+    rateLimit: { required: false, type: "number", min: 1, max: 10000 },
   },
   feeConfig: {
-    feeType: { 
-      required: true, 
-      type: 'string', 
-      enum: ['DEV_FEE', 'PLATFORM_FEE', 'REFERRAL_FEE', 'BOT_FEE', 'AIRDROP_DONATION'] 
+    feeType: {
+      required: true,
+      type: "string",
+      enum: [
+        "DEV_FEE",
+        "PLATFORM_FEE",
+        "REFERRAL_FEE",
+        "BOT_FEE",
+        "AIRDROP_DONATION",
+      ],
     },
-    feePercentage: { required: true, type: 'number', min: 0, max: 1 },
-    recipientWallet: { 
-      required: true, 
-      type: 'string', 
-      minLength: 32, 
+    feePercentage: { required: true, type: "number", min: 0, max: 1 },
+    recipientWallet: {
+      required: true,
+      type: "string",
+      minLength: 32,
       maxLength: 44,
       validate: (value: string) => {
         if (!/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(value)) {
-          return 'Invalid Solana address format';
+          return "Invalid Solana address format";
         }
         return null;
-      }
+      },
     },
   },
   botConfig: {
-    name: { required: true, type: 'string', minLength: 1, maxLength: 100 },
-    botType: { 
-      required: true, 
-      type: 'string', 
-      enum: ['ARBITRAGE', 'SNIPER', 'FLASH_LOAN', 'TRIANGULAR', 'CUSTOM'] 
+    name: { required: true, type: "string", minLength: 1, maxLength: 100 },
+    botType: {
+      required: true,
+      type: "string",
+      enum: ["ARBITRAGE", "SNIPER", "FLASH_LOAN", "TRIANGULAR", "CUSTOM"],
     },
-    signingMode: { 
-      required: true, 
-      type: 'string', 
-      enum: ['CLIENT_SIDE', 'SERVER_SIDE', 'ENCLAVE'] 
+    signingMode: {
+      required: true,
+      type: "string",
+      enum: ["CLIENT_SIDE", "SERVER_SIDE", "ENCLAVE"],
     },
-    strategyConfig: { required: true, type: 'object' },
+    strategyConfig: { required: true, type: "object" },
   },
 };
 

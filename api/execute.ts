@@ -4,22 +4,22 @@
  * Enhanced with wallet permission checks
  */
 
-import { Connection, Keypair, VersionedTransaction } from '@solana/web3.js';
-import bs58 from 'bs58';
-import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { authorizeRequest, UserRole } from '../lib/auth';
+import { Connection, Keypair, VersionedTransaction } from "@solana/web3.js";
+import bs58 from "bs58";
+import type { VercelRequest, VercelResponse } from "@vercel/node";
+import { authorizeRequest, UserRole } from "../lib/auth";
 
 // Verify Vercel cron authorization
 function isValidCronRequest(req: VercelRequest): boolean {
   const cronSecret = process.env.CRON_SECRET;
   const authHeader = req.headers.authorization;
-  
+
   if (cronSecret) {
     return authHeader === `Bearer ${cronSecret}`;
   }
-  
-  const userAgent = req.headers['user-agent'] || '';
-  return userAgent.includes('vercel-cron') || userAgent.includes('vercel');
+
+  const userAgent = req.headers["user-agent"] || "";
+  return userAgent.includes("vercel-cron") || userAgent.includes("vercel");
 }
 
 interface ExecutionResult {
@@ -41,25 +41,22 @@ export interface ExecuteResponse {
   error?: string;
 }
 
-export default async function handler(
-  req: VercelRequest,
-  res: VercelResponse
-) {
-  console.log('⚡ Execute cron triggered');
-  
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  console.log("⚡ Execute cron triggered");
+
   // For cron jobs, verify cron authorization
   // For API calls, verify JWT authorization
   const isCron = isValidCronRequest(req);
-  
+
   if (!isCron) {
     // Not a cron job, check for JWT authorization
     const auth = authorizeRequest(
       req.headers.authorization as string | undefined,
-      [UserRole.USER, UserRole.ADMIN, UserRole.SERVICE]
+      [UserRole.USER, UserRole.ADMIN, UserRole.SERVICE],
     );
-    
+
     if (!auth.authorized) {
-      console.warn('⚠️ Unauthorized execute request');
+      console.warn("⚠️ Unauthorized execute request");
       return res.status(401).json({
         success: false,
         tradesExecuted: 0,
@@ -68,56 +65,62 @@ export default async function handler(
         totalProfit: 0,
         transactions: [],
         timestamp: Date.now(),
-        error: auth.error || 'Unauthorized',
+        error: auth.error || "Unauthorized",
       });
     }
-    
-    console.log('✅ Authorized API execution request from:', auth.payload?.userId || 'unknown');
+
+    console.log(
+      "✅ Authorized API execution request from:",
+      auth.payload?.userId || "unknown",
+    );
   }
-  
+
   try {
     // Load wallet from environment
     const privateKeyString = process.env.WALLET_PRIVATE_KEY;
     if (!privateKeyString) {
-      throw new Error('WALLET_PRIVATE_KEY not configured');
+      throw new Error("WALLET_PRIVATE_KEY not configured");
     }
-    
+
     let keypair: Keypair;
     try {
       // Support both base58 and array formats
       // SECURITY: Never log the private key
-      const privateKey = privateKeyString.includes('[')
+      const privateKey = privateKeyString.includes("[")
         ? Uint8Array.from(JSON.parse(privateKeyString))
         : bs58.decode(privateKeyString);
       keypair = Keypair.fromSecretKey(privateKey);
-      console.log('✅ Wallet loaded:', keypair.publicKey.toString());
+      console.log("✅ Wallet loaded:", keypair.publicKey.toString());
     } catch (error) {
-      throw new Error('Invalid WALLET_PRIVATE_KEY format. Use base58 string.');
+      throw new Error("Invalid WALLET_PRIVATE_KEY format. Use base58 string.");
     }
-    
+
     // Connect to Solana mainnet
-    const rpcUrl = process.env.SOLANA_RPC_URL || process.env.NEXT_PUBLIC_RPC_URL;
+    const rpcUrl =
+      process.env.SOLANA_RPC_URL || process.env.NEXT_PUBLIC_RPC_URL;
     if (!rpcUrl) {
-      throw new Error('SOLANA_RPC_URL not configured');
+      throw new Error("SOLANA_RPC_URL not configured");
     }
-    
-    const connection = new Connection(rpcUrl, 'confirmed');
-    
+
+    const connection = new Connection(rpcUrl, "confirmed");
+
     // Check wallet balance
     const balance = await connection.getBalance(keypair.publicKey);
     const balanceSol = balance / 1e9;
     console.log(`💰 Wallet balance: ${balanceSol.toFixed(4)} SOL`);
-    
+
     if (balanceSol < 0.01) {
-      throw new Error('Insufficient wallet balance (minimum 0.01 SOL required)');
+      throw new Error(
+        "Insufficient wallet balance (minimum 0.01 SOL required)",
+      );
     }
-    
+
     // Fetch pending opportunities
     // In production, this would fetch from a database or cache
     const opportunities = await fetchPendingOpportunities();
-    
+
     if (opportunities.length === 0) {
-      console.log('ℹ️ No pending opportunities to execute');
+      console.log("ℹ️ No pending opportunities to execute");
       return res.status(200).json({
         success: true,
         tradesExecuted: 0,
@@ -128,32 +131,32 @@ export default async function handler(
         timestamp: Date.now(),
       });
     }
-    
+
     console.log(`📊 Found ${opportunities.length} opportunities to validate`);
-    
+
     // Execute opportunities
     const results: ExecutionResult[] = [];
     let totalProfit = 0;
-    
+
     for (const opp of opportunities) {
       try {
         // Validate opportunity is still profitable
         const isStillValid = await validateOpportunity(opp, connection);
-        
+
         if (!isStillValid) {
           console.log(`⏭️ Opportunity ${opp.id} no longer valid, skipping`);
           results.push({
             opportunityId: opp.id,
             success: false,
-            error: 'Opportunity expired',
+            error: "Opportunity expired",
           });
           continue;
         }
-        
+
         // Execute trade via Jupiter API v6
         const result = await executeTrade(connection, keypair, opp);
         results.push(result);
-        
+
         if (result.success && result.profit) {
           totalProfit += result.profit;
         }
@@ -162,16 +165,18 @@ export default async function handler(
         results.push({
           opportunityId: opp.id,
           success: false,
-          error: error instanceof Error ? error.message : 'Unknown error',
+          error: error instanceof Error ? error.message : "Unknown error",
         });
       }
     }
-    
-    const successCount = results.filter(r => r.success).length;
+
+    const successCount = results.filter((r) => r.success).length;
     const failCount = results.length - successCount;
-    
-    console.log(`✅ Execution complete: ${successCount} success, ${failCount} failed, ${totalProfit.toFixed(4)} SOL profit`);
-    
+
+    console.log(
+      `✅ Execution complete: ${successCount} success, ${failCount} failed, ${totalProfit.toFixed(4)} SOL profit`,
+    );
+
     return res.status(200).json({
       success: true,
       tradesExecuted: results.length,
@@ -182,10 +187,11 @@ export default async function handler(
       timestamp: Date.now(),
     });
   } catch (error) {
-    console.error('❌ Execute error:', error);
-    
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    
+    console.error("❌ Execute error:", error);
+
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error";
+
     return res.status(500).json({
       success: false,
       tradesExecuted: 0,
@@ -222,7 +228,7 @@ async function fetchPendingOpportunities(): Promise<Opportunity[]> {
  */
 async function validateOpportunity(
   opp: Opportunity,
-  _connection: Connection
+  _connection: Connection,
 ): Promise<boolean> {
   try {
     // Check if opportunity is too old (> 30 seconds)
@@ -230,12 +236,12 @@ async function validateOpportunity(
     if (age > 30000) {
       return false;
     }
-    
+
     // In production, re-check prices via Jupiter API
     // For now, accept all recent opportunities
     return true;
   } catch (error) {
-    console.error('Error validating opportunity:', error);
+    console.error("Error validating opportunity:", error);
     return false;
   }
 }
@@ -246,68 +252,76 @@ async function validateOpportunity(
 async function executeTrade(
   connection: Connection,
   keypair: Keypair,
-  opp: Opportunity
+  opp: Opportunity,
 ): Promise<ExecutionResult> {
   try {
     // Get Jupiter quote
-    const jupiterApiUrl = 'https://api.jup.ag/v6/quote';
+    const jupiterApiUrl = "https://api.jup.ag/v6/quote";
     const amount = 100000000; // 0.1 SOL in lamports
-    
+
     const quoteParams = new URLSearchParams({
       inputMint: opp.inputToken,
       outputMint: opp.outputToken,
       amount: amount.toString(),
-      slippageBps: '100', // 1% slippage
+      slippageBps: "100", // 1% slippage
     });
-    
+
     const quoteResponse = await fetch(`${jupiterApiUrl}?${quoteParams}`);
-    
+
     if (!quoteResponse.ok) {
       throw new Error(`Jupiter quote failed: ${quoteResponse.statusText}`);
     }
-    
+
     const quoteData = await quoteResponse.json();
-    
+
     // Get swap transaction
-    const swapResponse = await fetch('https://api.jup.ag/v6/swap', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+    const swapResponse = await fetch("https://api.jup.ag/v6/swap", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         quoteResponse: quoteData,
         userPublicKey: keypair.publicKey.toString(),
         wrapAndUnwrapSol: true,
-        prioritizationFeeLamports: 'auto',
+        prioritizationFeeLamports: "auto",
       }),
     });
-    
+
     if (!swapResponse.ok) {
       throw new Error(`Jupiter swap failed: ${swapResponse.statusText}`);
     }
-    
+
     const { swapTransaction } = await swapResponse.json();
-    
+
     // Deserialize and sign transaction
-    const swapTransactionBuf = Buffer.from(swapTransaction, 'base64');
+    const swapTransactionBuf = Buffer.from(swapTransaction, "base64");
     const transaction = VersionedTransaction.deserialize(swapTransactionBuf);
     transaction.sign([keypair]);
-    
+
     // Send transaction with confirmation
-    const signature = await connection.sendRawTransaction(transaction.serialize(), {
-      skipPreflight: false,
-      maxRetries: 3,
-    });
-    
+    const signature = await connection.sendRawTransaction(
+      transaction.serialize(),
+      {
+        skipPreflight: false,
+        maxRetries: 3,
+      },
+    );
+
     console.log(`📤 Transaction sent: ${signature}`);
-    
+
     // Confirm transaction
-    const confirmation = await connection.confirmTransaction(signature, 'confirmed');
-    
+    const confirmation = await connection.confirmTransaction(
+      signature,
+      "confirmed",
+    );
+
     if (confirmation.value.err) {
-      throw new Error(`Transaction failed: ${JSON.stringify(confirmation.value.err)}`);
+      throw new Error(
+        `Transaction failed: ${JSON.stringify(confirmation.value.err)}`,
+      );
     }
-    
+
     console.log(`✅ Transaction confirmed: ${signature}`);
-    
+
     return {
       opportunityId: opp.id,
       success: true,
@@ -315,11 +329,11 @@ async function executeTrade(
       profit: opp.estimatedProfit,
     };
   } catch (error) {
-    console.error('Error executing trade:', error);
+    console.error("Error executing trade:", error);
     return {
       opportunityId: opp.id,
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: error instanceof Error ? error.message : "Unknown error",
     };
   }
 }

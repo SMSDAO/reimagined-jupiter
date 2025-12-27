@@ -2,7 +2,7 @@
  * Mainnet Token Launcher
  * Production-grade SPL token creation with mint/freeze authority management
  * and graduation milestone tracking
- * 
+ *
  * Features:
  * - SPL token creation
  * - Mint authority management
@@ -19,7 +19,7 @@ import {
   SystemProgram,
   Transaction,
   sendAndConfirmTransaction,
-} from '@solana/web3.js';
+} from "@solana/web3.js";
 import {
   TOKEN_PROGRAM_ID,
   createInitializeMintInstruction,
@@ -29,7 +29,7 @@ import {
   getAssociatedTokenAddress,
   createSetAuthorityInstruction,
   AuthorityType,
-} from '@solana/spl-token';
+} from "@solana/spl-token";
 
 export interface TokenMetadata {
   name: string;
@@ -45,8 +45,8 @@ export interface TokenLaunchConfig {
   metadata: TokenMetadata;
   initialSupply: number;
   maxSupply?: number;
-  mintAuthority?: 'CREATOR' | 'REVOKED' | 'CUSTOM';
-  freezeAuthority?: 'CREATOR' | 'REVOKED' | 'CUSTOM';
+  mintAuthority?: "CREATOR" | "REVOKED" | "CUSTOM";
+  freezeAuthority?: "CREATOR" | "REVOKED" | "CUSTOM";
   customMintAuthority?: string;
   customFreezeAuthority?: string;
   enableMetadata?: boolean;
@@ -75,7 +75,13 @@ export interface LaunchedToken {
 export interface TokenMilestone {
   id: string;
   tokenId: string;
-  milestoneType: 'MARKET_CAP' | 'VOLUME' | 'HOLDERS' | 'LIQUIDITY' | 'GRADUATION' | 'LISTING';
+  milestoneType:
+    | "MARKET_CAP"
+    | "VOLUME"
+    | "HOLDERS"
+    | "LIQUIDITY"
+    | "GRADUATION"
+    | "LISTING";
   milestoneValue: number;
   description?: string;
   isAchieved: boolean;
@@ -100,7 +106,7 @@ export class TokenLauncherService {
    */
   async createToken(
     creator: Keypair,
-    config: TokenLaunchConfig
+    config: TokenLaunchConfig,
   ): Promise<{
     token: LaunchedToken;
     mintKeypair: Keypair;
@@ -116,17 +122,23 @@ export class TokenLauncherService {
     let mintAuthority: PublicKey;
     let freezeAuthority: PublicKey | null;
 
-    if (config.mintAuthority === 'REVOKED') {
+    if (config.mintAuthority === "REVOKED") {
       mintAuthority = PublicKey.default; // Will be revoked immediately
-    } else if (config.mintAuthority === 'CUSTOM' && config.customMintAuthority) {
+    } else if (
+      config.mintAuthority === "CUSTOM" &&
+      config.customMintAuthority
+    ) {
       mintAuthority = new PublicKey(config.customMintAuthority);
     } else {
       mintAuthority = creator.publicKey;
     }
 
-    if (config.freezeAuthority === 'REVOKED') {
+    if (config.freezeAuthority === "REVOKED") {
       freezeAuthority = null;
-    } else if (config.freezeAuthority === 'CUSTOM' && config.customFreezeAuthority) {
+    } else if (
+      config.freezeAuthority === "CUSTOM" &&
+      config.customFreezeAuthority
+    ) {
       freezeAuthority = new PublicKey(config.customFreezeAuthority);
     } else {
       freezeAuthority = creator.publicKey;
@@ -134,7 +146,8 @@ export class TokenLauncherService {
 
     // Get rent for mint account
     const mintLen = getMintLen([]);
-    const rentExemption = await this.connection.getMinimumBalanceForRentExemption(mintLen);
+    const rentExemption =
+      await this.connection.getMinimumBalanceForRentExemption(mintLen);
 
     // Create transaction
     const transaction = new Transaction();
@@ -147,7 +160,7 @@ export class TokenLauncherService {
         space: mintLen,
         lamports: rentExemption,
         programId: TOKEN_PROGRAM_ID,
-      })
+      }),
     );
 
     // Initialize mint
@@ -157,8 +170,8 @@ export class TokenLauncherService {
         metadata.decimals,
         mintAuthority,
         freezeAuthority,
-        TOKEN_PROGRAM_ID
-      )
+        TOKEN_PROGRAM_ID,
+      ),
     );
 
     // Mint initial supply if specified
@@ -166,7 +179,7 @@ export class TokenLauncherService {
       // Get associated token account for creator
       const creatorTokenAccount = await getAssociatedTokenAddress(
         mintPublicKey,
-        creator.publicKey
+        creator.publicKey,
       );
 
       // Create ATA
@@ -175,8 +188,8 @@ export class TokenLauncherService {
           creator.publicKey,
           creatorTokenAccount,
           creator.publicKey,
-          mintPublicKey
-        )
+          mintPublicKey,
+        ),
       );
 
       // Mint tokens
@@ -185,8 +198,8 @@ export class TokenLauncherService {
           mintPublicKey,
           creatorTokenAccount,
           mintAuthority,
-          initialSupply * Math.pow(10, metadata.decimals)
-        )
+          initialSupply * Math.pow(10, metadata.decimals),
+        ),
       );
     }
 
@@ -195,7 +208,7 @@ export class TokenLauncherService {
       this.connection,
       transaction,
       [creator, mintKeypair],
-      { commitment: 'confirmed' }
+      { commitment: "confirmed" },
     );
 
     console.log(`✅ Token created: ${mintPublicKey.toBase58()}`);
@@ -211,10 +224,13 @@ export class TokenLauncherService {
       tokenDecimals: metadata.decimals,
       initialSupply,
       maxSupply: config.maxSupply,
-      mintAuthority: config.mintAuthority === 'REVOKED' ? undefined : mintAuthority.toBase58(),
+      mintAuthority:
+        config.mintAuthority === "REVOKED"
+          ? undefined
+          : mintAuthority.toBase58(),
       freezeAuthority: freezeAuthority ? freezeAuthority.toBase58() : undefined,
-      mintAuthorityRevoked: config.mintAuthority === 'REVOKED',
-      freezeAuthorityRevoked: config.freezeAuthority === 'REVOKED',
+      mintAuthorityRevoked: config.mintAuthority === "REVOKED",
+      freezeAuthorityRevoked: config.freezeAuthority === "REVOKED",
       tokenUri: metadata.externalUrl,
       description: metadata.description,
       isActive: true,
@@ -233,10 +249,10 @@ export class TokenLauncherService {
    */
   async revokeMintAuthority(
     token: LaunchedToken,
-    currentAuthority: Keypair
+    currentAuthority: Keypair,
   ): Promise<string> {
     if (token.mintAuthorityRevoked) {
-      throw new Error('Mint authority already revoked');
+      throw new Error("Mint authority already revoked");
     }
 
     const mintPublicKey = new PublicKey(token.tokenMint);
@@ -248,15 +264,15 @@ export class TokenLauncherService {
         AuthorityType.MintTokens,
         null, // Setting to null revokes authority
         [],
-        TOKEN_PROGRAM_ID
-      )
+        TOKEN_PROGRAM_ID,
+      ),
     );
 
     const signature = await sendAndConfirmTransaction(
       this.connection,
       transaction,
       [currentAuthority],
-      { commitment: 'confirmed' }
+      { commitment: "confirmed" },
     );
 
     console.log(`✅ Mint authority revoked for ${token.tokenMint}`);
@@ -274,10 +290,10 @@ export class TokenLauncherService {
    */
   async revokeFreezeAuthority(
     token: LaunchedToken,
-    currentAuthority: Keypair
+    currentAuthority: Keypair,
   ): Promise<string> {
     if (token.freezeAuthorityRevoked) {
-      throw new Error('Freeze authority already revoked');
+      throw new Error("Freeze authority already revoked");
     }
 
     const mintPublicKey = new PublicKey(token.tokenMint);
@@ -289,15 +305,15 @@ export class TokenLauncherService {
         AuthorityType.FreezeAccount,
         null, // Setting to null revokes authority
         [],
-        TOKEN_PROGRAM_ID
-      )
+        TOKEN_PROGRAM_ID,
+      ),
     );
 
     const signature = await sendAndConfirmTransaction(
       this.connection,
       transaction,
       [currentAuthority],
-      { commitment: 'confirmed' }
+      { commitment: "confirmed" },
     );
 
     console.log(`✅ Freeze authority revoked for ${token.tokenMint}`);
@@ -316,10 +332,10 @@ export class TokenLauncherService {
   async transferMintAuthority(
     token: LaunchedToken,
     currentAuthority: Keypair,
-    newAuthority: PublicKey
+    newAuthority: PublicKey,
   ): Promise<string> {
     if (token.mintAuthorityRevoked) {
-      throw new Error('Mint authority already revoked, cannot transfer');
+      throw new Error("Mint authority already revoked, cannot transfer");
     }
 
     const mintPublicKey = new PublicKey(token.tokenMint);
@@ -331,15 +347,15 @@ export class TokenLauncherService {
         AuthorityType.MintTokens,
         newAuthority,
         [],
-        TOKEN_PROGRAM_ID
-      )
+        TOKEN_PROGRAM_ID,
+      ),
     );
 
     const signature = await sendAndConfirmTransaction(
       this.connection,
       transaction,
       [currentAuthority],
-      { commitment: 'confirmed' }
+      { commitment: "confirmed" },
     );
 
     console.log(`✅ Mint authority transferred for ${token.tokenMint}`);
@@ -357,9 +373,9 @@ export class TokenLauncherService {
    */
   createMilestone(
     tokenId: string,
-    milestoneType: TokenMilestone['milestoneType'],
+    milestoneType: TokenMilestone["milestoneType"],
     milestoneValue: number,
-    description?: string
+    description?: string,
   ): TokenMilestone {
     return {
       id: crypto.randomUUID(),
@@ -378,7 +394,7 @@ export class TokenLauncherService {
   async checkMilestone(
     token: LaunchedToken,
     milestone: TokenMilestone,
-    currentValue: number
+    currentValue: number,
   ): Promise<boolean> {
     if (milestone.isAchieved) {
       return true;
@@ -412,7 +428,7 @@ export class TokenLauncherService {
     options: {
       revokeMintAuthority?: boolean;
       revokeFreezeAuthority?: boolean;
-    } = {}
+    } = {},
   ): Promise<{
     token: LaunchedToken;
     signatures: string[];
@@ -454,7 +470,9 @@ export class TokenLauncherService {
   async getTokenSupply(tokenMint: string): Promise<number> {
     const mintPublicKey = new PublicKey(tokenMint);
     const supply = await this.connection.getTokenSupply(mintPublicKey);
-    return parseFloat(supply.value.amount) / Math.pow(10, supply.value.decimals);
+    return (
+      parseFloat(supply.value.amount) / Math.pow(10, supply.value.decimals)
+    );
   }
 
   /**
@@ -467,10 +485,11 @@ export class TokenLauncherService {
     freezeAuthority: string | null;
   }> {
     const mintPublicKey = new PublicKey(tokenMint);
-    const accountInfo = await this.connection.getParsedAccountInfo(mintPublicKey);
+    const accountInfo =
+      await this.connection.getParsedAccountInfo(mintPublicKey);
 
-    if (!accountInfo.value || !('parsed' in accountInfo.value.data)) {
-      throw new Error('Invalid mint account');
+    if (!accountInfo.value || !("parsed" in accountInfo.value.data)) {
+      throw new Error("Invalid mint account");
     }
 
     const data = accountInfo.value.data.parsed.info;
@@ -488,7 +507,7 @@ export class TokenLauncherService {
    */
   async verifyTokenLaunch(
     tokenMint: string,
-    expectedDecimals: number
+    expectedDecimals: number,
   ): Promise<{ verified: boolean; error?: string }> {
     try {
       const info = await this.getTokenInfo(tokenMint);
@@ -504,7 +523,7 @@ export class TokenLauncherService {
     } catch (error) {
       return {
         verified: false,
-        error: error instanceof Error ? error.message : 'Verification failed',
+        error: error instanceof Error ? error.message : "Verification failed",
       };
     }
   }
@@ -514,12 +533,32 @@ export class TokenLauncherService {
    */
   createDefaultMilestones(tokenId: string): TokenMilestone[] {
     return [
-      this.createMilestone(tokenId, 'HOLDERS', 100, 'Reach 100 unique holders'),
-      this.createMilestone(tokenId, 'HOLDERS', 1000, 'Reach 1,000 unique holders'),
-      this.createMilestone(tokenId, 'MARKET_CAP', 100000, 'Reach $100,000 market cap'),
-      this.createMilestone(tokenId, 'MARKET_CAP', 1000000, 'Reach $1,000,000 market cap'),
-      this.createMilestone(tokenId, 'LIQUIDITY', 50000, 'Add $50,000 in liquidity'),
-      this.createMilestone(tokenId, 'GRADUATION', 1, 'Token graduation ready'),
+      this.createMilestone(tokenId, "HOLDERS", 100, "Reach 100 unique holders"),
+      this.createMilestone(
+        tokenId,
+        "HOLDERS",
+        1000,
+        "Reach 1,000 unique holders",
+      ),
+      this.createMilestone(
+        tokenId,
+        "MARKET_CAP",
+        100000,
+        "Reach $100,000 market cap",
+      ),
+      this.createMilestone(
+        tokenId,
+        "MARKET_CAP",
+        1000000,
+        "Reach $1,000,000 market cap",
+      ),
+      this.createMilestone(
+        tokenId,
+        "LIQUIDITY",
+        50000,
+        "Add $50,000 in liquidity",
+      ),
+      this.createMilestone(tokenId, "GRADUATION", 1, "Token graduation ready"),
     ];
   }
 }

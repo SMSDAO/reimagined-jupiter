@@ -1,14 +1,19 @@
 /**
  * Example: Dual-Approval Deployment Workflow
- * 
+ *
  * This example demonstrates the complete workflow for deploying a program
  * with dual-approval security enforcement.
  */
 
-import { Keypair, PublicKey, Transaction, SystemProgram } from '@solana/web3.js';
-import { TransactionBuilder } from '../../webapp/lib/solana/transaction-builder';
-import { ResilientSolanaConnection } from '../../webapp/lib/solana/connection';
-import { approvalService } from '../services/approvalService.js';
+import {
+  Keypair,
+  PublicKey,
+  Transaction,
+  SystemProgram,
+} from "@solana/web3.js";
+import { TransactionBuilder } from "../../webapp/lib/solana/transaction-builder";
+import { ResilientSolanaConnection } from "../../webapp/lib/solana/connection";
+import { approvalService } from "../services/approvalService.js";
 
 /**
  * Step 1: Admin prepares a critical transaction (e.g., program deployment)
@@ -17,11 +22,11 @@ async function prepareDeploymentTransaction(): Promise<{
   serialized: string;
   simulation: any;
 }> {
-  console.log('📋 Step 1: Preparing deployment transaction...\n');
+  console.log("📋 Step 1: Preparing deployment transaction...\n");
 
   // Initialize connection and builder
   const connection = new ResilientSolanaConnection([
-    process.env.SOLANA_RPC_URL || 'https://api.mainnet-beta.solana.com',
+    process.env.SOLANA_RPC_URL || "https://api.mainnet-beta.solana.com",
   ]);
   const builder = new TransactionBuilder(connection);
 
@@ -43,25 +48,25 @@ async function prepareDeploymentTransaction(): Promise<{
     instructions,
     feePayer,
     undefined,
-    'high'
+    "high",
   );
 
   // Run advanced simulation to calculate Value at Risk
-  console.log('🔍 Running simulation...');
+  console.log("🔍 Running simulation...");
   const simulation = await builder.simulateTransactionAdvanced(transaction);
-  
+
   console.log(`✅ Simulation complete:`);
   console.log(`   Value at Risk: ${simulation.valueAtRisk.toFixed(4)} SOL`);
-  console.log(`   Target Program: ${simulation.programId || 'N/A'}`);
-  console.log('');
+  console.log(`   Target Program: ${simulation.programId || "N/A"}`);
+  console.log("");
 
   // Serialize for offline signing / approval workflow
   const serialized = builder.serializeUnsignedTransaction(transaction);
-  
+
   console.log(`📦 Transaction serialized (${serialized.base64.length} bytes)`);
   console.log(`   Instructions: ${serialized.instructions.length}`);
   console.log(`   Fee Payer: ${serialized.feePayer}`);
-  console.log('');
+  console.log("");
 
   return {
     serialized: serialized.base64,
@@ -76,21 +81,22 @@ async function requestApproval(
   serializedTx: string,
   simulation: any,
   userId: string,
-  username: string
+  username: string,
 ): Promise<string> {
-  console.log('📝 Step 2: Creating approval request...\n');
+  console.log("📝 Step 2: Creating approval request...\n");
 
   // Create approval request
   const approval = await approvalService.createApprovalRequest({
     serializedTransaction: serializedTx,
-    transactionType: 'PROGRAM_DEPLOYMENT',
+    transactionType: "PROGRAM_DEPLOYMENT",
     valueAtRisk: simulation.valueAtRisk,
     targetProgramId: simulation.programId,
-    description: 'Deploy trading program v2.0 to mainnet',
+    description: "Deploy trading program v2.0 to mainnet",
     instructionsCount: 3,
     requestedBy: userId,
     requestedByUsername: username,
-    requestReason: 'New trading algorithm implementation with improved efficiency',
+    requestReason:
+      "New trading algorithm implementation with improved efficiency",
     expiresInHours: 24,
   });
 
@@ -98,9 +104,9 @@ async function requestApproval(
   console.log(`   Approval ID: ${approval.id}`);
   console.log(`   Status: ${approval.status}`);
   console.log(`   Expires: ${approval.expiresAt.toISOString()}`);
-  console.log('');
+  console.log("");
   console.log(`⏳ Waiting for SUPER_ADMIN approval...`);
-  console.log('');
+  console.log("");
 
   return approval.id;
 }
@@ -112,9 +118,9 @@ async function processApprovalBySuperAdmin(
   approvalId: string,
   superAdminId: string,
   superAdminUsername: string,
-  approve: boolean
+  approve: boolean,
 ): Promise<void> {
-  console.log('👤 Step 3: SUPER_ADMIN review...\n');
+  console.log("👤 Step 3: SUPER_ADMIN review...\n");
 
   // Process approval decision
   const decision = await approvalService.processApproval({
@@ -122,10 +128,10 @@ async function processApprovalBySuperAdmin(
     approvedBy: superAdminId,
     approvedByUsername: superAdminUsername,
     approved: approve,
-    reason: approve 
-      ? 'Code review completed, security audit passed, deployment approved'
-      : 'Insufficient testing, requires more validation',
-    signature: 'digital_signature_here', // In production, would be actual cryptographic signature
+    reason: approve
+      ? "Code review completed, security audit passed, deployment approved"
+      : "Insufficient testing, requires more validation",
+    signature: "digital_signature_here", // In production, would be actual cryptographic signature
   });
 
   if (approve) {
@@ -136,7 +142,7 @@ async function processApprovalBySuperAdmin(
     console.log(`❌ Transaction REJECTED by ${superAdminUsername}`);
     console.log(`   Reason: ${decision.approvalReason}`);
   }
-  console.log('');
+  console.log("");
 }
 
 /**
@@ -144,37 +150,37 @@ async function processApprovalBySuperAdmin(
  */
 async function executeApprovedTransaction(
   approvalId: string,
-  serializedTx: string
+  serializedTx: string,
 ): Promise<void> {
-  console.log('🚀 Step 4: Executing approved transaction...\n');
+  console.log("🚀 Step 4: Executing approved transaction...\n");
 
   // Initialize connection and builder
   const connection = new ResilientSolanaConnection([
-    process.env.SOLANA_RPC_URL || 'https://api.mainnet-beta.solana.com',
+    process.env.SOLANA_RPC_URL || "https://api.mainnet-beta.solana.com",
   ]);
   const builder = new TransactionBuilder(connection);
 
   // Deserialize transaction
   const serializedData = {
     base64: serializedTx,
-    blockhash: '',
+    blockhash: "",
     lastValidBlockHeight: 0,
-    feePayer: '',
+    feePayer: "",
     instructions: [],
   };
   const transaction = builder.deserializeTransaction(serializedData);
 
   // Sign with appropriate keypairs
   const signers: Keypair[] = []; // In production, would have actual signers
-  
+
   // Execute with approval enforcement
-  console.log('🔒 Enforcing dual-approval at RPC layer...');
+  console.log("🔒 Enforcing dual-approval at RPC layer...");
   const result = await builder.executeTransaction(
     transaction,
     signers,
-    'confirmed',
+    "confirmed",
     false,
-    approvalId // This enforces approval check
+    approvalId, // This enforces approval check
   );
 
   if (result.success) {
@@ -182,26 +188,26 @@ async function executeApprovedTransaction(
     console.log(`   Signature: ${result.signature}`);
     console.log(`   Compute Units: ${result.computeUnits?.toLocaleString()}`);
     console.log(`   Fee: ${(result.fee! / 1e9).toFixed(6)} SOL`);
-    
+
     // Mark approval as executed
     await approvalService.markAsExecuted(approvalId, result.signature!);
   } else {
     console.log(`❌ Transaction failed: ${result.error}`);
-    
+
     // Mark approval as failed
-    await approvalService.markAsExecuted(approvalId, '', result.error);
+    await approvalService.markAsExecuted(approvalId, "", result.error);
   }
-  console.log('');
+  console.log("");
 }
 
 /**
  * Complete workflow demonstration
  */
 async function demonstrateWorkflow() {
-  console.log('='.repeat(70));
-  console.log('🔐 DUAL-APPROVAL DEPLOYMENT WORKFLOW DEMONSTRATION');
-  console.log('='.repeat(70));
-  console.log('');
+  console.log("=".repeat(70));
+  console.log("🔐 DUAL-APPROVAL DEPLOYMENT WORKFLOW DEMONSTRATION");
+  console.log("=".repeat(70));
+  console.log("");
 
   try {
     // Step 1: Prepare transaction
@@ -211,36 +217,35 @@ async function demonstrateWorkflow() {
     const approvalId = await requestApproval(
       serialized,
       simulation,
-      'user-123',
-      'admin_deployer'
+      "user-123",
+      "admin_deployer",
     );
 
     // Step 3: SUPER_ADMIN approves
     await processApprovalBySuperAdmin(
       approvalId,
-      'user-456',
-      'super_admin_reviewer',
-      true // Set to false to reject
+      "user-456",
+      "super_admin_reviewer",
+      true, // Set to false to reject
     );
 
     // Step 4: Execute (only if approved)
     await executeApprovedTransaction(approvalId, serialized);
 
-    console.log('='.repeat(70));
-    console.log('✅ WORKFLOW COMPLETE');
-    console.log('='.repeat(70));
-    console.log('');
-    console.log('Security Features Demonstrated:');
-    console.log('  ✓ Transaction serialization for offline signing');
-    console.log('  ✓ Pre-flight simulation with Value at Risk calculation');
-    console.log('  ✓ Dual-approval requirement (no self-approval)');
-    console.log('  ✓ SUPER_ADMIN role enforcement');
-    console.log('  ✓ Complete audit trail');
-    console.log('  ✓ RPC-layer approval verification');
-    console.log('');
-
+    console.log("=".repeat(70));
+    console.log("✅ WORKFLOW COMPLETE");
+    console.log("=".repeat(70));
+    console.log("");
+    console.log("Security Features Demonstrated:");
+    console.log("  ✓ Transaction serialization for offline signing");
+    console.log("  ✓ Pre-flight simulation with Value at Risk calculation");
+    console.log("  ✓ Dual-approval requirement (no self-approval)");
+    console.log("  ✓ SUPER_ADMIN role enforcement");
+    console.log("  ✓ Complete audit trail");
+    console.log("  ✓ RPC-layer approval verification");
+    console.log("");
   } catch (error) {
-    console.error('❌ Workflow failed:', error);
+    console.error("❌ Workflow failed:", error);
   }
 }
 

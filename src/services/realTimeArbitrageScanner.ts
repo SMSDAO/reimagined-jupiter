@@ -1,7 +1,7 @@
-import { Connection } from '@solana/web3.js';
-import { ArbitrageOpportunity, TokenConfig } from '../types.js';
-import { JupiterV6Integration } from '../integrations/jupiter.js';
-import { config, SUPPORTED_TOKENS } from '../config/index.js';
+import { Connection } from "@solana/web3.js";
+import { ArbitrageOpportunity, TokenConfig } from "../types.js";
+import { JupiterV6Integration } from "../integrations/jupiter.js";
+import { config, SUPPORTED_TOKENS } from "../config/index.js";
 
 export interface ScannerConfig {
   pollingIntervalMs: number;
@@ -23,22 +23,27 @@ export class RealTimeArbitrageScanner {
   private isScanning: boolean;
   private scanIntervalId: NodeJS.Timeout | null;
   private opportunityCallbacks: OpportunityCallback[];
-  private tokenPairs: Array<{ tokenA: TokenConfig; tokenB: TokenConfig; tokenC: TokenConfig }>;
+  private tokenPairs: Array<{
+    tokenA: TokenConfig;
+    tokenB: TokenConfig;
+    tokenC: TokenConfig;
+  }>;
   private intervals: Set<NodeJS.Timeout>;
   private isCleanedUp: boolean = false;
 
-  constructor(
-    connection: Connection,
-    customConfig?: Partial<ScannerConfig>
-  ) {
+  constructor(connection: Connection, customConfig?: Partial<ScannerConfig>) {
     this.connection = connection;
     this.jupiter = new JupiterV6Integration(connection);
     this.scannerConfig = {
-      pollingIntervalMs: customConfig?.pollingIntervalMs ?? config.scanner.pollingIntervalMs,
-      enableNotifications: customConfig?.enableNotifications ?? config.scanner.enableNotifications,
-      minProfitThreshold: customConfig?.minProfitThreshold ?? config.arbitrage.minProfitThreshold,
+      pollingIntervalMs:
+        customConfig?.pollingIntervalMs ?? config.scanner.pollingIntervalMs,
+      enableNotifications:
+        customConfig?.enableNotifications ?? config.scanner.enableNotifications,
+      minProfitThreshold:
+        customConfig?.minProfitThreshold ?? config.arbitrage.minProfitThreshold,
       maxSlippage: customConfig?.maxSlippage ?? config.arbitrage.maxSlippage,
-      minConfidence: customConfig?.minConfidence ?? config.scanner.minConfidence,
+      minConfidence:
+        customConfig?.minConfidence ?? config.scanner.minConfidence,
       batchSize: customConfig?.batchSize ?? 10,
       startAmount: customConfig?.startAmount ?? 1000000,
       estimatedGasFeeLamports: customConfig?.estimatedGasFeeLamports ?? 10000,
@@ -48,7 +53,7 @@ export class RealTimeArbitrageScanner {
     this.opportunityCallbacks = [];
     this.tokenPairs = [];
     this.intervals = new Set();
-    
+
     // Register cleanup handlers for process termination
     this.registerCleanupHandlers();
   }
@@ -58,7 +63,7 @@ export class RealTimeArbitrageScanner {
    * @param tokens Optional array of token symbols to scan. If not provided, uses all supported tokens
    */
   initializeTokenPairs(tokens?: string[]): void {
-    const tokensToScan = tokens || SUPPORTED_TOKENS.map(t => t.symbol);
+    const tokensToScan = tokens || SUPPORTED_TOKENS.map((t) => t.symbol);
     this.tokenPairs = [];
 
     // Generate all possible triangular arbitrage paths (A -> B -> C -> A)
@@ -66,9 +71,15 @@ export class RealTimeArbitrageScanner {
       for (let j = 0; j < tokensToScan.length; j++) {
         for (let k = 0; k < tokensToScan.length; k++) {
           if (i !== j && j !== k && i !== k) {
-            const tokenA = SUPPORTED_TOKENS.find(t => t.symbol === tokensToScan[i]);
-            const tokenB = SUPPORTED_TOKENS.find(t => t.symbol === tokensToScan[j]);
-            const tokenC = SUPPORTED_TOKENS.find(t => t.symbol === tokensToScan[k]);
+            const tokenA = SUPPORTED_TOKENS.find(
+              (t) => t.symbol === tokensToScan[i],
+            );
+            const tokenB = SUPPORTED_TOKENS.find(
+              (t) => t.symbol === tokensToScan[j],
+            );
+            const tokenC = SUPPORTED_TOKENS.find(
+              (t) => t.symbol === tokensToScan[k],
+            );
 
             if (tokenA && tokenB && tokenC) {
               this.tokenPairs.push({ tokenA, tokenB, tokenC });
@@ -78,7 +89,9 @@ export class RealTimeArbitrageScanner {
       }
     }
 
-    console.log(`[Scanner] Initialized ${this.tokenPairs.length} token pair combinations for scanning`);
+    console.log(
+      `[Scanner] Initialized ${this.tokenPairs.length} token pair combinations for scanning`,
+    );
   }
 
   /**
@@ -93,17 +106,21 @@ export class RealTimeArbitrageScanner {
    */
   async startScanning(): Promise<void> {
     if (this.isScanning) {
-      console.warn('[Scanner] Already scanning');
+      console.warn("[Scanner] Already scanning");
       return;
     }
 
     if (this.tokenPairs.length === 0) {
-      console.log('[Scanner] No token pairs initialized. Initializing with default tokens...');
+      console.log(
+        "[Scanner] No token pairs initialized. Initializing with default tokens...",
+      );
       this.initializeTokenPairs();
     }
 
     this.isScanning = true;
-    console.log(`[Scanner] Starting continuous scan every ${this.scannerConfig.pollingIntervalMs}ms`);
+    console.log(
+      `[Scanner] Starting continuous scan every ${this.scannerConfig.pollingIntervalMs}ms`,
+    );
 
     // Run initial scan immediately
     await this.performScan();
@@ -114,7 +131,7 @@ export class RealTimeArbitrageScanner {
         await this.performScan();
       }
     }, this.scannerConfig.pollingIntervalMs);
-    
+
     // Track the interval for cleanup
     if (this.scanIntervalId) {
       this.intervals.add(this.scanIntervalId);
@@ -126,7 +143,7 @@ export class RealTimeArbitrageScanner {
    */
   stopScanning(): void {
     if (!this.isScanning) {
-      console.warn('[Scanner] Not currently scanning');
+      console.warn("[Scanner] Not currently scanning");
       return;
     }
 
@@ -135,14 +152,16 @@ export class RealTimeArbitrageScanner {
       clearInterval(this.scanIntervalId);
       this.scanIntervalId = null;
     }
-    console.log('[Scanner] Scanning stopped');
+    console.log("[Scanner] Scanning stopped");
   }
 
   /**
    * Perform a single scan of all token pairs
    */
   private async performScan(): Promise<void> {
-    console.log(`[Scanner] Performing scan of ${this.tokenPairs.length} token pairs...`);
+    console.log(
+      `[Scanner] Performing scan of ${this.tokenPairs.length} token pairs...`,
+    );
     const startTime = Date.now();
     let opportunitiesFound = 0;
 
@@ -151,16 +170,18 @@ export class RealTimeArbitrageScanner {
     for (let i = 0; i < this.tokenPairs.length; i += batchSize) {
       const batch = this.tokenPairs.slice(i, i + batchSize);
       const batchResults = await Promise.allSettled(
-        batch.map(pair => this.scanTriangleArbitrage(pair.tokenA, pair.tokenB, pair.tokenC))
+        batch.map((pair) =>
+          this.scanTriangleArbitrage(pair.tokenA, pair.tokenB, pair.tokenC),
+        ),
       );
 
       for (const result of batchResults) {
-        if (result.status === 'fulfilled' && result.value) {
+        if (result.status === "fulfilled" && result.value) {
           opportunitiesFound++;
           this.notifyOpportunity(result.value);
-        } else if (result.status === 'rejected') {
+        } else if (result.status === "rejected") {
           // Log rejected results at debug level
-          if (process.env.DEBUG_SCANNER === 'true') {
+          if (process.env.DEBUG_SCANNER === "true") {
             console.debug(`[Scanner] Scan rejected: ${result.reason}`);
           }
         }
@@ -168,7 +189,9 @@ export class RealTimeArbitrageScanner {
     }
 
     const duration = Date.now() - startTime;
-    console.log(`[Scanner] Scan completed in ${duration}ms. Found ${opportunitiesFound} opportunities`);
+    console.log(
+      `[Scanner] Scan completed in ${duration}ms. Found ${opportunitiesFound} opportunities`,
+    );
   }
 
   /**
@@ -177,19 +200,21 @@ export class RealTimeArbitrageScanner {
   async scanTriangleArbitrage(
     tokenA: TokenConfig,
     tokenB: TokenConfig,
-    tokenC: TokenConfig
+    tokenC: TokenConfig,
   ): Promise<ArbitrageOpportunity | null> {
     try {
       // Use configured start amount, adjusting for token decimals
       const baseAmount = this.scannerConfig.startAmount || 1000000;
-      const startAmount = Math.floor(baseAmount * Math.pow(10, tokenA.decimals) / 1e9);
+      const startAmount = Math.floor(
+        (baseAmount * Math.pow(10, tokenA.decimals)) / 1e9,
+      );
       const timestamp = Date.now();
 
       // Get quote for A -> B
       const quoteAB = await this.jupiter.getQuote(
         tokenA.mint.toString(),
         tokenB.mint.toString(),
-        startAmount
+        startAmount,
       );
 
       if (!quoteAB) return null;
@@ -201,7 +226,7 @@ export class RealTimeArbitrageScanner {
       const quoteBC = await this.jupiter.getQuote(
         tokenB.mint.toString(),
         tokenC.mint.toString(),
-        amountB
+        amountB,
       );
 
       if (!quoteBC) return null;
@@ -213,7 +238,7 @@ export class RealTimeArbitrageScanner {
       const quoteCA = await this.jupiter.getQuote(
         tokenC.mint.toString(),
         tokenA.mint.toString(),
-        amountC
+        amountC,
       );
 
       if (!quoteCA) return null;
@@ -224,11 +249,12 @@ export class RealTimeArbitrageScanner {
       // Calculate profit and metrics
       const rawProfit = finalAmountA - startAmount;
       const totalPriceImpact = priceImpactAB + priceImpactBC + priceImpactCA;
-      
+
       // Use configured gas fee estimate (in lamports)
-      const estimatedGasFee = this.scannerConfig.estimatedGasFeeLamports || 10000;
+      const estimatedGasFee =
+        this.scannerConfig.estimatedGasFeeLamports || 10000;
       const profitAfterGas = rawProfit - estimatedGasFee;
-      
+
       // Calculate profit percentage
       const profitPercent = (profitAfterGas / startAmount) * 100;
 
@@ -257,13 +283,13 @@ export class RealTimeArbitrageScanner {
 
       // Extract DEX information from route plans
       const dexes = [
-        ...(quoteAB.routePlan || []).map(r => r.swapInfo.label),
-        ...(quoteBC.routePlan || []).map(r => r.swapInfo.label),
-        ...(quoteCA.routePlan || []).map(r => r.swapInfo.label),
+        ...(quoteAB.routePlan || []).map((r) => r.swapInfo.label),
+        ...(quoteBC.routePlan || []).map((r) => r.swapInfo.label),
+        ...(quoteCA.routePlan || []).map((r) => r.swapInfo.label),
       ];
 
       const opportunity: ArbitrageOpportunity = {
-        type: 'triangular',
+        type: "triangular",
         path: [tokenA, tokenB, tokenC, tokenA],
         estimatedProfit: profitAfterGas / Math.pow(10, tokenA.decimals),
         requiredCapital: startAmount / Math.pow(10, tokenA.decimals),
@@ -278,14 +304,21 @@ export class RealTimeArbitrageScanner {
         },
       };
 
-      console.log(`[Scanner] Found opportunity: ${tokenA.symbol} -> ${tokenB.symbol} -> ${tokenC.symbol} -> ${tokenA.symbol}`);
-      console.log(`[Scanner] Profit: ${opportunity.estimatedProfit.toFixed(6)} ${tokenA.symbol} (${profitPercent.toFixed(2)}%)`);
+      console.log(
+        `[Scanner] Found opportunity: ${tokenA.symbol} -> ${tokenB.symbol} -> ${tokenC.symbol} -> ${tokenA.symbol}`,
+      );
+      console.log(
+        `[Scanner] Profit: ${opportunity.estimatedProfit.toFixed(6)} ${tokenA.symbol} (${profitPercent.toFixed(2)}%)`,
+      );
 
       return opportunity;
     } catch (error) {
       // Log errors at debug level to avoid flooding logs during continuous scanning
-      if (process.env.DEBUG_SCANNER === 'true') {
-        console.debug(`[Scanner] Error scanning ${tokenA.symbol}->${tokenB.symbol}->${tokenC.symbol}:`, error);
+      if (process.env.DEBUG_SCANNER === "true") {
+        console.debug(
+          `[Scanner] Error scanning ${tokenA.symbol}->${tokenB.symbol}->${tokenC.symbol}:`,
+          error,
+        );
       }
       return null;
     }
@@ -294,16 +327,20 @@ export class RealTimeArbitrageScanner {
   /**
    * Scan for multiple arbitrage opportunities across token pairs
    */
-  async scanForOpportunities(tokens: string[]): Promise<ArbitrageOpportunity[]> {
-    console.log(`[Scanner] Scanning for opportunities with tokens: ${tokens.join(', ')}`);
-    
+  async scanForOpportunities(
+    tokens: string[],
+  ): Promise<ArbitrageOpportunity[]> {
+    console.log(
+      `[Scanner] Scanning for opportunities with tokens: ${tokens.join(", ")}`,
+    );
+
     const opportunities: ArbitrageOpportunity[] = [];
     const tokenConfigs = tokens
-      .map(symbol => SUPPORTED_TOKENS.find(t => t.symbol === symbol))
+      .map((symbol) => SUPPORTED_TOKENS.find((t) => t.symbol === symbol))
       .filter((t): t is TokenConfig => t !== undefined);
 
     if (tokenConfigs.length < 3) {
-      console.warn('[Scanner] Need at least 3 tokens for triangular arbitrage');
+      console.warn("[Scanner] Need at least 3 tokens for triangular arbitrage");
       return opportunities;
     }
 
@@ -315,7 +352,7 @@ export class RealTimeArbitrageScanner {
             const opportunity = await this.scanTriangleArbitrage(
               tokenConfigs[i],
               tokenConfigs[j],
-              tokenConfigs[k]
+              tokenConfigs[k],
             );
 
             if (opportunity) {
@@ -326,7 +363,9 @@ export class RealTimeArbitrageScanner {
       }
     }
 
-    console.log(`[Scanner] Found ${opportunities.length} profitable opportunities`);
+    console.log(
+      `[Scanner] Found ${opportunities.length} profitable opportunities`,
+    );
     return opportunities.sort((a, b) => b.estimatedProfit - a.estimatedProfit);
   }
 
@@ -339,7 +378,7 @@ export class RealTimeArbitrageScanner {
         try {
           callback(opportunity);
         } catch (error) {
-          console.error('[Scanner] Error in opportunity callback:', error);
+          console.error("[Scanner] Error in opportunity callback:", error);
         }
       }
     }
@@ -360,7 +399,7 @@ export class RealTimeArbitrageScanner {
       ...this.scannerConfig,
       ...newConfig,
     };
-    console.log('[Scanner] Configuration updated:', this.scannerConfig);
+    console.log("[Scanner] Configuration updated:", this.scannerConfig);
   }
 
   /**
@@ -376,45 +415,50 @@ export class RealTimeArbitrageScanner {
   getTokenPairCount(): number {
     return this.tokenPairs.length;
   }
-  
+
   /**
    * Register cleanup handlers for graceful shutdown
    * Prevents memory leaks by cleaning up intervals on process termination
    */
   private registerCleanupHandlers(): void {
     // Handle SIGINT (Ctrl+C)
-    process.on('SIGINT', () => {
+    process.on("SIGINT", () => {
       if (!this.isCleanedUp) {
-        console.log('\n[Scanner] Received SIGINT, cleaning up...');
+        console.log("\n[Scanner] Received SIGINT, cleaning up...");
         this.cleanup();
         process.exit(0);
       }
     });
-    
+
     // Handle SIGTERM (kill command)
-    process.on('SIGTERM', () => {
+    process.on("SIGTERM", () => {
       if (!this.isCleanedUp) {
-        console.log('\n[Scanner] Received SIGTERM, cleaning up...');
+        console.log("\n[Scanner] Received SIGTERM, cleaning up...");
         this.cleanup();
         process.exit(0);
       }
     });
-    
+
     // Handle uncaught exceptions
-    process.on('uncaughtException', (error) => {
-      console.error('[Scanner] Uncaught exception:', error);
+    process.on("uncaughtException", (error) => {
+      console.error("[Scanner] Uncaught exception:", error);
       this.cleanup();
       process.exit(1);
     });
-    
+
     // Handle unhandled promise rejections
-    process.on('unhandledRejection', (reason, promise) => {
-      console.error('[Scanner] Unhandled rejection at:', promise, 'reason:', reason);
+    process.on("unhandledRejection", (reason, promise) => {
+      console.error(
+        "[Scanner] Unhandled rejection at:",
+        promise,
+        "reason:",
+        reason,
+      );
       this.cleanup();
       process.exit(1);
     });
   }
-  
+
   /**
    * Cleanup all resources
    * Clears all intervals and connections to prevent memory leaks
@@ -423,33 +467,33 @@ export class RealTimeArbitrageScanner {
     if (this.isCleanedUp) {
       return;
     }
-    
-    console.log('[Scanner] Cleaning up resources...');
-    
+
+    console.log("[Scanner] Cleaning up resources...");
+
     // Stop scanning
     if (this.isScanning) {
       this.stopScanning();
     }
-    
+
     // Clear all tracked intervals
-    this.intervals.forEach(interval => {
+    this.intervals.forEach((interval) => {
       clearInterval(interval);
     });
     this.intervals.clear();
-    
+
     // Clear scan interval if it exists
     if (this.scanIntervalId) {
       clearInterval(this.scanIntervalId);
       this.scanIntervalId = null;
     }
-    
+
     // Clear callbacks
     this.opportunityCallbacks = [];
-    
+
     this.isCleanedUp = true;
-    console.log('[Scanner] Cleanup complete');
+    console.log("[Scanner] Cleanup complete");
   }
-  
+
   /**
    * Destroy scanner instance
    * Public method to manually trigger cleanup

@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { motion } from 'framer-motion';
-import { ReactNode } from 'react';
+import { motion } from "framer-motion";
+import { ReactNode } from "react";
 
 interface DashboardCardProps {
   title: string;
@@ -11,12 +11,12 @@ interface DashboardCardProps {
   gradient?: string;
 }
 
-export default function DashboardCard({ 
-  title, 
-  icon, 
-  children, 
-  className = '',
-  gradient = 'from-purple-900/50 to-blue-900/50'
+export default function DashboardCard({
+  title,
+  icon,
+  children,
+  className = "",
+  gradient = "from-purple-900/50 to-blue-900/50",
 }: DashboardCardProps) {
   return (
     <motion.div
