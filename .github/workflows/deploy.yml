@@ -76,7 +76,7 @@ jobs:
           else
             echo "enabled=false" >> "$GITHUB_OUTPUT"
           fi
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         if: steps.production_secrets.outputs.enabled == 'true'
         with:
           node-version-file: .nvmrc
