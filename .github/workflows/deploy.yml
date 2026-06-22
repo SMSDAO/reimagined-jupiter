@@ -22,7 +22,7 @@ jobs:
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Check preview deploy secrets
         id: preview_secrets
         env:
@@ -60,7 +60,7 @@ jobs:
     steps:
       # Use the exact CI-passed SHA to avoid deploying a newer commit if main advances.
       - name: Checkout exact commit that passed CI
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
       - name: Check production deploy secrets
